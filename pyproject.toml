@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "north-mini-test"
+version = "0.1.0"
+description = "Local OpenCode vibe eval harness for small CI-forensics coding-agent tasks."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+app = [
+  "pandas>=2.2",
+  "streamlit>=1.36",
+]
+
+[project.scripts]
+ci-vibe-run = "ci_vibe_lab.runner:main"
+
+[tool.setuptools.packages.find]
+include = ["ci_vibe_lab*"]
+

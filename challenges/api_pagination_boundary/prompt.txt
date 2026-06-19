@@ -1,0 +1,11 @@
+CI is red after a data ingestion pipeline test failure. Diagnose and get it green.
+
+Scenario: Pagination Boundary
+
+Keep the fix minimal. Do not delete or weaken tests. Do not write
+outside this repository. Use this command as the CI check:
+
+    python -m unittest discover -s tests -v
+
+Before editing, inspect the relevant source and failing output.
+When finished, leave a short summary of what changed and why.

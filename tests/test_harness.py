@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import sqlite3
 import tempfile
 import unittest
@@ -11,7 +13,7 @@ from ci_vibe_lab.evaluator import (
     extract_scenario_from_packet,
     validate_review,
 )
-from ci_vibe_lab.runner import run_command
+from ci_vibe_lab.runner import inspect_run, run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
 
@@ -87,6 +89,86 @@ class DatabaseTests(unittest.TestCase):
             with sqlite3.connect(db_path) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
             self.assertEqual(count, 1)
+
+    def test_inspect_latest_run_prints_artifact_envelope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            db_path = root / "results.sqlite"
+            artifact_dir = root / "artifacts" / "run-1"
+            artifact_dir.mkdir(parents=True)
+            prompt_path = artifact_dir / "prompt.txt"
+            stdout_path = artifact_dir / "opencode_stdout.jsonl"
+            stderr_path = artifact_dir / "opencode_stderr.txt"
+            public_path = artifact_dir / "public.txt"
+            hidden_path = artifact_dir / "hidden.txt"
+            patch_path = artifact_dir / "patch.diff"
+            baseline_path = artifact_dir / "baseline.txt"
+            for path, content in [
+                (prompt_path, "agent prompt"),
+                (stdout_path, "{\"type\":\"text\"}\n"),
+                (stderr_path, ""),
+                (public_path, "public ok"),
+                (hidden_path, "hidden ok"),
+                (patch_path, "diff --git"),
+                (baseline_path, "baseline red"),
+            ]:
+                path.write_text(content, encoding="utf-8")
+            insert_run(
+                db_path,
+                {
+                    "run_id": "run-1",
+                    "scenario": "dependency_api_change",
+                    "scenario_title": "Dependency API Change",
+                    "challenge_pack": "ci_forensics",
+                    "model": "test/model",
+                    "agent": "build",
+                    "started_at": "2026-01-01T00:00:00+00:00",
+                    "ended_at": "2026-01-01T00:00:01+00:00",
+                    "duration_seconds": 1.0,
+                    "workdir": str(root / "work"),
+                    "prompt": "agent prompt",
+                    "opencode_command": "[\"opencode\"]",
+                    "opencode_exit_code": 0,
+                    "baseline_pass": 0,
+                    "public_pass": 1,
+                    "hidden_pass": 1,
+                    "baseline_output": "baseline red",
+                    "opencode_stdout": "{\"type\":\"text\"}\n",
+                    "opencode_stderr": "",
+                    "public_output": "public ok",
+                    "hidden_output": "hidden ok",
+                    "patch": "diff --git",
+                    "artifact_dir": str(artifact_dir),
+                    "prompt_path": str(prompt_path),
+                    "baseline_output_path": str(baseline_path),
+                    "opencode_stdout_path": str(stdout_path),
+                    "opencode_stderr_path": str(stderr_path),
+                    "public_output_path": str(public_path),
+                    "hidden_output_path": str(hidden_path),
+                    "patch_path": str(patch_path),
+                },
+            )
+            args = type(
+                "Args",
+                (),
+                {
+                    "db": str(db_path),
+                    "run_id": None,
+                    "latest": True,
+                    "scenario": "dependency_api_change",
+                    "model": None,
+                    "full": True,
+                },
+            )()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                inspect_run(args)
+            text = output.getvalue()
+            self.assertIn("# Run Inspection: run-1", text)
+            self.assertIn("raw OpenCode stdout JSONL", text)
+            self.assertIn("Baseline/Public/Hidden pass: 0/1/1", text)
+            self.assertIn("## Baseline Test Output", text)
+            self.assertIn("baseline red", text)
 
     def test_legacy_database_is_migrated_before_indexes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

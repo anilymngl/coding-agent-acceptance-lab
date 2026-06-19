@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import time
@@ -80,6 +81,24 @@ def write_artifact(path: Path, content: str) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     return str(path.resolve())
+
+
+def read_artifact(path_value: object) -> str:
+    if not path_value:
+        return ""
+    path = Path(str(path_value))
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def artifact_line(label: str, path_value: object) -> str:
+    if not path_value:
+        return f"- {label}: <missing path>"
+    path = Path(str(path_value))
+    if not path.exists():
+        return f"- {label}: {path} (missing)"
+    return f"- {label}: {path} ({path.stat().st_size} bytes)"
 
 
 def build_opencode_command(
@@ -289,6 +308,96 @@ def run_scenarios(args: argparse.Namespace) -> None:
     print(f"Saved {len(run_ids)} run(s) to {db_path.resolve()}")
 
 
+def load_inspection_row(
+    db_path: Path,
+    *,
+    run_id: str | None,
+    latest: bool,
+    scenario: str | None,
+    model: str | None,
+) -> sqlite3.Row:
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    clauses = []
+    params: list[object] = []
+    if run_id:
+        clauses.append("run_id = ?")
+        params.append(run_id)
+    if scenario:
+        clauses.append("scenario = ?")
+        params.append(scenario)
+    if model:
+        clauses.append("model = ?")
+        params.append(model)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    ordering = "ORDER BY id DESC" if latest else "ORDER BY id ASC"
+    rows = list(connection.execute(f"SELECT * FROM runs {where} {ordering} LIMIT 2", params))
+    connection.close()
+    if not rows:
+        raise SystemExit("No run matched the inspection filters.")
+    if not latest and not run_id and len(rows) > 1:
+        raise SystemExit("Multiple runs matched. Use --run-id or --latest.")
+    return rows[0]
+
+
+def print_artifact_section(title: str, content: str) -> None:
+    print(f"\n## {title}")
+    print(content if content else "<empty>")
+
+
+def inspect_run(args: argparse.Namespace) -> None:
+    if not args.run_id and not args.latest:
+        raise SystemExit("inspect requires --run-id or --latest")
+    row = load_inspection_row(
+        Path(args.db),
+        run_id=args.run_id,
+        latest=args.latest,
+        scenario=args.scenario,
+        model=args.model,
+    )
+    print(f"# Run Inspection: {row['run_id']}")
+    print("")
+    print(f"- Scenario: {row['scenario']} [{row['challenge_pack']}]")
+    print(f"- Model: {row['model']}")
+    print(f"- Agent: {row['agent']}")
+    print(f"- Workdir: {row['workdir']}")
+    print(f"- Artifact dir: {row['artifact_dir']}")
+    print(f"- OpenCode exit code: {row['opencode_exit_code']}")
+    print(f"- Baseline/Public/Hidden pass: {row['baseline_pass']}/{row['public_pass']}/{row['hidden_pass']}")
+    print(f"- Duration seconds: {float(row['duration_seconds']):.1f}")
+    print("")
+    print("## OpenCode Command")
+    try:
+        command = json.loads(str(row["opencode_command"]))
+    except json.JSONDecodeError:
+        command = row["opencode_command"]
+    print(json.dumps(command, indent=2) if isinstance(command, list) else str(command))
+    print("")
+    print("## Artifact Files")
+    for label, column in [
+        ("agent prompt", "prompt_path"),
+        ("baseline test output", "baseline_output_path"),
+        ("raw OpenCode stdout JSONL", "opencode_stdout_path"),
+        ("OpenCode stderr", "opencode_stderr_path"),
+        ("public test output", "public_output_path"),
+        ("hidden test output", "hidden_output_path"),
+        ("patch diff", "patch_path"),
+    ]:
+        print(artifact_line(label, row[column]))
+    if not args.full:
+        print("")
+        print("Use --full to print complete prompt, raw OpenCode output, test output, and patch.")
+        return
+
+    print_artifact_section("Agent Prompt", read_artifact(row["prompt_path"]))
+    print_artifact_section("Baseline Test Output", read_artifact(row["baseline_output_path"]))
+    print_artifact_section("OpenCode Stdout JSONL", read_artifact(row["opencode_stdout_path"]))
+    print_artifact_section("OpenCode Stderr", read_artifact(row["opencode_stderr_path"]))
+    print_artifact_section("Public Test Output", read_artifact(row["public_output_path"]))
+    print_artifact_section("Hidden Test Output", read_artifact(row["hidden_output_path"]))
+    print_artifact_section("Patch Diff", read_artifact(row["patch_path"]))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run local OpenCode CI vibe eval challenges.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -323,6 +432,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Use OpenCode formatted output instead of raw JSON events.",
     )
 
+    inspect = subparsers.add_parser("inspect", help="Inspect saved run inputs, outputs, and artifacts.")
+    inspect.add_argument("--db", default=os.environ.get("CI_VIBE_DB", str(DEFAULT_DB)))
+    inspect.add_argument("--run-id", help="Exact run_id to inspect.")
+    inspect.add_argument("--latest", action="store_true", help="Inspect the latest row matching filters.")
+    inspect.add_argument("--scenario", help="Optional scenario filter for --latest.")
+    inspect.add_argument("--model", help="Optional model filter for --latest.")
+    inspect.add_argument("--full", action="store_true", help="Print full artifact contents.")
+
     return parser
 
 
@@ -337,6 +454,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "run":
         run_scenarios(args)
+        return 0
+    if args.command == "inspect":
+        inspect_run(args)
         return 0
     parser.error(f"Unknown command {args.command}")
     return 2

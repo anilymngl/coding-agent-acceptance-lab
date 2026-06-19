@@ -1,0 +1,5 @@
+FAILED tests/test_attribution.py::AttributionTests::test_orders_attributed_to_historical_region
+AssertionError: 150 != 100
+
+The user made a $100 order while living in the East, and a $50 order
+after moving to the West. But the pipeline attributed $150 to the East!

@@ -109,6 +109,47 @@ uv run python -m ci_vibe_lab.runner run --challenge dependency_api_change --no-o
 That command records the failing baseline and post-test state without invoking
 OpenCode.
 
+## Inspect A Run
+
+The runner stores the exact agent input/output envelope for every run:
+
+- `prompt.txt`: the full prompt sent to OpenCode.
+- `opencode_stdout.jsonl`: raw OpenCode event stream.
+- `opencode_stderr.txt`: OpenCode stderr and timeout messages.
+- `public.txt`: visible CI output after the agent exits.
+- `hidden.txt`: hidden acceptance output after hidden tests are injected.
+- `patch.diff`: the final `git diff` produced by the agent.
+
+To test the harness yourself without spending model tokens:
+
+```bash
+uv run ci-vibe-run run \
+  --challenge dependency_api_change \
+  --no-opencode \
+  --db /tmp/ci-vibe-smoke.sqlite \
+  --runs-dir /tmp/ci-vibe-smoke-runs
+
+uv run ci-vibe-run inspect \
+  --db /tmp/ci-vibe-smoke.sqlite \
+  --latest \
+  --full
+```
+
+To inspect the latest real North Mini Code run for one challenge:
+
+```bash
+uv run ci-vibe-run inspect \
+  --db data/results.sqlite \
+  --latest \
+  --scenario metric_semantic_mismatch \
+  --model opencode/north-mini-code-free \
+  --full
+```
+
+The hidden tests are not present during the OpenCode call. In `ci_vibe_lab/runner.py`,
+the sequence is: write visible scenario, run baseline, run OpenCode, run public tests,
+capture patch, inject hidden tests, run hidden tests, then persist artifacts.
+
 ## Hidden Failure Reports
 
 Generate a deterministic report from the saved SQLite results:

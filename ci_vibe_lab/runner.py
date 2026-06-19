@@ -337,15 +337,72 @@ def prepare_scenario(args: argparse.Namespace) -> None:
     print(f"CI command: {' '.join(TEST_COMMAND)}")
 
 
+def _completed_attempts(db_path: Path, *, model: str, scenario_ids_: list[str]) -> set[tuple[str, int]]:
+    """Return a set of (scenario_id, attempt_index) pairs already stored in db_path.
+
+    attempt_index is 0-based (matches the loop variable `index` in run_scenarios).
+    We count existing rows per scenario ordered by rowid to assign attempt slots.
+    """
+    if not db_path.exists():
+        return set()
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        done: set[tuple[str, int]] = set()
+        for sid in scenario_ids_:
+            rows = conn.execute(
+                "SELECT opencode_exit_code FROM runs WHERE scenario = ? AND model = ? ORDER BY rowid",
+                (sid, model),
+            ).fetchall()
+            for attempt_index, row in enumerate(rows):
+                done.add((sid, attempt_index))
+        conn.close()
+        return done
+    except Exception:
+        return set()
+
+
 def run_scenarios(args: argparse.Namespace) -> None:
     if not args.scenario:
         raise SystemExit("run requires --challenge or --scenario")
     db_path = Path(args.db)
     runs_dir = Path(args.runs_dir)
     selected = expand_scenarios(args.scenario, pack=args.pack)
+    model_key = args.model or "<opencode-default>"
+
+    completed: set[tuple[str, int]] = set()
+    if args.resume:
+        completed = _completed_attempts(db_path, model=model_key, scenario_ids_=selected)
+        if completed:
+            print(f"Resume: skipping {len(completed)} already-completed attempt(s).")
+
+    skipped_timeout: set[str] = set()
+    if getattr(args, "skip_timeouts", False) and db_path.exists():
+        try:
+            conn = sqlite3.connect(db_path)
+            rows = conn.execute(
+                "SELECT DISTINCT scenario FROM runs WHERE model = ? AND opencode_exit_code = 124",
+                (model_key,),
+            ).fetchall()
+            conn.close()
+            skipped_timeout = {r[0] for r in rows}
+            if skipped_timeout:
+                print(f"Skip-timeouts: skipping {len(skipped_timeout)} scenario(s) that previously timed out.")
+        except Exception:
+            pass
+
     run_ids = []
+    skipped = 0
     for index in range(args.runs):
         for scenario_id in selected:
+            if scenario_id in skipped_timeout:
+                print(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — previous timeout.")
+                skipped += 1
+                continue
+            if (scenario_id, index) in completed:
+                print(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — already complete.")
+                skipped += 1
+                continue
             print(f"Running {scenario_id} ({index + 1}/{args.runs})...")
             run_id = run_one(
                 scenario_id=scenario_id,
@@ -361,6 +418,8 @@ def run_scenarios(args: argparse.Namespace) -> None:
             )
             run_ids.append(run_id)
             print(f"  stored run_id={run_id}")
+    if skipped:
+        print(f"Skipped {skipped} attempt(s).")
     print(f"Saved {len(run_ids)} run(s) to {db_path.resolve()}")
 
 
@@ -486,6 +545,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--default-format",
         action="store_true",
         help="Use OpenCode formatted output instead of raw JSON events.",
+    )
+    run.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Skip (scenario, attempt) pairs already stored in the DB for the same model. "
+            "Safe to re-run the same command after an interruption."
+        ),
+    )
+    run.add_argument(
+        "--skip-timeouts",
+        action="store_true",
+        help="Skip scenarios that timed out (exit code 124) in a previous run.",
     )
 
     inspect = subparsers.add_parser("inspect", help="Inspect saved run inputs, outputs, and artifacts.")

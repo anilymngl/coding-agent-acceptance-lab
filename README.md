@@ -174,9 +174,68 @@ uv run ci-vibe-evaluate run \
 ```
 
 Each review directory contains `EVALUATION_PACKET.md`, raw OpenCode stdout/stderr,
-and either a validated `evaluation.json` from the evaluator agent or an explicit
-`blocked/invalid` validation record. The evaluator is only allowed to cite exact
-quotes from the packet, so reports are accountable rather than free-form vibes.
+a live-workbench directory, and either a validated `evaluation.json` from the
+evaluator agent or an explicit fallback validation record.
+
+The evaluator is an agent, not just a one-shot classifier. Before judging, it gets:
+
+- `BUDGET.md`: hard timeout plus soft working-time, token, tool-call, and shadow-fix budgets.
+- `WORKING_BOARD.md`: visible notes for reproduction, contract hypothesis, shadow fix, and verdict.
+- `workbench/seed_visible_repo`: original challenge repo before the model patch.
+- `workbench/model_repo`: visible repo plus the model patch plus hidden acceptance tests.
+- `workbench/shadow_repo`: scratch repo where the evaluator can test a better fix.
+- `workbench/model_patch.diff`: exact patch produced by the model under test.
+- `workbench/model_repo_test.txt`: reproduced public+hidden test result for the patched repo.
+
+Final evaluator JSON is validated with Pydantic models in `ci_vibe_lab/evaluator.py`.
+The schema forbids extra keys, bounds numeric scores, constrains enum fields, and
+then checks evidence quotes against exact packet substrings. In `--loose` mode,
+the raw evaluator output, stream, and working board are preserved even if the
+summary JSON fails validation; the report falls back to deterministic summary
+data so a bad evaluator response does not hide the run.
+
+To watch the evaluator stream live on one public-green/hidden-red North Mini run:
+
+```bash
+uv run ci-vibe-evaluate run \
+  --db data/results.sqlite \
+  --hidden-only \
+  --public-green-only \
+  --target-model opencode/north-mini-code-free \
+  --model deepseek/deepseek-v4-pro \
+  --auto-approve \
+  --out runs/evaluator-agent/deepseek-v4-pro-live-smoke \
+  --report reports/deepseek-v4-pro-live-smoke-2026-06-19.md \
+  --timeout 120 \
+  --max-rows 1 \
+  --stream \
+  --loose \
+  --budget-minutes 4 \
+  --token-budget 6000 \
+  --tool-call-budget 18 \
+  --shadow-fix-mode optional \
+  --shadow-fix-budget-minutes 2
+```
+
+Inspect the full agent envelope after the run:
+
+```bash
+find runs/evaluator-agent/deepseek-v4-pro-live-smoke -maxdepth 2 -type f
+cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/WORKING_BOARD.md
+cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/evaluation.json
+cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/evaluator_stdout.jsonl
+```
+
+The model-under-test envelope is separate and can be inspected with:
+
+```bash
+uv run ci-vibe-run inspect \
+  --db data/results.sqlite \
+  --latest \
+  --scenario metric_semantic_mismatch \
+  --model opencode/north-mini-code-free \
+  --full
+```
 
 ## Dashboard
 

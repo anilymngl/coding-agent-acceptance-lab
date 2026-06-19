@@ -7,7 +7,9 @@ name = "north-mini-test"
 version = "0.1.0"
 description = "Local OpenCode vibe eval harness for small CI-forensics coding-agent tasks."
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.7",
+]
 
 [project.optional-dependencies]
 app = [

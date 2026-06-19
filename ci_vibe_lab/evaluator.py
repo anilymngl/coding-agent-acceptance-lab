@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import selectors
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -11,33 +13,57 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from textwrap import dedent
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from ci_vibe_lab.scenarios import TEST_COMMAND, get_scenario, write_hidden_test, write_scenario
 
 
 DEFAULT_DB = Path("data/results.sqlite")
 DEFAULT_OUT_DIR = Path("runs/evaluator-agent")
 
-VERDICTS = {"pass", "public_green_hidden_red", "public_red", "blocked"}
-ROOT_CAUSE_CATEGORIES = {
-    "no_issue_detected",
-    "missed_hidden_contract",
-    "incomplete_domain_policy",
-    "edge_case_gap",
-    "wrong_fix_strategy",
-    "insufficient_verification",
-    "public_failure",
-    "evaluator_blocked",
-}
-SEVERITIES = {"low", "medium", "high"}
-EVIDENCE_SOURCES = {
-    "challenge_contract",
-    "patch",
-    "public_test_output",
-    "hidden_test_output",
-    "final_worktree",
-    "evaluator_validation",
-}
-REVIEW_SOURCES = {"evaluator_agent", "deterministic_fallback"}
-VALIDATION_STATUSES = {"valid", "invalid", "not_run"}
+class EvaluationEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: Literal[
+        "challenge_contract",
+        "patch",
+        "public_test_output",
+        "hidden_test_output",
+        "final_worktree",
+        "evaluator_validation",
+    ]
+    quote: str = Field(min_length=1)
+    interpretation: str = Field(min_length=1)
+
+
+class EvaluationReview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["ci-vibe-evaluator/v1"]
+    review_source: Literal["evaluator_agent", "deterministic_fallback"]
+    validation_status: Literal["valid", "invalid", "not_run"]
+    verdict: Literal["pass", "public_green_hidden_red", "public_red", "blocked"]
+    root_cause_category: Literal[
+        "no_issue_detected",
+        "missed_hidden_contract",
+        "incomplete_domain_policy",
+        "edge_case_gap",
+        "wrong_fix_strategy",
+        "insufficient_verification",
+        "public_failure",
+        "evaluator_blocked",
+    ]
+    root_cause: str = Field(min_length=1)
+    missed_contract: str = Field(min_length=1)
+    patch_quality: int = Field(ge=1, le=5)
+    debug_discipline: int = Field(ge=1, le=5)
+    severity: Literal["low", "medium", "high"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence: list[EvaluationEvidence] = Field(min_length=1)
+    recommendation: str = Field(min_length=1)
+    review_limits: str = Field(min_length=1)
 
 
 @dataclass(frozen=True)
@@ -59,14 +85,26 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return connection
 
 
-def load_rows(db_path: Path, *, hidden_only: bool, pack: str | None) -> list[sqlite3.Row]:
+def load_rows(
+    db_path: Path,
+    *,
+    hidden_only: bool,
+    pack: str | None,
+    target_model: str | None,
+    public_green_only: bool,
+) -> list[sqlite3.Row]:
     clauses = []
     params: list[object] = []
     if hidden_only:
         clauses.append("hidden_pass = 0")
+    if public_green_only:
+        clauses.append("public_pass = 1")
     if pack:
         clauses.append("challenge_pack = ?")
         params.append(pack)
+    if target_model:
+        clauses.append("model = ?")
+        params.append(target_model)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     with connect(db_path) as connection:
         return list(connection.execute(f"SELECT * FROM runs {where} ORDER BY id", params))
@@ -96,6 +134,183 @@ def read_text(path_value: object, fallback: str = "") -> str:
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def build_budget_note(
+    *,
+    timeout: int,
+    budget_minutes: int | None,
+    token_budget: int | None,
+    tool_call_budget: int | None,
+    shadow_fix_mode: str,
+    shadow_fix_budget_minutes: int | None,
+    loose: bool,
+) -> str:
+    lines = [
+        "# Evaluator Budget",
+        "",
+        f"- Hard process timeout: {timeout} seconds.",
+        f"- Loose mode: {'on' if loose else 'off'}.",
+    ]
+    if budget_minutes is not None:
+        lines.append(f"- Soft working-time budget: about {budget_minutes} minute(s).")
+    if token_budget is not None:
+        lines.append(f"- Soft token budget: about {token_budget} output/input reasoning tokens total.")
+    if tool_call_budget is not None:
+        lines.append(f"- Soft tool-call budget: about {tool_call_budget} tool calls.")
+    lines.append(f"- Shadow fix mode: {shadow_fix_mode}.")
+    if shadow_fix_budget_minutes is not None:
+        lines.append(f"- Shadow fix budget: about {shadow_fix_budget_minutes} minute(s).")
+    lines.extend(
+        [
+            "",
+            "Treat these as operating budgets. The CLI enforces only the hard process timeout; "
+            "token and tool-call budgets are evaluator instructions because OpenCode does not "
+            "expose native token/tool-call limit flags for `opencode run`.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def copy_repo_tree(source: Path, destination: Path) -> None:
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(
+        source,
+        destination,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+
+
+def apply_patch(repo: Path, patch: str) -> str:
+    if not patch.strip():
+        return "No patch content was available for this run.\n"
+    completed = subprocess.run(
+        ["git", "apply", "--whitespace=nowarn"],
+        cwd=repo,
+        input=patch,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = completed.stdout
+    if completed.stderr:
+        output += ("\n" if output else "") + completed.stderr
+    if completed.returncode == 0:
+        return "Patch applied cleanly.\n" + output
+    return f"Patch apply failed with exit code {completed.returncode}.\n{output}"
+
+
+def run_repro_command(repo: Path, *, timeout: int = 60) -> str:
+    try:
+        completed = subprocess.run(
+            TEST_COMMAND,
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        output = completed.stdout
+        if completed.stderr:
+            output += ("\n" if output else "") + completed.stderr
+        return f"$ {' '.join(TEST_COMMAND)}\nexit_code={completed.returncode}\n{output}"
+    except subprocess.TimeoutExpired as exc:
+        output = ""
+        if exc.stdout:
+            output += exc.stdout if isinstance(exc.stdout, str) else exc.stdout.decode("utf-8", "replace")
+        if exc.stderr:
+            output += ("\n" if output else "")
+            output += exc.stderr if isinstance(exc.stderr, str) else exc.stderr.decode("utf-8", "replace")
+        return f"$ {' '.join(TEST_COMMAND)}\nexit_code=124\n{output}\nCommand timed out after {timeout} seconds."
+
+
+def working_board_template(row: sqlite3.Row) -> str:
+    return dedent(
+        f"""
+        # Evaluator Working Board
+
+        Challenge: `{row['scenario']}`
+        Run ID: `{row['run_id']}`
+        Model under test: `{row['model']}`
+
+        ## Reproduction
+
+        - Public/hidden reproduction command:
+        - Observed model_repo result:
+
+        ## Contract Hypothesis
+
+        - Missed or satisfied contract:
+        - Why this is the right interpretation:
+
+        ## Shadow Fix Lab
+
+        - Attempted in `workbench/shadow_repo`: yes/no
+        - What changed, if attempted:
+        - Test result, if attempted:
+
+        ## Verdict Notes
+
+        - Final verdict:
+        - Patch quality rationale:
+        - Debug discipline rationale:
+        """
+    ).lstrip()
+
+
+def prepare_workbench(row: sqlite3.Row, review_dir: Path) -> None:
+    workbench = review_dir / "workbench"
+    if workbench.exists():
+        shutil.rmtree(workbench)
+    workbench.mkdir(parents=True)
+
+    seed_repo = workbench / "seed_visible_repo"
+    model_repo = workbench / "model_repo"
+    shadow_repo = workbench / "shadow_repo"
+    hidden_dir = workbench / "hidden_acceptance"
+
+    write_scenario(str(row["scenario"]), seed_repo, clean=True)
+    copy_repo_tree(seed_repo, model_repo)
+    copy_repo_tree(seed_repo, shadow_repo)
+
+    patch = read_text(row["patch_path"], str(row["patch"] or ""))
+    write_text(workbench / "model_patch.diff", patch)
+    write_text(workbench / "model_patch_apply.txt", apply_patch(model_repo, patch))
+
+    hidden_dir.mkdir(parents=True, exist_ok=True)
+    hidden_text = get_scenario(str(row["scenario"])).hidden_test
+    write_text(hidden_dir / "test_hidden_acceptance.py", hidden_text)
+    write_hidden_test(str(row["scenario"]), model_repo)
+    write_hidden_test(str(row["scenario"]), shadow_repo)
+
+    write_text(workbench / "model_repo_test.txt", run_repro_command(model_repo))
+    write_text(
+        workbench / "README.md",
+        dedent(
+            f"""
+            # Evaluator Agent Workbench
+
+            This directory lets the evaluator act like a coding agent while keeping
+            the model-under-test artifact auditable.
+
+            - `seed_visible_repo/`: original visible challenge repo before the model patch.
+            - `model_repo/`: original repo plus the model patch plus hidden acceptance tests.
+            - `shadow_repo/`: scratch repo plus hidden acceptance tests. The evaluator may edit this
+              directory to test a better fix.
+            - `hidden_acceptance/test_hidden_acceptance.py`: hidden test source.
+            - `model_patch.diff`: exact patch captured from the model-under-test run.
+            - `model_repo_test.txt`: harness reproduction of public+hidden tests in `model_repo`.
+
+            Test command:
+
+            ```bash
+            {' '.join(TEST_COMMAND)}
+            ```
+            """
+        ).strip()
+        + "\n",
+    )
 
 
 def snapshot_files(workdir: Path, *, max_chars: int = 18000) -> str:
@@ -210,11 +425,17 @@ def make_packet(row: sqlite3.Row) -> str:
 def evaluator_prompt(review_dir: Path | None = None) -> str:
     if review_dir is None:
         packet_path = "./EVALUATION_PACKET.md"
+        workbench_path = "./workbench"
+        budget_path = "./BUDGET.md"
+        working_board_path = "./WORKING_BOARD.md"
         json_path = "./evaluation.json"
         markdown_path = "./evaluation.md"
     else:
         resolved = review_dir.resolve()
         packet_path = str(resolved / "EVALUATION_PACKET.md")
+        workbench_path = str(resolved / "workbench")
+        budget_path = str(resolved / "BUDGET.md")
+        working_board_path = str(resolved / "WORKING_BOARD.md")
         json_path = str(resolved / "evaluation.json")
         markdown_path = str(resolved / "evaluation.md")
     return dedent(
@@ -222,13 +443,17 @@ def evaluator_prompt(review_dir: Path | None = None) -> str:
         You are the evaluator agent for a coding-agent benchmark.
 
         Non-negotiable constraints:
-        - Do not fix code.
-        - Read only `{packet_path}`.
-        - Write only `{json_path}` and `{markdown_path}`.
+        - Do not fix the model-under-test artifact.
+        - You may edit only `{workbench_path}/shadow_repo` if a scratch shadow fix helps you test your judgment.
+        - Read `{budget_path}` before deciding how deep to go.
+        - Read `{packet_path}` and files under `{workbench_path}`.
+        - Write only `{working_board_path}`, `{json_path}`, `{markdown_path}`, and files under `{workbench_path}/shadow_repo`.
         - Do not search parent directories.
         - Do not use or write any other `runs/...` path.
         - Do not edit EVALUATION_PACKET.md.
-        - Use only evidence present in `{packet_path}`.
+        - Do not edit `{workbench_path}/model_repo`; use it only for inspection and test reproduction.
+        - Use the workbench before judging: inspect the model patch, run or read the reproduced tests, and optionally test a better fix in `shadow_repo`.
+        - Use only evidence present in `{packet_path}` for final JSON evidence quotes.
         - Every evidence.quote must be an exact contiguous substring copied from `{packet_path}`.
         - Keep evidence.quote short: prefer one exact line or one exact bullet.
         - For patch evidence, quote one exact added/removed/context line, not a reconstructed diff hunk.
@@ -236,7 +461,17 @@ def evaluator_prompt(review_dir: Path | None = None) -> str:
         - If public tests failed, the verdict must be public_red.
         - Do not invent missing tests, hidden intent, source files, or facts.
 
-        Your job is to analyze the run in EVALUATION_PACKET.md and write two files:
+        Your job is to analyze the run in EVALUATION_PACKET.md and the evaluator workbench.
+        First update `{working_board_path}` with your working notes:
+
+        - reproduction result from `workbench/model_repo`
+        - contract hypothesis
+        - whether you attempted a shadow fix in `workbench/shadow_repo`
+        - verdict rationale
+
+        Then write two final files. `evaluation.md` can be natural and practical.
+        `evaluation.json` should follow the schema so the harness can summarize the run,
+        but your working board is the primary agent trace.
 
         1. evaluation.json
         2. evaluation.md
@@ -287,22 +522,6 @@ def evaluator_prompt(review_dir: Path | None = None) -> str:
         Before writing, check your own JSON against the schema above.
         """
     ).strip()
-
-
-def clamp_int(value: object, *, low: int = 1, high: int = 5, default: int = 3) -> int:
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return default
-    return max(low, min(high, number))
-
-
-def clamp_float(value: object, *, low: float = 0.0, high: float = 1.0, default: float = 0.5) -> float:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return default
-    return max(low, min(high, number))
 
 
 def evidence_item(source: str, quote: str, interpretation: str) -> dict[str, str]:
@@ -443,56 +662,22 @@ def validation_error_review(row: sqlite3.Row, errors: list[str]) -> dict[str, ob
     }
 
 
-def validate_review(review: dict[str, object], packet: str, row: sqlite3.Row) -> list[str]:
+def validate_and_normalize_review(
+    review: dict[str, object],
+    packet: str,
+    row: sqlite3.Row,
+) -> tuple[dict[str, object], list[str]]:
     errors: list[str] = []
-    expected_keys = {
-        "schema_version",
-        "review_source",
-        "validation_status",
-        "verdict",
-        "root_cause_category",
-        "root_cause",
-        "missed_contract",
-        "patch_quality",
-        "debug_discipline",
-        "severity",
-        "confidence",
-        "evidence",
-        "recommendation",
-        "review_limits",
-    }
-    extra = set(review) - expected_keys
-    missing = expected_keys - set(review)
-    if extra:
-        errors.append(f"extra top-level keys: {sorted(extra)}")
-    if missing:
-        errors.append(f"missing top-level keys: {sorted(missing)}")
-    if review.get("schema_version") != "ci-vibe-evaluator/v1":
-        errors.append("schema_version must be ci-vibe-evaluator/v1")
-    if review.get("review_source") not in REVIEW_SOURCES:
-        errors.append("review_source enum violation")
-    if review.get("validation_status") not in VALIDATION_STATUSES:
-        errors.append("validation_status enum violation")
-    if review.get("verdict") not in VERDICTS:
-        errors.append("verdict enum violation")
-    if review.get("root_cause_category") not in ROOT_CAUSE_CATEGORIES:
-        errors.append("root_cause_category enum violation")
-    if review.get("severity") not in SEVERITIES:
-        errors.append("severity enum violation")
-    for key in ["root_cause", "missed_contract", "recommendation", "review_limits"]:
-        if not isinstance(review.get(key), str) or not str(review.get(key)).strip():
-            errors.append(f"{key} must be non-empty text")
-    for key in ["patch_quality", "debug_discipline"]:
-        value = review.get(key)
-        if not isinstance(value, int) or not 1 <= value <= 5:
-            errors.append(f"{key} must be integer 1-5")
-    confidence = review.get("confidence")
-    if not isinstance(confidence, (int, float)) or not 0.0 <= float(confidence) <= 1.0:
-        errors.append("confidence must be number 0.0-1.0")
+    try:
+        parsed = EvaluationReview.model_validate(review)
+    except ValidationError as exc:
+        return review, [f"pydantic schema error: {error['loc']}: {error['msg']}" for error in exc.errors()]
+
+    normalized: dict[str, object] = parsed.model_dump(mode="json")
 
     public_pass = int(row["public_pass"])
     hidden_pass = int(row["hidden_pass"])
-    verdict = review.get("verdict")
+    verdict = normalized.get("verdict")
     if public_pass and not hidden_pass and verdict != "public_green_hidden_red":
         errors.append("public green + hidden red rows must use verdict public_green_hidden_red")
     if not public_pass and verdict != "public_red":
@@ -500,31 +685,22 @@ def validate_review(review: dict[str, object], packet: str, row: sqlite3.Row) ->
     if public_pass and hidden_pass and verdict not in {"pass", "blocked"}:
         errors.append("public+hidden pass rows should use verdict pass unless evaluator blocked")
 
-    evidence = review.get("evidence")
-    if not isinstance(evidence, list) or not evidence:
-        errors.append("evidence must be a non-empty list")
+    evidence = normalized.get("evidence")
+    if not isinstance(evidence, list):
         evidence = []
     hidden_cited = False
     patch_or_contract_cited = False
     for index, item in enumerate(evidence):
         if not isinstance(item, dict):
-            errors.append(f"evidence[{index}] must be an object")
             continue
         source = item.get("source")
         quote = item.get("quote")
-        interpretation = item.get("interpretation")
-        if source not in EVIDENCE_SOURCES:
-            errors.append(f"evidence[{index}].source enum violation")
         if source == "hidden_test_output":
             hidden_cited = True
         if source in {"patch", "challenge_contract"}:
             patch_or_contract_cited = True
-        if not isinstance(quote, str) or not quote.strip():
-            errors.append(f"evidence[{index}].quote must be non-empty")
-        elif quote not in packet and source != "evaluator_validation":
+        if isinstance(quote, str) and quote not in packet and source != "evaluator_validation":
             errors.append(f"evidence[{index}].quote is not an exact packet substring")
-        if not isinstance(interpretation, str) or not interpretation.strip():
-            errors.append(f"evidence[{index}].interpretation must be non-empty")
     if public_pass and not hidden_pass:
         if len(evidence) < 2:
             errors.append("hidden failures require at least two evidence objects")
@@ -532,15 +708,30 @@ def validate_review(review: dict[str, object], packet: str, row: sqlite3.Row) ->
             errors.append("hidden failures require hidden_test_output evidence")
         if not patch_or_contract_cited:
             errors.append("hidden failures require patch or challenge_contract evidence")
+    return normalized, errors
+
+
+def validate_review(review: dict[str, object], packet: str, row: sqlite3.Row) -> list[str]:
+    _normalized, errors = validate_and_normalize_review(review, packet, row)
     return errors
 
 
-def normalize_review(review: dict[str, object]) -> dict[str, object]:
-    normalized = dict(review)
-    normalized["patch_quality"] = clamp_int(normalized.get("patch_quality"))
-    normalized["debug_discipline"] = clamp_int(normalized.get("debug_discipline"))
-    normalized["confidence"] = clamp_float(normalized.get("confidence"))
-    return normalized
+def validate_working_board(review_dir: Path) -> list[str]:
+    path = review_dir / "WORKING_BOARD.md"
+    if not path.exists():
+        return ["WORKING_BOARD.md was not created"]
+    text = path.read_text(encoding="utf-8", errors="replace")
+    required_section_patterns = [
+        ("reproduction", r"^##\s+.*reproduction"),
+        ("contract hypothesis", r"^##\s+.*(contract|hypothesis)"),
+        ("shadow fix lab", r"^##\s+.*shadow"),
+        ("verdict notes", r"^##\s+.*(verdict|rationale)"),
+    ]
+    errors = []
+    for label, pattern in required_section_patterns:
+        if not re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE):
+            errors.append(f"WORKING_BOARD.md missing {label} section")
+    return errors
 
 
 def build_opencode_evaluator_command(
@@ -577,6 +768,7 @@ def run_opencode_evaluator(
     opencode_bin: str,
     timeout: int,
     auto_approve: bool,
+    stream: bool,
 ) -> tuple[int, str, str]:
     command = build_opencode_evaluator_command(
         review_dir=review_dir,
@@ -585,6 +777,8 @@ def run_opencode_evaluator(
         opencode_bin=opencode_bin,
         auto_approve=auto_approve,
     )
+    if stream:
+        return run_opencode_evaluator_streaming(command, timeout=timeout)
     try:
         completed = subprocess.run(
             command,
@@ -600,6 +794,59 @@ def run_opencode_evaluator(
         stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", "replace")
         stderr += f"\nEvaluator timed out after {timeout} seconds."
         return 124, stdout, stderr
+
+
+def run_opencode_evaluator_streaming(command: list[str], *, timeout: int) -> tuple[int, str, str]:
+    started = time.monotonic()
+    process = subprocess.Popen(
+        command,
+        cwd=Path.cwd(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    assert process.stdout is not None
+    assert process.stderr is not None
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ, "stdout")
+    selector.register(process.stderr, selectors.EVENT_READ, "stderr")
+    while True:
+        if time.monotonic() - started > timeout:
+            process.kill()
+            selector.close()
+            tail_stdout, tail_stderr = process.communicate()
+            if tail_stdout:
+                print(tail_stdout, end="", flush=True)
+                stdout_chunks.append(tail_stdout)
+            if tail_stderr:
+                print(tail_stderr, end="", file=sys.stderr, flush=True)
+                stderr_chunks.append(tail_stderr)
+            stderr = "".join(stderr_chunks) + f"\nEvaluator timed out after {timeout} seconds."
+            return 124, "".join(stdout_chunks), stderr
+        for key, _event in selector.select(timeout=0.2):
+            line = key.fileobj.readline()
+            if not line:
+                selector.unregister(key.fileobj)
+                continue
+            if key.data == "stdout":
+                print(line, end="", flush=True)
+                stdout_chunks.append(line)
+            else:
+                print(line, end="", file=sys.stderr, flush=True)
+                stderr_chunks.append(line)
+        if process.poll() is not None:
+            selector.close()
+            remaining_stdout, remaining_stderr = process.communicate()
+            if remaining_stdout:
+                print(remaining_stdout, end="", flush=True)
+                stdout_chunks.append(remaining_stdout)
+            if remaining_stderr:
+                print(remaining_stderr, end="", file=sys.stderr, flush=True)
+                stderr_chunks.append(remaining_stderr)
+            return process.returncode, "".join(stdout_chunks), "".join(stderr_chunks)
 
 
 def ensure_review_workspace(review_dir: Path) -> None:
@@ -624,6 +871,13 @@ def evaluate_row(
     opencode_bin: str,
     timeout: int,
     auto_approve: bool,
+    stream: bool,
+    loose: bool,
+    budget_minutes: int | None,
+    token_budget: int | None,
+    tool_call_budget: int | None,
+    shadow_fix_mode: str,
+    shadow_fix_budget_minutes: int | None,
 ) -> ReviewResult:
     start = time.monotonic()
     review_dir = out_dir / str(row["run_id"])
@@ -631,12 +885,33 @@ def evaluate_row(
     ensure_review_workspace(review_dir)
     packet = make_packet(row)
     write_text(review_dir / "EVALUATION_PACKET.md", packet)
+    prepare_workbench(row, review_dir)
+    write_text(review_dir / "WORKING_BOARD.md", working_board_template(row))
+    write_text(
+        review_dir / "BUDGET.md",
+        build_budget_note(
+            timeout=timeout,
+            budget_minutes=budget_minutes,
+            token_budget=token_budget,
+            tool_call_budget=tool_call_budget,
+            shadow_fix_mode=shadow_fix_mode,
+            shadow_fix_budget_minutes=shadow_fix_budget_minutes,
+            loose=loose,
+        ),
+    )
     write_text(review_dir / "prompt.txt", evaluator_prompt(review_dir) + "\n")
 
     agent_exit_code: int | None = None
     stderr = ""
     if model:
-        for filename in ["evaluation.json", "evaluation.md", "evaluation.agent.json", "validation_errors.json"]:
+        for filename in [
+            "evaluation.json",
+            "evaluation.md",
+            "evaluation.agent.json",
+            "validation_errors.json",
+            "evaluator_stdout.jsonl",
+            "evaluator_stderr.txt",
+        ]:
             path = review_dir / filename
             if path.exists():
                 path.unlink()
@@ -647,19 +922,28 @@ def evaluate_row(
             opencode_bin=opencode_bin,
             timeout=timeout,
             auto_approve=auto_approve,
+            stream=stream,
         )
         write_text(review_dir / "evaluator_stdout.jsonl", stdout)
         write_text(review_dir / "evaluator_stderr.txt", stderr)
 
     agent_review_path = review_dir / "evaluation.json"
     if model and agent_review_path.exists():
-        finalize_agent_review(review_dir, row, packet)
+        finalize_agent_review(review_dir, row, packet, loose=loose)
     elif model:
         errors = agent_missing_errors(agent_exit_code=agent_exit_code, stderr=stderr)
         write_text(review_dir / "validation_errors.json", json.dumps(errors, indent=2) + "\n")
-        review = validation_error_review(row, errors)
+        review = deterministic_review(row) if loose else validation_error_review(row, errors)
+        if loose:
+            review["review_limits"] = (
+                "Loose evaluator mode used deterministic summary because the evaluator "
+                "did not create schema JSON; inspect WORKING_BOARD.md and evaluator_stdout.jsonl."
+            )
         write_text(review_dir / "evaluation.json", json.dumps(review, indent=2, sort_keys=True) + "\n")
-        write_text(review_dir / "evaluation.md", review_markdown(row, review))
+        if loose and (review_dir / "evaluation.md").exists():
+            pass
+        else:
+            write_text(review_dir / "evaluation.md", review_markdown(row, review))
     elif not (review_dir / "evaluation.json").exists():
         review = deterministic_review(row)
         write_text(review_dir / "evaluation.json", json.dumps(review, indent=2, sort_keys=True) + "\n")
@@ -674,7 +958,7 @@ def evaluate_row(
     )
 
 
-def finalize_agent_review(review_dir: Path, row: sqlite3.Row, packet: str) -> None:
+def finalize_agent_review(review_dir: Path, row: sqlite3.Row, packet: str, *, loose: bool) -> None:
     agent_review_path = review_dir / "evaluation.json"
     try:
         raw_review = agent_review_path.read_text(encoding="utf-8")
@@ -687,15 +971,22 @@ def finalize_agent_review(review_dir: Path, row: sqlite3.Row, packet: str) -> No
         if not isinstance(agent_review, dict):
             errors = ["evaluation.json top-level value must be an object"]
         else:
-            agent_review = normalize_review(agent_review)
-            errors = validate_review(agent_review, packet, row)
+            agent_review, errors = validate_and_normalize_review(agent_review, packet, row)
+            errors.extend(validate_working_board(review_dir))
 
     write_text(review_dir / "evaluation.agent.json", raw_review)
     if errors:
         write_text(review_dir / "validation_errors.json", json.dumps(errors, indent=2) + "\n")
-        review = validation_error_review(row, errors)
+        review = deterministic_review(row) if loose else validation_error_review(row, errors)
+        if loose:
+            review["review_limits"] = (
+                "Loose evaluator mode kept the agent's raw evaluation.agent.json, "
+                "WORKING_BOARD.md, and evaluator stream, but used deterministic summary "
+                f"because schema validation found: {'; '.join(errors[:4])}"
+            )
         write_text(review_dir / "evaluation.json", json.dumps(review, indent=2, sort_keys=True) + "\n")
-        write_text(review_dir / "evaluation.md", review_markdown(row, review))
+        if not loose or not (review_dir / "evaluation.md").exists():
+            write_text(review_dir / "evaluation.md", review_markdown(row, review))
         return
 
     agent_review["validation_status"] = "valid"
@@ -814,10 +1105,18 @@ def build_summary_report(review_root: Path, out_path: Path) -> None:
 
 
 def run_reviews(args: argparse.Namespace) -> None:
-    rows = load_rows(Path(args.db), hidden_only=args.hidden_only, pack=args.pack)
+    rows = load_rows(
+        Path(args.db),
+        hidden_only=args.hidden_only,
+        pack=args.pack,
+        target_model=args.target_model,
+        public_green_only=args.public_green_only,
+    )
     if not rows:
         print("No rows matched.")
         return
+    if args.max_rows is not None:
+        rows = rows[: args.max_rows]
     out_dir = Path(args.out)
     results = []
     for row in rows:
@@ -830,6 +1129,13 @@ def run_reviews(args: argparse.Namespace) -> None:
             opencode_bin=args.opencode_bin,
             timeout=args.timeout,
             auto_approve=args.auto_approve,
+            stream=args.stream,
+            loose=args.loose,
+            budget_minutes=args.budget_minutes,
+            token_budget=args.token_budget,
+            tool_call_budget=args.tool_call_budget,
+            shadow_fix_mode=args.shadow_fix_mode,
+            shadow_fix_budget_minutes=args.shadow_fix_budget_minutes,
         )
         results.append(result)
         print(f"  wrote {result.review_dir}")
@@ -846,11 +1152,34 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--db", default=str(DEFAULT_DB))
     run.add_argument("--out", default=str(DEFAULT_OUT_DIR))
     run.add_argument("--pack", help="Only evaluate rows from this challenge pack.")
+    run.add_argument("--target-model", help="Only evaluate rows produced by this model under test.")
     run.add_argument("--hidden-only", action="store_true", help="Only evaluate hidden-test failures.")
+    run.add_argument(
+        "--public-green-only",
+        action="store_true",
+        help="Only evaluate runs where public tests passed. Useful for expensive public-green/hidden-red review.",
+    )
     run.add_argument("--model", help="Optional OpenCode model for evaluator-agent review.")
     run.add_argument("--agent", help="Optional OpenCode agent name for evaluator-agent review.")
     run.add_argument("--opencode-bin", default="opencode")
     run.add_argument("--timeout", type=int, default=900)
+    run.add_argument("--max-rows", type=int, help="Evaluate at most this many matching rows.")
+    run.add_argument("--stream", action="store_true", help="Print evaluator-agent stdout/stderr as it runs.")
+    run.add_argument("--loose", action="store_true", help="Keep flexible evaluator outputs and fallback summaries instead of hard-blocking on schema issues.")
+    run.add_argument("--budget-minutes", type=int, help="Soft evaluator working-time budget written to BUDGET.md.")
+    run.add_argument("--token-budget", type=int, help="Soft evaluator token budget written to BUDGET.md.")
+    run.add_argument("--tool-call-budget", type=int, help="Soft evaluator tool-call budget written to BUDGET.md.")
+    run.add_argument(
+        "--shadow-fix-mode",
+        choices=["off", "optional", "required"],
+        default="optional",
+        help="How much the evaluator should use shadow_repo when forming judgment.",
+    )
+    run.add_argument(
+        "--shadow-fix-budget-minutes",
+        type=int,
+        help="Soft time budget for any shadow fix attempt.",
+    )
     run.add_argument("--auto-approve", action="store_true")
     run.add_argument("--report", help="Write a Markdown summary report after reviews.")
 

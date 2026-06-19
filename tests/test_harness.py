@@ -11,7 +11,11 @@ from ci_vibe_lab.db import connect, insert_run
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
     extract_scenario_from_packet,
+    load_rows as load_evaluator_rows,
+    prepare_workbench,
     validate_review,
+    validate_working_board,
+    working_board_template,
 )
 from ci_vibe_lab.runner import inspect_run, run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
@@ -218,6 +222,79 @@ class DatabaseTests(unittest.TestCase):
 
 
 class EvaluatorTests(unittest.TestCase):
+    def test_prepare_workbench_creates_replay_and_shadow_repos(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            review_dir = Path(temp_dir) / "review"
+            review_dir.mkdir()
+            row = {
+                "scenario": "dependency_api_change",
+                "run_id": "run-1",
+                "model": "model/a",
+                "patch_path": "",
+                "patch": "",
+            }
+
+            prepare_workbench(row, review_dir)  # type: ignore[arg-type]
+            (review_dir / "WORKING_BOARD.md").write_text(
+                working_board_template(row),  # type: ignore[arg-type]
+                encoding="utf-8",
+            )
+
+            self.assertTrue((review_dir / "workbench/model_repo/tests/test_hidden_acceptance.py").exists())
+            self.assertTrue((review_dir / "workbench/shadow_repo/tests/test_hidden_acceptance.py").exists())
+            self.assertIn(
+                "No patch content",
+                (review_dir / "workbench/model_patch_apply.txt").read_text(encoding="utf-8"),
+            )
+            self.assertEqual(validate_working_board(review_dir), [])
+
+    def test_load_rows_can_filter_target_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "results.sqlite"
+            base = {
+                "scenario": "dependency_api_change",
+                "scenario_title": "Dependency API Change",
+                "challenge_pack": "ci_forensics",
+                "agent": "build",
+                "started_at": "2026-01-01T00:00:00+00:00",
+                "ended_at": "2026-01-01T00:00:01+00:00",
+                "duration_seconds": 1.0,
+                "workdir": str(Path(temp_dir) / "work"),
+                "prompt": "prompt",
+                "opencode_command": "[\"opencode\"]",
+                "opencode_exit_code": 0,
+                "baseline_pass": 0,
+                "public_pass": 1,
+                "hidden_pass": 0,
+                "baseline_output": "baseline",
+                "opencode_stdout": "{}",
+                "opencode_stderr": "",
+                "public_output": "public",
+                "hidden_output": "hidden",
+                "patch": "diff",
+            }
+            insert_run(db_path, {**base, "run_id": "run-a", "model": "model/a"})
+            insert_run(db_path, {**base, "run_id": "run-b", "model": "model/b"})
+            insert_run(
+                db_path,
+                {
+                    **base,
+                    "run_id": "run-c",
+                    "model": "model/b",
+                    "public_pass": 0,
+                },
+            )
+
+            rows = load_evaluator_rows(
+                db_path,
+                hidden_only=True,
+                pack=None,
+                target_model="model/b",
+                public_green_only=True,
+            )
+
+            self.assertEqual([row["run_id"] for row in rows], ["run-b"])
+
     def test_evaluator_command_uses_current_review_dir(self) -> None:
         review_dir = Path("/tmp/ci-vibe-review")
         command = build_opencode_evaluator_command(
@@ -283,6 +360,11 @@ class EvaluatorTests(unittest.TestCase):
         ]
         errors = validate_review(bad_review, packet, row)
         self.assertTrue(any("exact packet substring" in error for error in errors))
+
+        extra_key_review = dict(review)
+        extra_key_review["surprise"] = "not allowed"
+        errors = validate_review(extra_key_review, packet, row)
+        self.assertTrue(any("pydantic schema error" in error for error in errors))
 
 
 if __name__ == "__main__":

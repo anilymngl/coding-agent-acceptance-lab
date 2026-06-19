@@ -26,6 +26,17 @@ real coding-agent failure mode:
   the file.
 - `async_export_race`: fixes a deterministic async write race instead of calling
   the test flaky.
+- `pagination_cursor_drift`: follows renamed pagination cursors instead of
+  silently importing only the first page.
+- `env_bool_parser`: parses string feature flags safely instead of relying on
+  Python string truthiness.
+- `tenant_cache_leak`: preserves multi-tenant cache isolation for reused
+  external user IDs.
+- `decimal_money_rounding`: uses exact decimal money math and explicit cent
+  rounding.
+- `idempotency_key_regression`: keeps retry dedupe keys deterministic without
+  cross-order collisions.
+- `csv_header_contract`: preserves documented export columns and order.
 
 ## Setup
 

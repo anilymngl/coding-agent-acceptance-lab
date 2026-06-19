@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ci_vibe_lab.db import insert_run
+from ci_vibe_lab.db import connect, insert_run
 from ci_vibe_lab.runner import run_command
-from ci_vibe_lab.scenarios import TEST_COMMAND, scenario_ids, write_hidden_test, write_scenario
+from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
 
 class ScenarioTests(unittest.TestCase):
@@ -28,6 +28,16 @@ class ScenarioTests(unittest.TestCase):
             hidden_path = write_hidden_test("dependency_api_change", workdir)
             self.assertTrue(hidden_path.exists())
             self.assertIn("HiddenBillingAcceptanceTests", hidden_path.read_text(encoding="utf-8"))
+
+    def test_challenge_pack_has_at_least_ten_curated_cases(self) -> None:
+        manifest = challenge_manifest()
+        self.assertGreaterEqual(len(manifest), 10)
+        for challenge in manifest:
+            self.assertTrue(challenge["vibe"], challenge["id"])
+            self.assertTrue(challenge["trap"], challenge["id"])
+            self.assertGreaterEqual(len(challenge["expected_behavior"]), 3, challenge["id"])
+            self.assertGreaterEqual(len(challenge["success_signals"]), 3, challenge["id"])
+            self.assertGreaterEqual(len(challenge["failure_modes"]), 3, challenge["id"])
 
 
 class DatabaseTests(unittest.TestCase):
@@ -64,7 +74,52 @@ class DatabaseTests(unittest.TestCase):
                 count = connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
             self.assertEqual(count, 1)
 
+    def test_legacy_database_is_migrated_before_indexes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "legacy.sqlite"
+            with sqlite3.connect(db_path) as connection:
+                connection.execute(
+                    """
+                    CREATE TABLE runs (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      run_id TEXT NOT NULL UNIQUE,
+                      scenario TEXT NOT NULL,
+                      scenario_title TEXT NOT NULL,
+                      model TEXT,
+                      agent TEXT,
+                      started_at TEXT NOT NULL,
+                      ended_at TEXT NOT NULL,
+                      duration_seconds REAL NOT NULL,
+                      workdir TEXT NOT NULL,
+                      prompt TEXT NOT NULL,
+                      opencode_command TEXT NOT NULL,
+                      opencode_exit_code INTEGER,
+                      baseline_pass INTEGER NOT NULL,
+                      public_pass INTEGER NOT NULL,
+                      hidden_pass INTEGER NOT NULL,
+                      baseline_output TEXT NOT NULL,
+                      opencode_stdout TEXT NOT NULL,
+                      opencode_stderr TEXT NOT NULL,
+                      public_output TEXT NOT NULL,
+                      hidden_output TEXT NOT NULL,
+                      patch TEXT NOT NULL,
+                      patch_quality INTEGER,
+                      debug_discipline INTEGER,
+                      notes TEXT DEFAULT ''
+                    )
+                    """
+                )
+                connection.commit()
+
+            with connect(db_path) as connection:
+                columns = {
+                    row[1]
+                    for row in connection.execute("PRAGMA table_info(runs)").fetchall()
+                }
+
+            self.assertIn("challenge_pack", columns)
+            self.assertIn("artifact_dir", columns)
+
 
 if __name__ == "__main__":
     unittest.main()
-

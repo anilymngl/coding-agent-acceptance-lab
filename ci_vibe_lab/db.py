@@ -27,7 +27,7 @@ EXTRA_COLUMNS = {
 }
 
 
-SCHEMA = """
+TABLE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL UNIQUE,
@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS runs (
   debug_discipline INTEGER,
   notes TEXT DEFAULT ''
 );
+"""
 
+INDEX_SCHEMA = """
 CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at);
 CREATE INDEX IF NOT EXISTS idx_runs_scenario ON runs(scenario);
 CREATE INDEX IF NOT EXISTS idx_runs_pack ON runs(challenge_pack);
@@ -97,8 +99,9 @@ def connect(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(db_path)
     connection.row_factory = sqlite3.Row
-    connection.executescript(SCHEMA)
+    connection.executescript(TABLE_SCHEMA)
     migrate(connection)
+    connection.executescript(INDEX_SCHEMA)
     connection.commit()
     return connection
 

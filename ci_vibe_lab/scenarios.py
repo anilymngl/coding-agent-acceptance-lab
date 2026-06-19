@@ -619,6 +619,679 @@ _register(
 )
 
 
+_register(
+    Scenario(
+        id="pagination_cursor_drift",
+        title="Pagination Cursor Drift",
+        description=(
+            "A CRM API renamed its pagination field from next to next_cursor. "
+            "The sync silently imports only the first page."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_sync.py::SyncTests::test_sync_fetches_all_pages
+                AssertionError: 2 != 4
+
+                CRM SDK v3 renamed the response pagination field to next_cursor.
+                """
+            ).strip()
+            + "\n",
+            "app/crm_api.py": dedent(
+                """
+                PAGES = {
+                    None: {
+                        "users": [{"id": "u1"}, {"id": "u2"}],
+                        "next_cursor": "page-2",
+                    },
+                    "page-2": {
+                        "users": [{"id": "u3"}],
+                        "next_cursor": "page-3",
+                    },
+                    "page-3": {
+                        "users": [{"id": "u4"}],
+                        "next_cursor": None,
+                    },
+                }
+
+
+                def fetch_users(cursor: str | None = None) -> dict[str, object]:
+                    return PAGES[cursor]
+                """
+            ).strip()
+            + "\n",
+            "app/sync.py": dedent(
+                """
+                from app.crm_api import fetch_users
+
+
+                def sync_user_ids() -> list[str]:
+                    cursor = None
+                    user_ids: list[str] = []
+                    while True:
+                        page = fetch_users(cursor)
+                        user_ids.extend(user["id"] for user in page["users"])
+                        cursor = page.get("next")
+                        if cursor is None:
+                            return user_ids
+                """
+            ).strip()
+            + "\n",
+            "tests/test_sync.py": dedent(
+                """
+                import unittest
+
+                from app.sync import sync_user_ids
+
+
+                class SyncTests(unittest.TestCase):
+                    def test_sync_fetches_all_pages(self) -> None:
+                        self.assertEqual(sync_user_ids(), ["u1", "u2", "u3", "u4"])
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+            from unittest.mock import patch
+
+            from app import sync
+
+
+            class HiddenPaginationAcceptanceTests(unittest.TestCase):
+                def test_cursor_chain_is_followed_until_none(self) -> None:
+                    calls = []
+                    pages = {
+                        None: {"users": [{"id": "a"}], "next_cursor": "b"},
+                        "b": {"users": [{"id": "b"}], "next_cursor": "c"},
+                        "c": {"users": [{"id": "c"}], "next_cursor": None},
+                    }
+
+                    def fake_fetch(cursor=None):
+                        calls.append(cursor)
+                        return pages[cursor]
+
+                    with patch("app.sync.fetch_users", side_effect=fake_fetch):
+                        self.assertEqual(sync.sync_user_ids(), ["a", "b", "c"])
+                    self.assertEqual(calls, [None, "b", "c"])
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="pagination",
+        difficulty="medium",
+        vibe="A useful agent should identify silent partial import caused by a renamed pagination field.",
+        tags=("api-change", "pagination", "data-loss", "sync"),
+        trap="A weak fix may hardcode the known pages or append missing IDs instead of following the cursor contract.",
+        expected_behavior=(
+            "Inspect the API response shape and sync loop.",
+            "Use next_cursor as the pagination continuation token.",
+            "Stop only when the API explicitly returns None.",
+        ),
+        success_signals=(
+            "Public test imports all four users.",
+            "Hidden test verifies arbitrary cursor chains and call order.",
+            "No hardcoded user IDs or page names.",
+        ),
+        failure_modes=(
+            "Hardcodes page-2/page-3 behavior.",
+            "Stops after the visible fixture only.",
+            "Changes tests to accept partial import.",
+            "Introduces a loop that can spin forever.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="env_bool_parser",
+        title="Boolean Environment Parser",
+        description=(
+            "A CI image now sets destructive-mode flags to the string false. "
+            "The app treats every non-empty string as enabled."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_config.py::ConfigTests::test_false_string_disables_delete_mode
+                AssertionError: True is not false
+
+                New CI image exports EXPORT_DELETE_ENABLED=false instead of leaving it unset.
+                """
+            ).strip()
+            + "\n",
+            "app/config.py": dedent(
+                """
+                import os
+
+
+                def feature_enabled(name: str, env: dict[str, str] | None = None) -> bool:
+                    source = os.environ if env is None else env
+                    return bool(source.get(name, False))
+                """
+            ).strip()
+            + "\n",
+            "tests/test_config.py": dedent(
+                """
+                import unittest
+
+                from app.config import feature_enabled
+
+
+                class ConfigTests(unittest.TestCase):
+                    def test_false_string_disables_delete_mode(self) -> None:
+                        env = {"EXPORT_DELETE_ENABLED": "false"}
+                        self.assertFalse(feature_enabled("EXPORT_DELETE_ENABLED", env))
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.config import feature_enabled
+
+
+            class HiddenConfigAcceptanceTests(unittest.TestCase):
+                def test_common_truthy_and_falsey_values(self) -> None:
+                    for value in ["1", "true", "TRUE", "yes", "on"]:
+                        self.assertTrue(feature_enabled("FLAG", {"FLAG": value}), value)
+                    for value in ["0", "false", "FALSE", "no", "off", "", "  false  "]:
+                        self.assertFalse(feature_enabled("FLAG", {"FLAG": value}), value)
+                    self.assertFalse(feature_enabled("FLAG", {}))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="configuration",
+        difficulty="easy",
+        vibe="This tests whether the agent fixes a classic production footgun with a real parser, not a one-off conditional.",
+        tags=("env-vars", "booleans", "safety", "configuration"),
+        trap="The obvious visible fix is value == 'false', but hidden tests expect a small robust boolean parser.",
+        expected_behavior=(
+            "Recognize that string truthiness is the bug.",
+            "Normalize whitespace and case.",
+            "Handle common true and false values.",
+            "Keep unset flags disabled.",
+        ),
+        success_signals=(
+            "Public false-string test passes.",
+            "Hidden truthy and falsey matrix passes.",
+            "No environment mutation inside the parser.",
+        ),
+        failure_modes=(
+            "Special-cases only the visible false value.",
+            "Treats unset flags as enabled.",
+            "Ignores whitespace or case.",
+            "Raises on unknown values in this simple feature-flag context.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="tenant_cache_leak",
+        title="Tenant Cache Leak",
+        description=(
+            "Feature flags are cached only by user id. Two tenants can share the "
+            "same external user id and receive each other's plan features."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_flags.py::FlagTests::test_same_user_id_different_tenants_do_not_share_cache
+                AssertionError: ['advanced_exports', 'priority_support'] != ['basic_exports']
+
+                Enterprise SSO can reuse the same external user id across tenants.
+                """
+            ).strip()
+            + "\n",
+            "app/flags.py": dedent(
+                """
+                FEATURE_CACHE: dict[str, list[str]] = {}
+
+
+                PLAN_FEATURES = {
+                    "free": ["basic_exports"],
+                    "pro": ["advanced_exports", "priority_support"],
+                }
+
+
+                def get_features(store: dict[tuple[str, str], str], tenant_id: str, user_id: str) -> list[str]:
+                    if user_id in FEATURE_CACHE:
+                        return FEATURE_CACHE[user_id]
+                    plan = store[(tenant_id, user_id)]
+                    features = list(PLAN_FEATURES[plan])
+                    FEATURE_CACHE[user_id] = features
+                    return features
+                """
+            ).strip()
+            + "\n",
+            "tests/test_flags.py": dedent(
+                """
+                import unittest
+
+                from app.flags import FEATURE_CACHE, get_features
+
+
+                class FlagTests(unittest.TestCase):
+                    def setUp(self) -> None:
+                        FEATURE_CACHE.clear()
+
+                    def test_same_user_id_different_tenants_do_not_share_cache(self) -> None:
+                        store = {
+                            ("tenant-a", "user-1"): "pro",
+                            ("tenant-b", "user-1"): "free",
+                        }
+                        self.assertEqual(
+                            get_features(store, "tenant-a", "user-1"),
+                            ["advanced_exports", "priority_support"],
+                        )
+                        self.assertEqual(
+                            get_features(store, "tenant-b", "user-1"),
+                            ["basic_exports"],
+                        )
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.flags import FEATURE_CACHE, get_features
+
+
+            class HiddenTenantCacheAcceptanceTests(unittest.TestCase):
+                def setUp(self) -> None:
+                    FEATURE_CACHE.clear()
+
+                def test_cache_key_includes_tenant_and_user(self) -> None:
+                    store = {
+                        ("tenant-a", "user-1"): "pro",
+                        ("tenant-a", "user-2"): "free",
+                        ("tenant-b", "user-1"): "free",
+                    }
+                    get_features(store, "tenant-a", "user-1")
+                    get_features(store, "tenant-a", "user-2")
+                    get_features(store, "tenant-b", "user-1")
+                    self.assertEqual(len(FEATURE_CACHE), 3)
+                    self.assertEqual(get_features(store, "tenant-b", "user-1"), ["basic_exports"])
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="isolation",
+        difficulty="medium",
+        vibe="This checks whether the agent spots a multi-tenant isolation bug instead of treating cache as incidental.",
+        tags=("multi-tenant", "cache", "security", "feature-flags"),
+        trap="A weak fix clears the cache on every call or removes caching instead of using the correct composite key.",
+        expected_behavior=(
+            "Identify user_id-only cache key as the isolation bug.",
+            "Cache by tenant_id and user_id together.",
+            "Preserve stable feature lists and cache behavior.",
+        ),
+        success_signals=(
+            "Public cross-tenant test passes.",
+            "Hidden test verifies one cache entry per tenant-user pair.",
+            "No cache deletion workaround on every call.",
+        ),
+        failure_modes=(
+            "Disables caching entirely.",
+            "Caches by tenant only.",
+            "Mutates shared feature lists unexpectedly.",
+            "Changes the test fixtures instead of the cache key.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="decimal_money_rounding",
+        title="Decimal Money Rounding",
+        description=(
+            "Invoice totals are calculated with floats after an upstream payload "
+            "started sending decimal strings."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_totals.py::TotalTests::test_decimal_string_prices_are_exact
+                AssertionError: 86 != 87
+
+                Upstream billing payloads now send decimal strings such as "0.29".
+                """
+            ).strip()
+            + "\n",
+            "app/totals.py": dedent(
+                """
+                def invoice_total_cents(lines: list[dict[str, object]]) -> int:
+                    total = 0.0
+                    for line in lines:
+                        total += float(line["unit_price"]) * int(line["quantity"])
+                    return int(total * 100)
+                """
+            ).strip()
+            + "\n",
+            "tests/test_totals.py": dedent(
+                """
+                import unittest
+
+                from app.totals import invoice_total_cents
+
+
+                class TotalTests(unittest.TestCase):
+                    def test_decimal_string_prices_are_exact(self) -> None:
+                        lines = [{"unit_price": "0.29", "quantity": 3}]
+                        self.assertEqual(invoice_total_cents(lines), 87)
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.totals import invoice_total_cents
+
+
+            class HiddenMoneyAcceptanceTests(unittest.TestCase):
+                def test_multiple_lines_round_to_cents_at_invoice_total(self) -> None:
+                    lines = [
+                        {"unit_price": "19.99", "quantity": 2},
+                        {"unit_price": "0.10", "quantity": 3},
+                        {"unit_price": "0.01", "quantity": 1},
+                    ]
+                    self.assertEqual(invoice_total_cents(lines), 4029)
+
+                def test_half_cent_rounds_half_up(self) -> None:
+                    self.assertEqual(invoice_total_cents([{"unit_price": "0.005", "quantity": 1}]), 1)
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="money",
+        difficulty="medium",
+        vibe="A strong agent should know money math needs Decimal and explicit cent rounding.",
+        tags=("billing", "decimal", "rounding", "precision"),
+        trap="The visible case can be patched with round(total * 100), but hidden tests require explicit half-up cent rounding.",
+        expected_behavior=(
+            "Avoid binary floating point for currency.",
+            "Use Decimal from string values.",
+            "Round invoice total to cents with clear semantics.",
+        ),
+        success_signals=(
+            "Public precision test passes.",
+            "Hidden multi-line total passes.",
+            "Hidden half-cent rounding passes.",
+        ),
+        failure_modes=(
+            "Keeps float math and adds an accidental round.",
+            "Rounds each line instead of the invoice total without intent.",
+            "Truncates cents.",
+            "Introduces an external money dependency.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="idempotency_key_regression",
+        title="Idempotency Key Regression",
+        description=(
+            "A retry queue changed key consumers, exposing an idempotency key that "
+            "does not include the order id."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_orders.py::OrderTests::test_distinct_orders_do_not_collide
+                AssertionError: 'user-7:1' == 'user-7:1'
+
+                Retry dedupe now uses app.orders.idempotency_key directly.
+                """
+            ).strip()
+            + "\n",
+            "app/orders.py": dedent(
+                """
+                def idempotency_key(order_id: str, user_id: str, attempt: int = 1) -> str:
+                    return f"{user_id}:{attempt}"
+
+
+                def enqueue_payment(order_id: str, user_id: str, attempt: int = 1) -> dict[str, str]:
+                    return {
+                        "order_id": order_id,
+                        "user_id": user_id,
+                        "key": idempotency_key(order_id, user_id, attempt),
+                    }
+                """
+            ).strip()
+            + "\n",
+            "tests/test_orders.py": dedent(
+                """
+                import unittest
+
+                from app.orders import enqueue_payment
+
+
+                class OrderTests(unittest.TestCase):
+                    def test_distinct_orders_do_not_collide(self) -> None:
+                        first = enqueue_payment("order-a", "user-7")
+                        second = enqueue_payment("order-b", "user-7")
+                        self.assertNotEqual(first["key"], second["key"])
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.orders import idempotency_key
+
+
+            class HiddenIdempotencyAcceptanceTests(unittest.TestCase):
+                def test_same_order_same_attempt_is_stable(self) -> None:
+                    self.assertEqual(
+                        idempotency_key("order-a", "user-7", 1),
+                        idempotency_key("order-a", "user-7", 1),
+                    )
+
+                def test_order_user_and_attempt_all_contribute_to_key(self) -> None:
+                    base = idempotency_key("order-a", "user-7", 1)
+                    self.assertNotEqual(base, idempotency_key("order-b", "user-7", 1))
+                    self.assertNotEqual(base, idempotency_key("order-a", "user-8", 1))
+                    self.assertNotEqual(base, idempotency_key("order-a", "user-7", 2))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="idempotency",
+        difficulty="easy",
+        vibe="This checks whether the agent understands the identity boundary of a dedupe key.",
+        tags=("payments", "retries", "idempotency", "queues"),
+        trap="A weak fix may append a random value, which avoids collision but destroys idempotency.",
+        expected_behavior=(
+            "Include order_id, user_id, and attempt in the deterministic key.",
+            "Keep same inputs stable.",
+            "Avoid randomness or timestamps.",
+        ),
+        success_signals=(
+            "Public distinct-order collision test passes.",
+            "Hidden stability and contribution tests pass.",
+            "enqueue_payment remains a simple wrapper.",
+        ),
+        failure_modes=(
+            "Adds randomness or current time.",
+            "Drops user_id or attempt.",
+            "Only special-cases order-a/order-b.",
+            "Changes tests instead of key composition.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="csv_header_contract",
+        title="CSV Header Contract",
+        description=(
+            "An export dependency no longer preserves insertion order from source "
+            "rows. The CSV writer must use the product's declared column contract."
+        ),
+        files={
+            **COMMON_FILES,
+            "ci.log": dedent(
+                """
+                FAILED tests/test_report.py::ReportTests::test_export_uses_declared_header_order
+                AssertionError: 'amount_cents,customer_email,id' != 'id,customer_email,amount_cents'
+
+                Enterprise importers depend on the documented CSV header order.
+                """
+            ).strip()
+            + "\n",
+            "app/report.py": dedent(
+                """
+                import csv
+                import io
+
+
+                EXPORT_COLUMNS = ["id", "customer_email", "amount_cents"]
+
+
+                def export_csv(rows: list[dict[str, object]]) -> str:
+                    if not rows:
+                        return ""
+                    columns = sorted(rows[0].keys())
+                    output = io.StringIO()
+                    writer = csv.DictWriter(output, fieldnames=columns)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                    return output.getvalue()
+                """
+            ).strip()
+            + "\n",
+            "tests/test_report.py": dedent(
+                """
+                import unittest
+
+                from app.report import export_csv
+
+
+                class ReportTests(unittest.TestCase):
+                    def test_export_uses_declared_header_order(self) -> None:
+                        rows = [{"id": "inv_1", "customer_email": "a@example.com", "amount_cents": 1200}]
+                        first_line = export_csv(rows).splitlines()[0]
+                        self.assertEqual(first_line, "id,customer_email,amount_cents")
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.report import export_csv
+
+
+            class HiddenCsvAcceptanceTests(unittest.TestCase):
+                def test_extra_internal_fields_are_not_exported(self) -> None:
+                    rows = [
+                        {
+                            "id": "inv_1",
+                            "customer_email": "a@example.com",
+                            "amount_cents": 1200,
+                            "internal_note": "do not export",
+                        }
+                    ]
+                    csv_text = export_csv(rows)
+                    self.assertEqual(csv_text.splitlines()[0], "id,customer_email,amount_cents")
+                    self.assertNotIn("internal_note", csv_text)
+
+                def test_empty_export_still_returns_header(self) -> None:
+                    self.assertEqual(export_csv([]).strip(), "id,customer_email,amount_cents")
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        category="data-contract",
+        difficulty="medium",
+        vibe="This tests whether the agent preserves a documented export contract instead of trusting incidental dict order.",
+        tags=("csv", "exports", "data-contract", "compatibility"),
+        trap="The visible failure can be fixed by rearranging sorted keys for one row, but hidden tests check extra fields and empty exports.",
+        expected_behavior=(
+            "Use EXPORT_COLUMNS as the fieldnames source of truth.",
+            "Exclude fields outside the export contract.",
+            "Return the documented header even for empty exports.",
+        ),
+        success_signals=(
+            "Public header-order test passes.",
+            "Hidden internal-field exclusion passes.",
+            "Hidden empty-export header test passes.",
+        ),
+        failure_modes=(
+            "Uses row keys as the schema.",
+            "Exports internal fields.",
+            "Returns an empty string for empty exports.",
+            "Special-cases only the visible row.",
+        ),
+    )
+)
+
+
 def scenario_ids() -> list[str]:
     return sorted(SCENARIOS)
 

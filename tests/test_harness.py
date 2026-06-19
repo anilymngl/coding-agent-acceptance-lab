@@ -2,21 +2,26 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
-from ci_vibe_lab.db import connect, insert_run
+from ci_vibe_lab.db import connect, insert_run, upsert_evaluator_review
+from ci_vibe_lab.analysis import compute_trust_metrics
+from ci_vibe_lab.dashboard import load_runs as load_dashboard_runs
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
     extract_scenario_from_packet,
+    ingest_reviews,
     load_rows as load_evaluator_rows,
     prepare_workbench,
     validate_review,
     validate_working_board,
     working_board_template,
 )
+from ci_vibe_lab.report import make_xray_report
 from ci_vibe_lab.runner import inspect_run, run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
@@ -61,35 +66,40 @@ class ScenarioTests(unittest.TestCase):
 
 
 class DatabaseTests(unittest.TestCase):
+    def run_row(self, **overrides: object) -> dict[str, object]:
+        base: dict[str, object] = {
+            "run_id": "run-1",
+            "scenario": "dependency_api_change",
+            "scenario_title": "Dependency API Change",
+            "challenge_pack": "ci_forensics",
+            "category": "dependency-boundary",
+            "difficulty": "medium",
+            "model": "test/model",
+            "agent": "build",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "ended_at": "2026-01-01T00:00:01+00:00",
+            "duration_seconds": 1.0,
+            "workdir": "/tmp/work",
+            "prompt": "fix it",
+            "opencode_command": "[]",
+            "opencode_exit_code": 0,
+            "baseline_pass": 0,
+            "public_pass": 1,
+            "hidden_pass": 0,
+            "baseline_output": "fail",
+            "opencode_stdout": "{}",
+            "opencode_stderr": "",
+            "public_output": "pass",
+            "hidden_output": "fail",
+            "patch": "diff --git",
+        }
+        base.update(overrides)
+        return base
+
     def test_insert_run_creates_database(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "results.sqlite"
-            insert_run(
-                db_path,
-                {
-                    "run_id": "run-1",
-                    "scenario": "dependency_api_change",
-                    "scenario_title": "Dependency API Change",
-                    "model": "test/model",
-                    "agent": "build",
-                    "started_at": "2026-01-01T00:00:00+00:00",
-                    "ended_at": "2026-01-01T00:00:01+00:00",
-                    "duration_seconds": 1.0,
-                    "workdir": "/tmp/work",
-                    "prompt": "fix it",
-                    "opencode_command": "[]",
-                    "opencode_exit_code": 0,
-                    "baseline_pass": 0,
-                    "public_pass": 1,
-                    "hidden_pass": 1,
-                    "baseline_output": "fail",
-                    "opencode_stdout": "{}",
-                    "opencode_stderr": "",
-                    "public_output": "pass",
-                    "hidden_output": "pass",
-                    "patch": "diff --git",
-                },
-            )
+            insert_run(db_path, self.run_row(hidden_pass=1, hidden_output="pass"))
             with sqlite3.connect(db_path) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
             self.assertEqual(count, 1)
@@ -220,8 +230,233 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("challenge_pack", columns)
             self.assertIn("artifact_dir", columns)
 
+            with connect(db_path) as connection:
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    ).fetchall()
+                }
+                audit_count = connection.execute("SELECT COUNT(*) FROM scenario_audits").fetchone()[0]
+
+            self.assertIn("evaluator_reviews", tables)
+            self.assertIn("scenario_audits", tables)
+            self.assertGreater(audit_count, 0)
+
+    def test_trust_gap_metrics_handle_zero_public_pass(self) -> None:
+        metrics = compute_trust_metrics(
+            [
+                {"public_pass": 0, "hidden_pass": 0, "scenario": "a"},
+                {"public_pass": 0, "hidden_pass": 0, "scenario": "b"},
+            ]
+        )
+        self.assertEqual(metrics.public_pass, 0)
+        self.assertEqual(metrics.false_green_rate, 0.0)
+        self.assertEqual(metrics.public_red_rate, 1.0)
+
+    def test_dashboard_loader_accepts_multiple_dbs_and_adds_source_db(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_a = Path(temp_dir) / "a.sqlite"
+            db_b = Path(temp_dir) / "b.sqlite"
+            insert_run(db_a, self.run_row(run_id="run-a", model="model/a"))
+            insert_run(db_b, self.run_row(run_id="run-b", model="model/b"))
+
+            rows = load_dashboard_runs([db_a, db_b])
+
+            self.assertEqual(set(rows["run_id"]), {"run-a", "run-b"})
+            self.assertIn("source_db", rows.columns)
+            self.assertEqual(set(rows["source_db"]), {str(db_a), str(db_b)})
+
+    def test_xray_report_excludes_quarantined_rows_from_headline_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "results.sqlite"
+            insert_run(db_path, self.run_row(run_id="run-a", scenario="dependency_api_change"))
+            insert_run(
+                db_path,
+                self.run_row(
+                    run_id="run-b",
+                    scenario="env_bool_parser",
+                    scenario_title="Env Bool Parser",
+                    public_pass=1,
+                    hidden_pass=1,
+                ),
+            )
+            with connect(db_path) as connection:
+                connection.execute(
+                    "UPDATE scenario_audits SET audit_status = 'quarantine' WHERE scenario = 'env_bool_parser'"
+                )
+                connection.commit()
+
+            report = make_xray_report(
+                db_paths=[db_path],
+                model="test/model",
+                include_artifact_index=False,
+            )
+
+            self.assertIn("| Runs | 1 |", report)
+            self.assertIn("`env_bool_parser` | quarantine", report)
+
+    def test_xray_report_counts_latest_review_per_target_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "results.sqlite"
+            insert_run(
+                db_path,
+                self.run_row(
+                    run_id="run-a",
+                    scenario="dependency_api_change",
+                    model="opencode/north-mini-code-free",
+                ),
+            )
+            base_review = {
+                "target_run_id": "run-a",
+                "target_model": "opencode/north-mini-code-free",
+                "scenario": "dependency_api_change",
+                "evaluator_model": "deepseek/deepseek-v4-pro",
+                "schema_version": "ci-vibe-evaluator/v1",
+                "validation_status": "valid",
+                "verdict": "public_green_hidden_red",
+                "root_cause": "old diagnosis",
+                "missed_contract": "old contract",
+                "patch_quality": 2,
+                "debug_discipline": 2,
+                "severity": "medium",
+                "confidence": 0.8,
+                "evidence_json": "[]",
+                "recommendation": "old",
+                "review_limits": "fixture",
+            }
+            upsert_evaluator_review(
+                db_path,
+                base_review
+                | {
+                    "review_dir": "runs/old",
+                    "root_cause_category": "missed_hidden_contract",
+                    "created_at": "2026-06-19T00:00:00+00:00",
+                },
+            )
+            upsert_evaluator_review(
+                db_path,
+                base_review
+                | {
+                    "review_dir": "runs/new",
+                    "root_cause_category": "edge_case_gap",
+                    "root_cause": "new diagnosis",
+                    "created_at": "2026-06-19T01:00:00+00:00",
+                },
+            )
+
+            report = make_xray_report(
+                db_paths=[db_path],
+                model="opencode/north-mini-code-free",
+                include_artifact_index=False,
+            )
+
+            self.assertIn("Public-green/hidden-red target runs reviewed: 1/1 (2 review rows indexed).", report)
+            self.assertIn("| `edge_case_gap` | 1 |", report)
+            self.assertNotIn("| `missed_hidden_contract` | 1 |", report)
+
 
 class EvaluatorTests(unittest.TestCase):
+    def test_ingest_reviews_upserts_evaluator_review(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            db_path = root / "results.sqlite"
+            insert_run(
+                db_path,
+                DatabaseTests().run_row(
+                    run_id="target-run-1",
+                    scenario="metric_semantic_mismatch",
+                    scenario_title="Metric Semantic Mismatch",
+                    model="opencode/north-mini-code-free",
+                ),
+            )
+            review_dir = root / "reviews" / "target-run-1"
+            review_dir.mkdir(parents=True)
+            (review_dir / "EVALUATION_PACKET.md").write_text(
+                "\n".join(
+                    [
+                        "# Evaluation Packet",
+                        "- Run ID: `target-run-1`",
+                        "- Challenge: `metric_semantic_mismatch` - Metric Semantic Mismatch",
+                        "- Model under test: `opencode/north-mini-code-free`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (review_dir / "evaluation.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ci-vibe-evaluator/v1",
+                        "review_source": "evaluator_agent",
+                        "validation_status": "valid",
+                        "verdict": "public_green_hidden_red",
+                        "root_cause_category": "wrong_fix_strategy",
+                        "root_cause": "Conversion was placed in the wrong layer.",
+                        "missed_contract": "compute must return raw values.",
+                        "patch_quality": 2,
+                        "debug_discipline": 3,
+                        "severity": "medium",
+                        "confidence": 0.95,
+                        "evidence": [{"source": "hidden_test_output", "quote": "FAIL", "interpretation": "failed"}],
+                        "recommendation": "Move conversion to dashboard_total.",
+                        "review_limits": "Fixture review.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            count = ingest_reviews(db_path, root / "reviews", evaluator_model="deepseek/deepseek-v4-pro")
+
+            self.assertEqual(count, 1)
+            with connect(db_path) as connection:
+                row = connection.execute("SELECT * FROM evaluator_reviews").fetchone()
+            self.assertEqual(row["target_run_id"], "target-run-1")
+            self.assertEqual(row["target_model"], "opencode/north-mini-code-free")
+            self.assertEqual(row["patch_quality"], 2)
+
+    def test_ingest_reviews_enforces_pydantic_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            db_path = root / "results.sqlite"
+            insert_run(db_path, DatabaseTests().run_row(run_id="target-run-1"))
+            review_dir = root / "reviews" / "target-run-1"
+            review_dir.mkdir(parents=True)
+            (review_dir / "EVALUATION_PACKET.md").write_text(
+                "\n".join(
+                    [
+                        "# Evaluation Packet",
+                        "- Run ID: `target-run-1`",
+                        "- Challenge: `dependency_api_change` - Dependency API Change",
+                        "- Model under test: `opencode/north-mini-code-free`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (review_dir / "evaluation.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ci-vibe-evaluator/v1",
+                        "review_source": "evaluator_agent",
+                        "validation_status": "valid",
+                        "verdict": "public_green_hidden_red",
+                        "root_cause_category": "semantic_architecture",
+                        "root_cause": "Invalid taxonomy category.",
+                        "missed_contract": "Fixture.",
+                        "patch_quality": 2,
+                        "debug_discipline": 3,
+                        "severity": "medium",
+                        "confidence": 0.95,
+                        "evidence": [{"source": "hidden_test_output", "quote": "FAIL", "interpretation": "failed"}],
+                        "recommendation": "Use an allowed category.",
+                        "review_limits": "Fixture review.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                ingest_reviews(db_path, root / "reviews", evaluator_model="deepseek/deepseek-v4-pro")
+
     def test_prepare_workbench_creates_replay_and_shadow_repos(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             review_dir = Path(temp_dir) / "review"

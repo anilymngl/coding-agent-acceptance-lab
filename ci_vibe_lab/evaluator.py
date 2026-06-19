@@ -17,6 +17,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from ci_vibe_lab.db import upsert_evaluator_review
 from ci_vibe_lab.scenarios import TEST_COMMAND, get_scenario, write_hidden_test, write_scenario
 
 
@@ -1026,6 +1027,84 @@ def extract_scenario_from_packet(packet_text: str, fallback: str) -> str:
     return match.group(1) if match else fallback
 
 
+def extract_packet_field(packet_text: str, label: str, fallback: str = "") -> str:
+    match = re.search(rf"-\s*{re.escape(label)}:\s*`([^`]+)`", packet_text)
+    return match.group(1) if match else fallback
+
+
+def infer_evaluator_model(review_root: Path) -> str:
+    name = review_root.name
+    if "deepseek-v4-pro" in name:
+        return "deepseek/deepseek-v4-pro"
+    return name
+
+
+def existing_path(path: Path) -> str:
+    return str(path) if path.exists() else ""
+
+
+def evaluator_review_row(review_dir: Path, *, evaluator_model: str) -> dict[str, object] | None:
+    review = load_review(review_dir)
+    if not review:
+        return None
+    try:
+        parsed = EvaluationReview.model_validate(review)
+    except ValidationError as exc:
+        joined = "; ".join(f"{error['loc']}: {error['msg']}" for error in exc.errors())
+        raise ValueError(f"{review_dir / 'evaluation.json'} failed evaluator schema validation: {joined}") from exc
+    normalized = parsed.model_dump(mode="json")
+    packet_path = review_dir / "EVALUATION_PACKET.md"
+    packet_text = packet_path.read_text(encoding="utf-8", errors="replace") if packet_path.exists() else ""
+    target_run_id = extract_packet_field(packet_text, "Run ID", review_dir.name)
+    scenario = extract_scenario_from_packet(packet_text, review_dir.name)
+    target_model = extract_packet_field(packet_text, "Model under test", "")
+    return {
+        "target_run_id": target_run_id,
+        "target_model": target_model,
+        "scenario": scenario,
+        "evaluator_model": evaluator_model,
+        "review_dir": str(review_dir),
+        "schema_version": normalized["schema_version"],
+        "validation_status": normalized["validation_status"],
+        "verdict": normalized["verdict"],
+        "root_cause_category": normalized["root_cause_category"],
+        "root_cause": normalized["root_cause"],
+        "missed_contract": normalized["missed_contract"],
+        "patch_quality": normalized["patch_quality"],
+        "debug_discipline": normalized["debug_discipline"],
+        "severity": normalized["severity"],
+        "confidence": normalized["confidence"],
+        "evidence_json": json.dumps(normalized["evidence"], sort_keys=True),
+        "recommendation": normalized["recommendation"],
+        "review_limits": normalized["review_limits"],
+        "evaluation_json_path": existing_path(review_dir / "evaluation.json"),
+        "evaluation_agent_json_path": existing_path(review_dir / "evaluation.agent.json"),
+        "evaluation_md_path": existing_path(review_dir / "evaluation.md"),
+        "working_board_path": existing_path(review_dir / "WORKING_BOARD.md"),
+        "evaluator_stdout_path": existing_path(review_dir / "evaluator_stdout.jsonl"),
+        "evaluator_stderr_path": existing_path(review_dir / "evaluator_stderr.txt"),
+        "packet_path": existing_path(packet_path),
+        "created_at": utc_now(),
+    }
+
+
+def ingest_review_dir(db_path: Path, review_dir: Path, *, evaluator_model: str) -> bool:
+    row = evaluator_review_row(review_dir, evaluator_model=evaluator_model)
+    if row is None:
+        return False
+    upsert_evaluator_review(db_path, row)
+    return True
+
+
+def ingest_reviews(db_path: Path, reviews_root: Path, *, evaluator_model: str | None = None) -> int:
+    model = evaluator_model or infer_evaluator_model(reviews_root)
+    count = 0
+    for review_dir in sorted(path for path in reviews_root.iterdir() if path.is_dir()):
+        if ingest_review_dir(db_path, review_dir, evaluator_model=model):
+            count += 1
+    return count
+
+
 def load_validation_errors(review_dir: Path) -> list[str]:
     path = review_dir / "validation_errors.json"
     if not path.exists():
@@ -1139,6 +1218,10 @@ def run_reviews(args: argparse.Namespace) -> None:
         )
         results.append(result)
         print(f"  wrote {result.review_dir}")
+        if args.write_db:
+            evaluator_model = args.model or "deterministic"
+            if ingest_review_dir(Path(args.db), result.review_dir, evaluator_model=evaluator_model):
+                print(f"  indexed review in {Path(args.db)}")
     if args.report:
         build_summary_report(out_dir, Path(args.report))
         print(f"Wrote {Path(args.report).resolve()}")
@@ -1182,10 +1265,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--auto-approve", action="store_true")
     run.add_argument("--report", help="Write a Markdown summary report after reviews.")
+    run.add_argument("--write-db", action="store_true", help="Index validated evaluator review artifacts in the SQLite database.")
 
     report = subparsers.add_parser("report", help="Build summary report from existing evaluator review directory.")
     report.add_argument("--reviews", required=True)
     report.add_argument("--out", required=True)
+
+    ingest = subparsers.add_parser("ingest", help="Index existing evaluator review artifacts in SQLite.")
+    ingest.add_argument("--db", default=str(DEFAULT_DB))
+    ingest.add_argument("--reviews", required=True)
+    ingest.add_argument("--evaluator-model", help="Evaluator model label. Defaults to a best-effort value from the review root name.")
 
     return parser
 
@@ -1199,6 +1288,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "report":
         build_summary_report(Path(args.reviews), Path(args.out))
         print(f"Wrote {Path(args.out).resolve()}")
+        return 0
+    if args.command == "ingest":
+        count = ingest_reviews(Path(args.db), Path(args.reviews), evaluator_model=args.evaluator_model)
+        print(f"Indexed {count} evaluator review(s) in {Path(args.db).resolve()}")
         return 0
     parser.error(f"Unknown command {args.command}")
     return 2

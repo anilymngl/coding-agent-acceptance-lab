@@ -237,17 +237,38 @@ uv run ci-vibe-run inspect \
   --full
 ```
 
+To index completed evaluator-agent review directories into SQLite:
+
+```bash
+uv run ci-vibe-evaluate ingest \
+  --db data/results.sqlite \
+  --reviews runs/evaluator-agent/deepseek-v4-pro-north-mini-expanded-pghr
+```
+
+To regenerate the defensible evidence-pack report:
+
+```bash
+uv run ci-vibe-report xray \
+  --db data/north-mini-code-eval.sqlite \
+  --db data/results.sqlite \
+  --db data/control-results.sqlite \
+  --model opencode/north-mini-code-free \
+  --out reports/north-mini-code-evidence-pack-2026-06-20.md \
+  --include-artifact-index
+```
+
 ## Dashboard
 
 ```bash
 uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ```
 
-The dashboard has four tabs:
+The dashboard has five tabs:
 
-- **Report**: pass rates, focus priorities, result matrix, category/challenge summaries.
+- **Report**: trust gap, false-green rate, severity-weighted failure, product-workflow stress, and result matrices.
 - **Runs**: run table, failure inbox, and model-vs-model comparison.
 - **Inspector**: challenge card, prompt, test logs, OpenCode trace, patch, and human review scores.
+- **Evidence**: evaluator reviews, review artifacts, and scenario audit status.
 - **Exports**: filtered CSVs and Markdown report downloads.
 
 By default the dashboard reads:
@@ -260,6 +281,20 @@ You can override it:
 
 ```bash
 CI_VIBE_DB=/path/to/results.sqlite uv run --extra app streamlit run ci_vibe_lab/dashboard.py
+```
+
+Or compare multiple databases in one view:
+
+```bash
+CI_VIBE_DB="data/north-mini-code-eval.sqlite,data/results.sqlite" \
+  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
+```
+
+Include the strong-model control when it exists:
+
+```bash
+CI_VIBE_DB="data/north-mini-code-eval.sqlite,data/results.sqlite,data/control-results.sqlite" \
+  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ```
 
 ## Files Written By Runs

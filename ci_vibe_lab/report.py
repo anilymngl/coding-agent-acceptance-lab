@@ -1,23 +1,55 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sqlite3
 import sys
+from collections import Counter
 from pathlib import Path
 from textwrap import shorten
+
+from ci_vibe_lab.analysis import TrustMetrics, compute_trust_metrics, percent
+from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits
 
 
 DEFAULT_DB = Path("data/results.sqlite")
 
 
 def load_rows(db_path: Path) -> list[sqlite3.Row]:
-    connection = sqlite3.connect(db_path)
-    connection.row_factory = sqlite3.Row
-    try:
+    with connect(db_path) as connection:
         return list(connection.execute("SELECT * FROM runs ORDER BY id"))
-    finally:
-        connection.close()
+
+
+def row_dict(row: sqlite3.Row, *, source_db: Path) -> dict[str, object]:
+    item = dict(row)
+    item["source_db"] = str(source_db)
+    return item
+
+
+def load_rows_from_dbs(db_paths: list[Path]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for db_path in db_paths:
+        rows.extend(row_dict(row, source_db=db_path) for row in load_rows(db_path))
+    return rows
+
+
+def load_audits_from_dbs(db_paths: list[Path]) -> dict[str, dict[str, object]]:
+    audits: dict[str, dict[str, object]] = {}
+    for db_path in db_paths:
+        for row in load_scenario_audits(db_path):
+            audits[str(row["scenario"])] = dict(row)
+    return audits
+
+
+def load_reviews_from_dbs(db_paths: list[Path]) -> list[dict[str, object]]:
+    reviews: list[dict[str, object]] = []
+    for db_path in db_paths:
+        for row in load_evaluator_reviews(db_path):
+            item = dict(row)
+            item["source_db"] = str(db_path)
+            reviews.append(item)
+    return reviews
 
 
 def json_list(value: object) -> list[str]:
@@ -39,6 +71,19 @@ def read_text(path_value: object, fallback: str = "") -> str:
     if not path.exists():
         return fallback
     return path.read_text(encoding="utf-8")
+
+
+def sha256_file(path_value: object) -> str:
+    if not path_value:
+        return ""
+    path = Path(str(path_value))
+    if not path.exists() or not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def clip(text: str, *, lines: int = 80, chars: int = 6000) -> str:
@@ -183,6 +228,348 @@ def hidden_short_read(row: sqlite3.Row, patch: str, hidden_output: str) -> str:
     return "No patch was produced, so hidden acceptance remained red."
 
 
+def filter_model_rows(rows: list[dict[str, object]], model: str) -> list[dict[str, object]]:
+    return [row for row in rows if str(row.get("model", "")) == model]
+
+
+def accepted_rows(rows: list[dict[str, object]], audits: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        row
+        for row in rows
+        if str(audits.get(str(row.get("scenario", "")), {}).get("audit_status", "accepted")) == "accepted"
+    ]
+
+
+def audit_weights(audits: dict[str, dict[str, object]]) -> dict[str, int]:
+    weights = {}
+    for scenario, audit in audits.items():
+        try:
+            weights[scenario] = int(audit.get("impact_weight", 3))
+        except (TypeError, ValueError):
+            weights[scenario] = 3
+    return weights
+
+
+def claim_row(claim: str, evidence: str, source: str, confidence: str, caveat: str) -> str:
+    return (
+        f"| {claim.replace('|', '/')} | {evidence.replace('|', '/')} | {source.replace('|', '/')} | "
+        f"{confidence.replace('|', '/')} | {caveat.replace('|', '/')} |"
+    )
+
+
+def format_count_rate(count: int, denominator: int) -> str:
+    return f"{count}/{denominator} ({percent(count / denominator) if denominator else '0.0%'})"
+
+
+def metrics_table(metrics: TrustMetrics) -> list[str]:
+    return [
+        "| Metric | Value |",
+        "|---|---:|",
+        f"| Runs | {metrics.total} |",
+        f"| Public pass | {format_count_rate(metrics.public_pass, metrics.total)} |",
+        f"| Hidden pass | {format_count_rate(metrics.hidden_pass, metrics.total)} |",
+        f"| Trust gap | {percent(metrics.trust_gap)} |",
+        f"| Public-green / hidden-red | {metrics.public_green_hidden_red}/{metrics.total} |",
+        f"| False-green rate | {format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} |",
+        f"| Public-red rate | {percent(metrics.public_red_rate)} |",
+        f"| Severity-weighted hidden-failure rate | {percent(metrics.severity_weighted_failure_rate or 0.0)} |",
+    ]
+
+
+def group_metrics(rows: list[dict[str, object]], group_key: str, weights: dict[str, int]) -> list[dict[str, object]]:
+    groups = sorted({str(row.get(group_key, "")) for row in rows})
+    output = []
+    for group in groups:
+        group_rows = [row for row in rows if str(row.get(group_key, "")) == group]
+        metrics = compute_trust_metrics(group_rows, audit_weights=weights)
+        output.append(
+            {
+                group_key: group,
+                "runs": metrics.total,
+                "public": f"{metrics.public_pass}/{metrics.total}",
+                "hidden": f"{metrics.hidden_pass}/{metrics.total}",
+                "trust_gap": percent(metrics.trust_gap),
+                "false_green": format_count_rate(metrics.public_green_hidden_red, metrics.public_pass),
+            }
+        )
+    return output
+
+
+def evaluator_taxonomy(reviews: list[dict[str, object]]) -> list[tuple[str, int]]:
+    counts = Counter(str(review.get("root_cause_category", "") or "unknown") for review in reviews)
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+
+
+def latest_reviews_by_target_run(reviews: list[dict[str, object]]) -> list[dict[str, object]]:
+    latest: dict[str, dict[str, object]] = {}
+    for review in sorted(
+        reviews,
+        key=lambda item: (
+            str(item.get("created_at", "")),
+            str(item.get("review_dir", "")),
+        ),
+    ):
+        target_run_id = str(review.get("target_run_id", ""))
+        if target_run_id:
+            latest[target_run_id] = review
+    return list(latest.values())
+
+
+def artifact_line(row: dict[str, object], review_by_run: dict[str, dict[str, object]]) -> str:
+    run_id = str(row.get("run_id", ""))
+    review = review_by_run.get(run_id, {})
+    prompt_path = str(row.get("prompt_path", ""))
+    patch_path = str(row.get("patch_path", ""))
+    public_path = str(row.get("public_output_path", ""))
+    hidden_path = str(row.get("hidden_output_path", ""))
+    review_path = str(review.get("evaluation_json_path", ""))
+    digest = sha256_file(patch_path)[:12] if patch_path else ""
+    return (
+        f"| `{run_id}` | `{row.get('scenario', '')}` | `{prompt_path}` | `{patch_path}` | "
+        f"`{public_path}` | `{hidden_path}` | `{review_path}` | `{digest}` |"
+    )
+
+
+def make_xray_report(
+    *,
+    db_paths: list[Path],
+    model: str,
+    include_artifact_index: bool,
+) -> str:
+    all_rows = load_rows_from_dbs(db_paths)
+    model_rows = filter_model_rows(all_rows, model)
+    audits = load_audits_from_dbs(db_paths)
+    weights = audit_weights(audits)
+    accepted = accepted_rows(model_rows, audits)
+    reviews = [
+        review
+        for review in load_reviews_from_dbs(db_paths)
+        if str(review.get("target_model", "")) == model or not str(review.get("target_model", ""))
+    ]
+    latest_reviews = latest_reviews_by_target_run(reviews)
+    review_by_run = {str(review.get("target_run_id", "")): review for review in latest_reviews}
+    metrics = compute_trust_metrics(accepted, audit_weights=weights)
+    product_rows = [row for row in accepted if str(row.get("challenge_pack", "")) == "product_workflows"]
+    product_metrics = compute_trust_metrics(product_rows, audit_weights=weights)
+    control_rows = [
+        row
+        for row in all_rows
+        if str(row.get("model", "")) != model and str(row.get("challenge_pack", "")) == "product_workflows"
+    ]
+    pghr_rows = [row for row in accepted if int(row.get("public_pass", 0)) == 1 and int(row.get("hidden_pass", 0)) == 0]
+    pghr_run_ids = {str(row.get("run_id", "")) for row in pghr_rows}
+    diagnostic_reviews = [
+        review for review in latest_reviews if str(review.get("target_run_id", "")) in pghr_run_ids
+    ]
+    audit_status_counts = Counter(str(audits.get(str(row.get("scenario", "")), {}).get("audit_status", "accepted")) for row in model_rows)
+
+    lines = [
+        "# North Mini Code Evidence Pack",
+        "",
+        "## Executive Claim",
+        "",
+        "North Mini Code is operationally competent but semantically premature: it reliably performs the",
+        "OpenCode repository-repair loop, but often stops at public-test success instead of inferring the",
+        "full domain or architectural contract.",
+        "",
+        "This is a behavior microscope, not a public leaderboard benchmark. The defensible claim is about",
+        "the trust gap between visible CI success and hidden acceptance on this curated local eval.",
+        "",
+        "## Model-Card Connection",
+        "",
+        "Cohere describes North Mini Code as `north-mini-code-1-0`, a 30B total / 3B active MoE model",
+        "trained for agentic coding, with a 256K context window and 64K max output tokens. The official",
+        "page explicitly names repo-level changes in harnesses like SWE-Agent and OpenCode as intended",
+        "uses. The page checked on 2026-06-20 did not provide a numeric benchmark table, so this report",
+        "does not claim official accuracy numbers.",
+        "",
+        "Sources: https://docs.cohere.com/docs/north-mini-code-1.0, https://opencode.ai/docs/,",
+        "https://www.swebench.com/, https://www.tbench.ai/",
+        "",
+        "## Methodology",
+        "",
+        "- The model saw only visible challenge repos and public tests during the OpenCode call.",
+        "- The harness captured prompt, raw OpenCode stream, patch, public output, hidden output, and artifact paths.",
+        "- Hidden tests were injected only after the agent exited.",
+        "- Evaluator-agent reviews are indexed from validated `evaluation.json` files and preserve raw working boards/streams.",
+        "- Headline metrics use only scenarios whose audit status is `accepted`.",
+        "",
+        "## Scorecard",
+        "",
+    ]
+    lines.extend(metrics_table(metrics))
+    lines.extend(
+        [
+            "",
+            "The central diagnostic is the false-green rate: public tests passed but hidden acceptance failed.",
+            f"Combined accepted rows: {metrics.public_green_hidden_red}/{metrics.public_pass} public-green runs were hidden-red.",
+            "",
+            "## Product Workflow Stress Read",
+            "",
+            f"Product workflow false-green rate: {product_metrics.public_green_hidden_red}/{product_metrics.public_pass} "
+            f"({percent(product_metrics.false_green_rate)}).",
+            "",
+            "This pack is the strongest evidence that the weakness is semantic density, not repo scale.",
+            "",
+        ]
+    )
+    if control_rows:
+        lines.extend(
+            [
+                "## Strong-Model Control Snapshot",
+                "",
+                "One product-workflow control run is included as a calibration check, not as a leaderboard result.",
+                "It asks whether the pack is broadly hard or uniquely exposing North Mini Code.",
+                "",
+                "| Control Model | Runs | Public | Hidden | Trust Gap | False Green Rate |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for item in group_metrics(control_rows, "model", weights):
+            lines.append(
+                f"| `{item['model']}` | {item['runs']} | {item['public']} | {item['hidden']} | "
+                f"{item['trust_gap']} | {item['false_green']} |"
+            )
+        lines.extend(
+            [
+                "",
+                "Interpretation: this control suggests the product-workflow pack is genuinely difficult,",
+                "so North Mini's failures should be framed as a trust-gap microscope result first, not as",
+                "a complete model-ranking claim.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Pack Breakdown",
+            "",
+            "| Pack | Runs | Public | Hidden | Trust Gap | False Green Rate |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for item in group_metrics(accepted, "challenge_pack", weights):
+        lines.append(
+            f"| `{item['challenge_pack']}` | {item['runs']} | {item['public']} | {item['hidden']} | "
+            f"{item['trust_gap']} | {item['false_green']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Evaluator-Agent Taxonomy",
+            "",
+            f"Public-green/hidden-red target runs reviewed: {len(diagnostic_reviews)}/{len(pghr_rows)} "
+            f"({len(reviews)} review rows indexed).",
+            "",
+            "| Root Cause Category | Reviews |",
+            "|---|---:|",
+        ]
+    )
+    for category, count in evaluator_taxonomy(diagnostic_reviews):
+        lines.append(f"| `{category}` | {count} |")
+    if not diagnostic_reviews:
+        lines.append("| `not_indexed_yet` | 0 |")
+
+    lines.extend(["", "### Evaluator Review Details", ""])
+    if diagnostic_reviews:
+        lines.extend(
+            [
+                "| Scenario | Verdict | Severity | Confidence | Patch Quality | Root Cause | Review Artifact |",
+                "|---|---|---|---:|---:|---|---|",
+            ]
+        )
+        for review in sorted(diagnostic_reviews, key=lambda item: (str(item.get("scenario", "")), str(item.get("target_run_id", "")))):
+            lines.append(
+                f"| `{review.get('scenario', '')}` | {review.get('verdict', '')} | {review.get('severity', '')} | "
+                f"{review.get('confidence', '')} | {review.get('patch_quality', '')} | "
+                f"{str(review.get('root_cause', '')).replace('|', '/')} | `{review.get('evaluation_json_path', '')}` |"
+            )
+    else:
+        lines.append("No evaluator reviews are indexed yet. Run `ci-vibe-evaluate ingest` or evaluator batches with `--write-db`.")
+
+    lines.extend(
+        [
+            "",
+            "## Benchmark Quality Audit",
+            "",
+            f"Audit status counts: {dict(sorted(audit_status_counts.items()))}",
+            "",
+            "| Scenario | Status | Risk Area | Impact | Inferability | Hidden Legitimacy | Flexibility | Notes |",
+            "|---|---|---|---:|---:|---:|---:|---|",
+        ]
+    )
+    for scenario in sorted({str(row.get("scenario", "")) for row in model_rows}):
+        audit = audits.get(scenario, {})
+        lines.append(
+            f"| `{scenario}` | {audit.get('audit_status', 'accepted')} | {audit.get('risk_area', '')} | "
+            f"{audit.get('impact_weight', '')} | {audit.get('inferability_score', '')} | "
+            f"{audit.get('hidden_legitimacy_score', '')} | {audit.get('implementation_flexibility_score', '')} | "
+            f"{str(audit.get('audit_notes', '')).replace('|', '/')} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Claim Ledger",
+            "",
+            "| Claim | Evidence | Source | Confidence | Caveat |",
+            "|---|---|---|---|---|",
+            claim_row(
+                "Operational competence is strong",
+                f"Public pass: {format_count_rate(metrics.public_pass, metrics.total)}",
+                "SQLite run rows plus public output artifacts",
+                "high",
+                "Small curated local task set, not a broad benchmark.",
+            ),
+            claim_row(
+                "Semantic trust gap is large",
+                f"Trust gap: {percent(metrics.trust_gap)}",
+                "Public/hidden pass split after hidden test injection",
+                "high",
+                "Hidden tests are authored contracts; benchmark audit reduces but does not remove author bias.",
+            ),
+            claim_row(
+                "Product workflows are the sharpest stressor",
+                f"Product false-green: {format_count_rate(product_metrics.public_green_hidden_red, product_metrics.public_pass)}",
+                "Rows where challenge_pack is product_workflows",
+                "high",
+                "Add control-model run before claiming difficulty is model-specific.",
+            ),
+            claim_row(
+                "Evaluator-agent diagnostics are accountable",
+                f"Public-green/hidden-red target runs reviewed: {len(diagnostic_reviews)}/{len(pghr_rows)}",
+                "evaluator_reviews table plus raw review artifacts",
+                "medium",
+                "Single evaluator model; broader evaluator agreement remains future work.",
+            ),
+            "",
+            "## What Can And Cannot Be Defended",
+            "",
+            "**Can defend:** North Mini Code is highly effective at visible-feedback CI repair in this harness,",
+            "and the public-green/hidden-red split reveals a substantial trust gap on sparse semantic contracts.",
+            "",
+            "**Cannot yet defend:** broad model leaderboard ranking, statistically stable pass rates, or claims",
+            "that these failures generalize to all coding workloads. Multi-seed runs and control models are still required.",
+            "",
+        ]
+    )
+
+    if include_artifact_index:
+        lines.extend(
+            [
+                "## Artifact Index",
+                "",
+                "| Run ID | Scenario | Prompt | Patch | Public Output | Hidden Output | Evaluator JSON | Patch SHA256 Prefix |",
+                "|---|---|---|---|---|---|---|---|",
+            ]
+        )
+        for row in accepted:
+            lines.append(artifact_line(row, review_by_run))
+        lines.append("")
+
+    return "\n".join(lines) + "\n"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate Markdown reports from CI Vibe Lab result DBs.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -190,6 +577,12 @@ def build_parser() -> argparse.ArgumentParser:
     hidden = subparsers.add_parser("hidden-failures", help="Generate a hidden-test failure report.")
     hidden.add_argument("--db", default=str(DEFAULT_DB), help="SQLite result database.")
     hidden.add_argument("--out", required=True, help="Markdown output path.")
+
+    xray = subparsers.add_parser("xray", help="Generate a defensible trust-gap evidence pack report.")
+    xray.add_argument("--db", action="append", required=True, help="SQLite result database. Can be provided more than once.")
+    xray.add_argument("--model", required=True, help="Model under test to report.")
+    xray.add_argument("--out", required=True, help="Markdown output path.")
+    xray.add_argument("--include-artifact-index", action="store_true")
 
     return parser
 
@@ -201,6 +594,18 @@ def main(argv: list[str] | None = None) -> int:
         db_path = Path(args.db)
         rows = load_rows(db_path)
         report = make_hidden_failure_report(rows)
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()}")
+        return 0
+    if args.command == "xray":
+        db_paths = [Path(path) for path in args.db]
+        report = make_xray_report(
+            db_paths=db_paths,
+            model=args.model,
+            include_artifact_index=args.include_artifact_index,
+        )
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(report, encoding="utf-8")

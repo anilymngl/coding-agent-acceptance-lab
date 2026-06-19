@@ -8,10 +8,11 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from ci_vibe_lab.db import connect, update_review
+from ci_vibe_lab.analysis import compute_trust_metrics, percent
+from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits, update_review
 
 
-DEFAULT_DB = Path(os.environ.get("CI_VIBE_DB", "data/results.sqlite"))
+DEFAULT_DB = os.environ.get("CI_VIBE_DB", "data/results.sqlite")
 
 
 def apply_base_styles() -> None:
@@ -65,11 +66,48 @@ def apply_base_styles() -> None:
     )
 
 
-def load_runs(db_path: Path) -> pd.DataFrame:
-    if not db_path.exists():
+def parse_db_paths(value: str) -> list[Path]:
+    return [Path(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def load_runs(db_paths: list[Path]) -> pd.DataFrame:
+    frames = []
+    for db_path in db_paths:
+        if not db_path.exists():
+            continue
+        with connect(db_path) as connection:
+            frame = pd.read_sql_query("SELECT * FROM runs ORDER BY started_at DESC", connection)
+        frame["source_db"] = str(db_path)
+        frames.append(frame)
+    if not frames:
         return pd.DataFrame()
-    with connect(db_path) as connection:
-        return pd.read_sql_query("SELECT * FROM runs ORDER BY started_at DESC", connection)
+    return pd.concat(frames, ignore_index=True).sort_values("started_at", ascending=False)
+
+
+def load_audits(db_paths: list[Path]) -> pd.DataFrame:
+    frames = []
+    for db_path in db_paths:
+        if not db_path.exists():
+            continue
+        rows = [dict(row) | {"source_db": str(db_path)} for row in load_scenario_audits(db_path)]
+        if rows:
+            frames.append(pd.DataFrame(rows))
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True).drop_duplicates(subset=["scenario"], keep="last")
+
+
+def load_reviews(db_paths: list[Path]) -> pd.DataFrame:
+    frames = []
+    for db_path in db_paths:
+        if not db_path.exists():
+            continue
+        rows = [dict(row) | {"source_db": str(db_path)} for row in load_evaluator_reviews(db_path)]
+        if rows:
+            frames.append(pd.DataFrame(rows))
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
 
 
 def parse_json_list(value: object) -> list[str]:
@@ -140,6 +178,22 @@ def latest_by_model_and_scenario(rows: pd.DataFrame, model: str) -> pd.DataFrame
     return model_rows.drop_duplicates(subset=["scenario"], keep="first")
 
 
+def latest_per_model_scenario_frame(rows: pd.DataFrame) -> pd.DataFrame:
+    return rows.sort_values("started_at", ascending=False).drop_duplicates(subset=["model", "scenario"], keep="first")
+
+
+def audit_weight_map(audits: pd.DataFrame) -> dict[str, int]:
+    if audits.empty:
+        return {}
+    weights = {}
+    for _, row in audits.iterrows():
+        try:
+            weights[str(row["scenario"])] = int(row["impact_weight"])
+        except (KeyError, TypeError, ValueError):
+            weights[str(row.get("scenario", ""))] = 3
+    return weights
+
+
 def model_comparison(rows: pd.DataFrame, model_a: str, model_b: str) -> pd.DataFrame:
     latest_a = latest_by_model_and_scenario(rows, model_a)
     latest_b = latest_by_model_and_scenario(rows, model_b)
@@ -206,6 +260,7 @@ def build_run_table(rows: pd.DataFrame) -> pd.DataFrame:
         "category",
         "difficulty",
         "model",
+        "source_db",
         "opencode_exit_code",
         "baseline_pass",
         "public_pass",
@@ -220,18 +275,20 @@ def build_run_table(rows: pd.DataFrame) -> pd.DataFrame:
     return run_table
 
 
-def build_report_markdown(rows: pd.DataFrame) -> str:
+def build_report_markdown(rows: pd.DataFrame, audits: pd.DataFrame | None = None) -> str:
     total = len(rows)
-    public_rate = rows["public_pass"].mean() * 100 if total else 0
-    hidden_rate = rows["hidden_pass"].mean() * 100 if total else 0
+    weights = audit_weight_map(audits) if audits is not None else None
+    metrics = compute_trust_metrics(rows.to_dict("records"), audit_weights=weights)
     lines = [
         "# CI Vibe Lab Report",
         "",
         f"- Runs: {total}",
         f"- Models: {rows['model'].nunique() if total else 0}",
         f"- Challenges: {rows['scenario'].nunique() if total else 0}",
-        f"- Public pass rate: {public_rate:.1f}%",
-        f"- Hidden pass rate: {hidden_rate:.1f}%",
+        f"- Public pass rate: {percent(metrics.public_pass_rate)}",
+        f"- Hidden pass rate: {percent(metrics.hidden_pass_rate)}",
+        f"- Trust gap: {percent(metrics.trust_gap)}",
+        f"- False-green rate: {percent(metrics.false_green_rate)}",
         "",
         "## What To Focus On",
         "",
@@ -289,27 +346,53 @@ def build_run_markdown(run: pd.Series) -> str:
     )
 
 
-def render_report(rows: pd.DataFrame) -> None:
+def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFrame, *, show_weighted: bool) -> None:
     total_runs = len(rows)
-    public_rate = rows["public_pass"].mean() * 100
-    hidden_rate = rows["hidden_pass"].mean() * 100
+    weights = audit_weight_map(audits) if show_weighted else None
+    metrics = compute_trust_metrics(rows.to_dict("records"), audit_weights=weights)
     avg_duration = rows["duration_seconds"].mean()
     reviewed = rows["patch_quality"].notna().sum()
+    hidden_rate = metrics.hidden_pass_rate * 100
     hidden_tone = "good" if hidden_rate >= 80 else "warn" if hidden_rate >= 50 else "bad"
+    gap_tone = "bad" if metrics.trust_gap >= 0.25 else "warn" if metrics.trust_gap >= 0.1 else "good"
 
-    cols = st.columns(4)
+    cols = st.columns(6)
     cols[0].metric("Runs", total_runs)
-    cols[1].metric("Public Pass Rate", f"{public_rate:.0f}%")
-    cols[2].metric("Hidden Pass Rate", f"{hidden_rate:.0f}%")
-    cols[3].metric("Avg Duration", f"{avg_duration:.1f}s")
+    cols[1].metric("Public Pass Rate", percent(metrics.public_pass_rate))
+    cols[2].metric("Hidden Pass Rate", percent(metrics.hidden_pass_rate))
+    cols[3].metric("Trust Gap", percent(metrics.trust_gap))
+    cols[4].metric("False Green Rate", percent(metrics.false_green_rate))
+    cols[5].metric("Avg Duration", f"{avg_duration:.1f}s")
     render_chip_strip(
         [
             ("reviewed", f"{reviewed}/{total_runs}", "good" if reviewed == total_runs else "warn"),
             ("models", rows["model"].nunique(), ""),
             ("challenges", rows["scenario"].nunique(), ""),
-            ("hidden signal", "strong" if hidden_rate >= public_rate else "catching gaps", hidden_tone),
+            (
+                "hidden signal",
+                "strong" if metrics.hidden_pass_rate >= metrics.public_pass_rate else "catching gaps",
+                hidden_tone,
+            ),
+            ("trust gap", percent(metrics.trust_gap), gap_tone),
         ]
     )
+    if show_weighted and metrics.severity_weighted_failure_rate is not None:
+        render_chip_strip(
+            [("severity weighted hidden failure", percent(metrics.severity_weighted_failure_rate), "bad")]
+        )
+
+    product_rows = rows[rows["challenge_pack"] == "product_workflows"]
+    if not product_rows.empty:
+        product_metrics = compute_trust_metrics(product_rows.to_dict("records"), audit_weights=weights)
+        st.subheader("Product Workflow Stress Read")
+        render_chip_strip(
+            [
+                ("product runs", product_metrics.total, ""),
+                ("product public", f"{product_metrics.public_pass}/{product_metrics.total}", ""),
+                ("product hidden", f"{product_metrics.hidden_pass}/{product_metrics.total}", ""),
+                ("product false green", f"{product_metrics.public_green_hidden_red}/{product_metrics.public_pass}", "bad"),
+            ]
+        )
 
     st.subheader("What To Focus On")
     focus = focus_rows(rows)
@@ -333,6 +416,7 @@ def render_report(rows: pd.DataFrame) -> None:
     )
     by_category["public_pass_rate"] *= 100
     by_category["hidden_pass_rate"] *= 100
+    by_category["trust_gap"] = by_category["public_pass_rate"] - by_category["hidden_pass_rate"]
 
     st.subheader("Category Readout")
     st.dataframe(by_category, use_container_width=True, hide_index=True)
@@ -352,9 +436,15 @@ def render_report(rows: pd.DataFrame) -> None:
     )
     by_scenario["public_pass_rate"] *= 100
     by_scenario["hidden_pass_rate"] *= 100
+    by_scenario["trust_gap"] = by_scenario["public_pass_rate"] - by_scenario["hidden_pass_rate"]
 
     st.subheader("Challenge Summary")
     st.dataframe(by_scenario, use_container_width=True, hide_index=True)
+
+    if not reviews.empty:
+        st.subheader("Evaluator Review Summary")
+        review_counts = reviews.groupby(["verdict", "root_cause_category"], as_index=False).agg(reviews=("id", "count"))
+        st.dataframe(review_counts, use_container_width=True, hide_index=True)
 
 
 def render_runs(rows: pd.DataFrame) -> None:
@@ -465,7 +555,7 @@ def render_challenge_card(run: pd.Series) -> None:
         st.write(run["trap"] or "No trap documented.")
 
 
-def render_inspector(rows: pd.DataFrame, db_path: Path) -> None:
+def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
     options = rows["run_id"].tolist()
     labels = {
         row["run_id"]: f"{run_label(row['run_id'], row['started_at'])} - {row['scenario']} - {row['model']}"
@@ -499,8 +589,9 @@ def render_inspector(rows: pd.DataFrame, db_path: Path) -> None:
     )
     notes = review_cols[2].text_area("Notes", value=run["notes"] or "", height=96)
     if st.button("Save review"):
+        review_db_path = Path(str(run.get("source_db") or default_db_path))
         update_review(
-            db_path,
+            review_db_path,
             selected_run_id,
             patch_quality=patch_quality,
             debug_discipline=debug_discipline,
@@ -544,12 +635,67 @@ def render_inspector(rows: pd.DataFrame, db_path: Path) -> None:
         st.code(read_artifact(run["patch_path"], run["patch"] or "<empty patch>"), language="diff")
 
 
-def render_exports(rows: pd.DataFrame) -> None:
+def render_evidence(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFrame) -> None:
+    st.subheader("Evaluator Reviews")
+    if reviews.empty:
+        st.info("No evaluator reviews indexed yet. Run `ci-vibe-evaluate ingest` or evaluator batches with `--write-db`.")
+    else:
+        relevant_models = set(rows["model"].dropna().astype(str))
+        relevant_runs = set(rows["run_id"].dropna().astype(str))
+        view = reviews[
+            reviews["target_model"].astype(str).isin(relevant_models) | reviews["target_run_id"].astype(str).isin(relevant_runs)
+        ].copy()
+        if view.empty:
+            st.info("No evaluator reviews match the current run filters.")
+        else:
+            st.dataframe(
+                view[
+                    [
+                        "scenario",
+                        "target_model",
+                        "verdict",
+                        "root_cause_category",
+                        "severity",
+                        "confidence",
+                        "patch_quality",
+                        "review_dir",
+                        "evaluation_json_path",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.subheader("Benchmark Quality Audit")
+    if audits.empty:
+        st.warning("No scenario audit rows found.")
+    else:
+        scenarios = set(rows["scenario"].dropna().astype(str))
+        audit_view = audits[audits["scenario"].astype(str).isin(scenarios)].copy()
+        st.dataframe(
+            audit_view[
+                [
+                    "scenario",
+                    "audit_status",
+                    "risk_area",
+                    "impact_weight",
+                    "inferability_score",
+                    "hidden_legitimacy_score",
+                    "implementation_flexibility_score",
+                    "audit_notes",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+def render_exports(rows: pd.DataFrame, audits: pd.DataFrame) -> None:
     st.subheader("Exports")
     st.write("Export the filtered result set for deeper review or sharing with another local agent.")
     run_csv = build_run_table(rows).to_csv(index=False)
     raw_csv = rows.to_csv(index=False)
-    report_md = build_report_markdown(rows)
+    report_md = build_report_markdown(rows, audits)
     cols = st.columns(3)
     cols[0].download_button("Download run table (CSV)", data=run_csv, file_name="ci_vibe_runs.csv", mime="text/csv")
     cols[1].download_button("Download raw rows (CSV)", data=raw_csv, file_name="ci_vibe_raw_rows.csv", mime="text/csv")
@@ -562,9 +708,11 @@ def main() -> None:
     st.title("CI Vibe Lab")
     st.caption("Local coding-agent challenge runs, patches, traces, and human review in one place.")
 
-    db_input = st.sidebar.text_input("SQLite database", value=str(DEFAULT_DB))
-    db_path = Path(db_input)
-    runs = load_runs(db_path)
+    db_input = st.sidebar.text_input("SQLite database(s)", value=str(DEFAULT_DB))
+    db_paths = parse_db_paths(db_input)
+    runs = load_runs(db_paths)
+    audits = load_audits(db_paths)
+    reviews = load_reviews(db_paths)
 
     if runs.empty:
         st.info("No runs found.")
@@ -585,6 +733,10 @@ def main() -> None:
     selected_difficulty = st.sidebar.selectbox("Difficulty", difficulty_options)
     selected_scenario = st.sidebar.selectbox("Scenario", scenario_options)
     selected_model = st.sidebar.selectbox("Model", model_options)
+    latest_only = st.sidebar.checkbox("Latest per model+scenario", value=False)
+    accepted_only = st.sidebar.checkbox("Audited accepted scenarios only", value=False)
+    public_green_hidden_red_only = st.sidebar.checkbox("Public-green / hidden-red only", value=False)
+    show_weighted = st.sidebar.checkbox("Show severity-weighted metric", value=True)
 
     filtered = runs.copy()
     if selected_pack != "all":
@@ -597,6 +749,13 @@ def main() -> None:
         filtered = filtered[filtered["scenario"] == selected_scenario]
     if selected_model != "all":
         filtered = filtered[filtered["model"] == selected_model]
+    if accepted_only and not audits.empty:
+        accepted_scenarios = set(audits[audits["audit_status"] == "accepted"]["scenario"].astype(str))
+        filtered = filtered[filtered["scenario"].astype(str).isin(accepted_scenarios)]
+    if public_green_hidden_red_only:
+        filtered = filtered[(filtered["public_pass"].astype(int) == 1) & (filtered["hidden_pass"].astype(int) == 0)]
+    if latest_only:
+        filtered = latest_per_model_scenario_frame(filtered)
 
     if filtered.empty:
         st.warning("No runs match the selected filters.")
@@ -607,7 +766,8 @@ def main() -> None:
     tone = "good" if hidden_rate >= 80 else "warn" if hidden_rate >= 50 else "bad"
     render_chip_strip(
         [
-            ("db", db_path.name, ""),
+            ("dbs", len(db_paths), ""),
+            ("db", db_paths[0].name if len(db_paths) == 1 else "multi", ""),
             ("pack", selected_pack, ""),
             ("model", selected_model, ""),
             ("latest", str(latest)[:19], ""),
@@ -615,15 +775,17 @@ def main() -> None:
         ]
     )
 
-    report_tab, runs_tab, inspector_tab, exports_tab = st.tabs(["Report", "Runs", "Inspector", "Exports"])
+    report_tab, runs_tab, inspector_tab, evidence_tab, exports_tab = st.tabs(["Report", "Runs", "Inspector", "Evidence", "Exports"])
     with report_tab:
-        render_report(filtered)
+        render_report(filtered, audits, reviews, show_weighted=show_weighted)
     with runs_tab:
         render_runs(filtered)
     with inspector_tab:
-        render_inspector(filtered, db_path)
+        render_inspector(filtered, db_paths[0])
+    with evidence_tab:
+        render_evidence(filtered, audits, reviews)
     with exports_tab:
-        render_exports(filtered)
+        render_exports(filtered, audits)
 
 
 if __name__ == "__main__":

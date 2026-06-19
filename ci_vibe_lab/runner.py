@@ -38,6 +38,17 @@ class CommandResult:
         return self.returncode == 0
 
 
+@dataclass(frozen=True)
+class PatchStats:
+    files_touched: int
+    added_lines: int
+    deleted_lines: int
+
+    @property
+    def changed_lines(self) -> int:
+        return self.added_lines + self.deleted_lines
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -75,6 +86,42 @@ def git_diff(workdir: Path) -> str:
         check=False,
     )
     return completed.stdout + completed.stderr
+
+
+def git_patch_stats(workdir: Path) -> PatchStats:
+    names = subprocess.run(
+        ["git", "diff", "--name-only"],
+        cwd=workdir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    files_touched = len([line for line in names.stdout.splitlines() if line.strip()])
+    numstat = subprocess.run(
+        ["git", "diff", "--numstat"],
+        cwd=workdir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    added = 0
+    deleted = 0
+    for line in numstat.stdout.splitlines():
+        parts = line.split("\t", 2)
+        if len(parts) < 3:
+            continue
+        try:
+            added += int(parts[0])
+            deleted += int(parts[1])
+        except ValueError:
+            # Binary or unknown numstat rows use "-"; count the file but not line churn.
+            continue
+    return PatchStats(files_touched=files_touched, added_lines=added, deleted_lines=deleted)
+
+
+def estimate_review_minutes(stats: PatchStats) -> float:
+    estimate = 3.0 + (1.5 * stats.files_touched) + (0.15 * stats.changed_lines)
+    return round(max(4.0, min(30.0, estimate)), 2)
 
 
 def write_artifact(path: Path, content: str) -> str:
@@ -192,6 +239,8 @@ def run_one(
 
     public = run_command(TEST_COMMAND, workdir, timeout=timeout)
     patch = git_diff(workdir)
+    patch_stats = git_patch_stats(workdir)
+    estimated_review_minutes = estimate_review_minutes(patch_stats)
     write_hidden_test(scenario_id, workdir)
     hidden = run_command(TEST_COMMAND, workdir, timeout=timeout)
 
@@ -246,6 +295,13 @@ def run_one(
         "public_output_path": public_output_path,
         "hidden_output_path": hidden_output_path,
         "patch_path": patch_path,
+        "patch_files_touched": patch_stats.files_touched,
+        "patch_added_lines": patch_stats.added_lines,
+        "patch_deleted_lines": patch_stats.deleted_lines,
+        "patch_changed_lines": patch_stats.changed_lines,
+        "estimated_review_minutes": estimated_review_minutes,
+        "manual_review_minutes": None,
+        "review_decision": "",
     }
     insert_run(db_path, row)
     return run_id

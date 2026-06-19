@@ -8,7 +8,13 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from ci_vibe_lab.analysis import compute_trust_metrics, percent
+from ci_vibe_lab.analysis import (
+    compute_trust_metrics,
+    compute_value_metrics,
+    effective_review_minutes,
+    percent,
+    select_best_patches,
+)
 from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits, update_review
 
 
@@ -266,6 +272,11 @@ def build_run_table(rows: pd.DataFrame) -> pd.DataFrame:
         "public_pass",
         "hidden_pass",
         "duration_seconds",
+        "patch_files_touched",
+        "patch_changed_lines",
+        "estimated_review_minutes",
+        "manual_review_minutes",
+        "review_decision",
         "patch_quality",
         "debug_discipline",
     ]
@@ -445,6 +456,57 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
         st.subheader("Evaluator Review Summary")
         review_counts = reviews.groupby(["verdict", "root_cause_category"], as_index=False).agg(reviews=("id", "count"))
         st.dataframe(review_counts, use_container_width=True, hide_index=True)
+    render_value_section(rows)
+
+
+def render_value_section(rows: pd.DataFrame) -> None:
+    value_rows = rows[rows["challenge_pack"] == "maintenance_value"].copy()
+    if value_rows.empty:
+        return
+
+    records = value_rows.to_dict("records")
+    value_metrics = compute_value_metrics(records)
+    st.subheader("Maintenance Value Mode")
+    cols = st.columns(4)
+    cols[0].metric("Accepted / Review Hour", f"{value_metrics.accepted_patches_per_review_hour:.2f}")
+    cols[1].metric(
+        "Best-of-3 Success",
+        f"{value_metrics.best_of_three_successes}/{value_metrics.best_of_three_scenarios}",
+    )
+    cols[2].metric("Median Review Minutes", f"{value_metrics.median_review_minutes:.1f}")
+    cols[3].metric("Median Changed Lines", f"{value_metrics.median_changed_lines:.0f}")
+
+    selected = select_best_patches(records)
+    selected_rows = []
+    for row in selected:
+        selected_rows.append(
+            {
+                "scenario": row.get("scenario", ""),
+                "run_id": row.get("run_id", ""),
+                "model": row.get("model", ""),
+                "review_minutes": effective_review_minutes(row),
+                "files_touched": row.get("patch_files_touched", 0),
+                "changed_lines": row.get("patch_changed_lines", 0),
+                "started_at": row.get("started_at", ""),
+            }
+        )
+    if selected_rows:
+        st.caption("Selected survivor per model+scenario: hidden-passing attempt with the smallest patch.")
+        st.dataframe(pd.DataFrame(selected_rows), use_container_width=True, hide_index=True)
+
+    scenario_rows = []
+    for scenario, group in value_rows.groupby("scenario"):
+        group_records = group.to_dict("records")
+        scenario_rows.append(
+            {
+                "scenario": scenario,
+                "attempts": len(group),
+                "public_passes": int(group["public_pass"].sum()),
+                "hidden_passes": int(group["hidden_pass"].sum()),
+                "best_of_3": "pass" if select_best_patches(group_records) else "fail",
+            }
+        )
+    st.dataframe(pd.DataFrame(scenario_rows).sort_values("scenario"), use_container_width=True, hide_index=True)
 
 
 def render_runs(rows: pd.DataFrame) -> None:
@@ -588,6 +650,26 @@ def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
         value=int(run["debug_discipline"]) if pd.notna(run["debug_discipline"]) else 3,
     )
     notes = review_cols[2].text_area("Notes", value=run["notes"] or "", height=96)
+    value_cols = st.columns([1, 1, 2])
+    current_decision = str(run.get("review_decision") or "")
+    decision_options = ["", "accept", "edit", "reject"]
+    review_decision = value_cols[0].selectbox(
+        "Review decision",
+        decision_options,
+        index=decision_options.index(current_decision) if current_decision in decision_options else 0,
+    )
+    current_manual = float(run["manual_review_minutes"]) if "manual_review_minutes" in run and pd.notna(run["manual_review_minutes"]) else 0.0
+    manual_review_minutes = value_cols[1].number_input(
+        "Manual review minutes",
+        min_value=0.0,
+        value=current_manual,
+        step=0.5,
+        help="Use 0 to fall back to the deterministic estimate.",
+    )
+    value_cols[2].write(
+        f"Estimated review: `{float(run.get('estimated_review_minutes') or 0):.1f} min`; "
+        f"patch: `{int(run.get('patch_files_touched') or 0)}` files, `{int(run.get('patch_changed_lines') or 0)}` changed lines."
+    )
     if st.button("Save review"):
         review_db_path = Path(str(run.get("source_db") or default_db_path))
         update_review(
@@ -596,6 +678,8 @@ def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
             patch_quality=patch_quality,
             debug_discipline=debug_discipline,
             notes=notes,
+            manual_review_minutes=manual_review_minutes if manual_review_minutes > 0 else None,
+            review_decision=review_decision,
         )
         st.success("Saved review.")
 

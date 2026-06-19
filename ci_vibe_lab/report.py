@@ -9,7 +9,15 @@ from collections import Counter
 from pathlib import Path
 from textwrap import shorten
 
-from ci_vibe_lab.analysis import TrustMetrics, compute_trust_metrics, percent
+from ci_vibe_lab.analysis import (
+    TrustMetrics,
+    accepted_patch,
+    compute_trust_metrics,
+    compute_value_metrics,
+    effective_review_minutes,
+    percent,
+    select_best_patches,
+)
 from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits
 
 
@@ -261,6 +269,10 @@ def format_count_rate(count: int, denominator: int) -> str:
     return f"{count}/{denominator} ({percent(count / denominator) if denominator else '0.0%'})"
 
 
+def format_number(value: float) -> str:
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
 def metrics_table(metrics: TrustMetrics) -> list[str]:
     return [
         "| Metric | Value |",
@@ -328,6 +340,127 @@ def artifact_line(row: dict[str, object], review_by_run: dict[str, dict[str, obj
         f"| `{run_id}` | `{row.get('scenario', '')}` | `{prompt_path}` | `{patch_path}` | "
         f"`{public_path}` | `{hidden_path}` | `{review_path}` | `{digest}` |"
     )
+
+
+def value_artifact_line(row: dict[str, object]) -> str:
+    patch_path = str(row.get("patch_path", ""))
+    digest = sha256_file(patch_path)[:12] if patch_path else ""
+    return (
+        f"| `{row.get('run_id', '')}` | `{row.get('scenario', '')}` | `{row.get('prompt_path', '')}` | "
+        f"`{patch_path}` | `{row.get('public_output_path', '')}` | `{row.get('hidden_output_path', '')}` | `{digest}` |"
+    )
+
+
+def make_value_report(
+    *,
+    db_paths: list[Path],
+    model: str,
+    pack: str,
+    include_artifact_index: bool,
+) -> str:
+    all_rows = load_rows_from_dbs(db_paths)
+    rows = [
+        row
+        for row in all_rows
+        if str(row.get("model", "")) == model and str(row.get("challenge_pack", "")) == pack
+    ]
+    metrics = compute_trust_metrics(rows)
+    value_metrics = compute_value_metrics(rows)
+    selected = {str(row.get("scenario", "")): row for row in select_best_patches(rows)}
+    scenarios = sorted({str(row.get("scenario", "")) for row in rows})
+
+    lines = [
+        "# Maintenance Value Report",
+        "",
+        "## Executive Claim",
+        "",
+        "This report measures whether the model can create useful, reviewable maintenance patches",
+        "when the task has an explicit contract, local blast radius, and deterministic acceptance tests.",
+        "",
+        "The headline value metric is accepted maintenance patches per engineer-review hour.",
+        "",
+        "## Methodology",
+        "",
+        f"- Model: `{model}`",
+        f"- Pack: `{pack}`",
+        "- Intended run design: three attempts per scenario, then select the smallest hidden-passing patch.",
+        "- Public tests are visible to the coding agent; hidden acceptance is injected only after the agent exits.",
+        "- Review minutes use manual override when present; otherwise they use the deterministic patch-size heuristic.",
+        "",
+        "## Scorecard",
+        "",
+        "| Metric | Value |",
+        "|---|---:|",
+        f"| Attempts | {len(rows)} |",
+        f"| Public pass | {format_count_rate(metrics.public_pass, metrics.total)} |",
+        f"| Hidden pass | {format_count_rate(metrics.hidden_pass, metrics.total)} |",
+        f"| False-green rate | {format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} |",
+        f"| Best-of-3 scenario success | {format_count_rate(value_metrics.best_of_three_successes, value_metrics.best_of_three_scenarios)} |",
+        f"| Accepted patches / review hour | {format_number(value_metrics.accepted_patches_per_review_hour)} |",
+        f"| Median review minutes | {format_number(value_metrics.median_review_minutes)} |",
+        f"| Median changed lines | {format_number(value_metrics.median_changed_lines)} |",
+        "",
+        "## Scenario Breakdown",
+        "",
+        "| Scenario | Attempts | Hidden Passes | Best-of-3 | Selected Run | Review Minutes | Changed Lines |",
+        "|---|---:|---:|---|---|---:|---:|",
+    ]
+    for scenario in scenarios:
+        scenario_rows = [row for row in rows if str(row.get("scenario", "")) == scenario]
+        hidden_passes = sum(int(row.get("hidden_pass", 0)) for row in scenario_rows)
+        selected_row = selected.get(scenario)
+        lines.append(
+            f"| `{scenario}` | {len(scenario_rows)} | {hidden_passes} | "
+            f"{'pass' if selected_row else 'fail'} | "
+            f"`{selected_row.get('run_id', '') if selected_row else ''}` | "
+            f"{format_number(effective_review_minutes(selected_row)) if selected_row else '0'} | "
+            f"{selected_row.get('patch_changed_lines', 0) if selected_row else 0} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Reviewability Table",
+            "",
+            "| Run ID | Scenario | Public | Hidden | Accepted | Files | Changed Lines | Review Minutes | Decision |",
+            "|---|---|---:|---:|---|---:|---:|---:|---|",
+        ]
+    )
+    for row in sorted(rows, key=lambda item: (str(item.get("scenario", "")), str(item.get("started_at", "")))):
+        lines.append(
+            f"| `{row.get('run_id', '')}` | `{row.get('scenario', '')}` | {row.get('public_pass', 0)} | "
+            f"{row.get('hidden_pass', 0)} | {'yes' if accepted_patch(row) else 'no'} | "
+            f"{row.get('patch_files_touched', 0)} | {row.get('patch_changed_lines', 0)} | "
+            f"{format_number(effective_review_minutes(row))} | {row.get('review_decision', '') or ''} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "Use this report as an operating-mode readout, not a leaderboard. A strong result means",
+            "the model is useful for cheap bounded attempts protected by deterministic acceptance gates.",
+            "A weak result means even green-zone maintenance work needs either better prompts, better",
+            "acceptance tests, or escalation to a stronger model.",
+            "",
+        ]
+    )
+
+    if include_artifact_index:
+        lines.extend(
+            [
+                "## Artifact Index",
+                "",
+                "| Run ID | Scenario | Prompt | Patch | Public Output | Hidden Output | Patch SHA256 Prefix |",
+                "|---|---|---|---|---|---|---|",
+            ]
+        )
+        for row in rows:
+            lines.append(value_artifact_line(row))
+        lines.append("")
+
+    return "\n".join(lines) + "\n"
 
 
 def make_xray_report(
@@ -584,6 +717,13 @@ def build_parser() -> argparse.ArgumentParser:
     xray.add_argument("--out", required=True, help="Markdown output path.")
     xray.add_argument("--include-artifact-index", action="store_true")
 
+    value = subparsers.add_parser("value", help="Generate a positive maintenance-value report.")
+    value.add_argument("--db", action="append", required=True, help="SQLite result database. Can be provided more than once.")
+    value.add_argument("--model", required=True, help="Model under test to report.")
+    value.add_argument("--pack", default="maintenance_value", help="Challenge pack to report.")
+    value.add_argument("--out", required=True, help="Markdown output path.")
+    value.add_argument("--include-artifact-index", action="store_true")
+
     return parser
 
 
@@ -604,6 +744,19 @@ def main(argv: list[str] | None = None) -> int:
         report = make_xray_report(
             db_paths=db_paths,
             model=args.model,
+            include_artifact_index=args.include_artifact_index,
+        )
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()}")
+        return 0
+    if args.command == "value":
+        db_paths = [Path(path) for path in args.db]
+        report = make_value_report(
+            db_paths=db_paths,
+            model=args.model,
+            pack=args.pack,
             include_artifact_index=args.include_artifact_index,
         )
         out_path = Path(args.out)

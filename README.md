@@ -52,6 +52,21 @@ workflow regressions:
 - `webhook_signature_raw_body`: verifies HMAC signatures over raw payload bytes.
 - `support_sla_business_hours`: computes support deadlines inside business hours.
 
+The `maintenance_value` pack is the positive-value counterpart. These scenarios
+are deliberately low-risk and non-adversarial: explicit contract, local blast
+radius, deterministic verification, and cheap review.
+
+- `generated_openapi_refresh`: refreshes stale generated OpenAPI output.
+- `logger_warn_migration`: migrates deprecated `logger.warn()` calls.
+- `utcnow_timezone_migration`: replaces naive UTC timestamps with aware UTC.
+- `regression_test_gap`: adds a regression test for an already-fixed bug.
+- `adapter_field_rename`: normalizes old/new third-party response fields.
+- `fixture_schema_migration`: migrates stale JSON fixtures to the new schema.
+- `docs_cli_sync`: synchronizes README command examples with the CLI parser.
+- `import_hygiene_fix`: repairs package-safe imports without path hacks.
+- `explicit_validation_matrix`: implements a small finite validation matrix.
+- `batch_splitter_utility`: implements a pure batching helper.
+
 ## Setup
 
 ```bash
@@ -74,6 +89,7 @@ List challenges:
 ```bash
 uv run python -m ci_vibe_lab.runner list
 uv run python -m ci_vibe_lab.runner list --pack product_workflows
+uv run python -m ci_vibe_lab.runner list --pack maintenance_value
 ```
 
 Prepare a single disposable challenge repo for inspection:
@@ -108,6 +124,21 @@ uv run python -m ci_vibe_lab.runner run --challenge dependency_api_change --no-o
 
 That command records the failing baseline and post-test state without invoking
 OpenCode.
+
+Run the positive-value maintenance pack with three attempts per task:
+
+```bash
+uv run ci-vibe-run run \
+  --challenge all \
+  --pack maintenance_value \
+  --model opencode/north-mini-code-free \
+  --agent build \
+  --auto-approve \
+  --timeout 900 \
+  --runs 3 \
+  --db data/maintenance-value-north-mini.sqlite \
+  --runs-dir runs/maintenance-value-north-mini
+```
 
 ## Inspect A Run
 
@@ -257,6 +288,17 @@ uv run ci-vibe-report xray \
   --include-artifact-index
 ```
 
+To generate the positive maintenance-value report:
+
+```bash
+uv run ci-vibe-report value \
+  --db data/maintenance-value-north-mini.sqlite \
+  --model opencode/north-mini-code-free \
+  --pack maintenance_value \
+  --out reports/north-mini-maintenance-value-2026-06-20.md \
+  --include-artifact-index
+```
+
 ## Dashboard
 
 ```bash
@@ -265,9 +307,9 @@ uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 
 The dashboard has five tabs:
 
-- **Report**: trust gap, false-green rate, severity-weighted failure, product-workflow stress, and result matrices.
+- **Report**: trust gap, false-green rate, severity-weighted failure, product-workflow stress, maintenance value mode, and result matrices.
 - **Runs**: run table, failure inbox, and model-vs-model comparison.
-- **Inspector**: challenge card, prompt, test logs, OpenCode trace, patch, and human review scores.
+- **Inspector**: challenge card, prompt, test logs, OpenCode trace, patch, human review scores, review decision, and manual review minutes.
 - **Evidence**: evaluator reviews, review artifacts, and scenario audit status.
 - **Exports**: filtered CSVs and Markdown report downloads.
 
@@ -294,6 +336,13 @@ Include the strong-model control when it exists:
 
 ```bash
 CI_VIBE_DB="data/north-mini-code-eval.sqlite,data/results.sqlite,data/control-results.sqlite" \
+  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
+```
+
+Include maintenance-value results when comparing positive value against stress packs:
+
+```bash
+CI_VIBE_DB="data/maintenance-value-north-mini.sqlite,data/north-mini-code-eval.sqlite,data/results.sqlite" \
   uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ```
 

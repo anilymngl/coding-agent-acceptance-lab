@@ -4,12 +4,13 @@ import contextlib
 import io
 import json
 import sqlite3
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from ci_vibe_lab.db import connect, insert_run, upsert_evaluator_review
-from ci_vibe_lab.analysis import compute_trust_metrics
+from ci_vibe_lab.analysis import compute_trust_metrics, compute_value_metrics, effective_review_minutes, select_best_patches
 from ci_vibe_lab.dashboard import load_runs as load_dashboard_runs
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
@@ -21,8 +22,8 @@ from ci_vibe_lab.evaluator import (
     validate_working_board,
     working_board_template,
 )
-from ci_vibe_lab.report import make_xray_report
-from ci_vibe_lab.runner import inspect_run, run_command
+from ci_vibe_lab.report import make_value_report, make_xray_report
+from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
 
@@ -63,6 +64,29 @@ class ScenarioTests(unittest.TestCase):
             self.assertGreaterEqual(len(challenge["expected_behavior"]), 3, challenge["id"])
             self.assertGreaterEqual(len(challenge["success_signals"]), 3, challenge["id"])
             self.assertGreaterEqual(len(challenge["failure_modes"]), 3, challenge["id"])
+
+    def test_maintenance_value_pack_has_ten_positive_value_cases(self) -> None:
+        manifest = challenge_manifest(pack="maintenance_value")
+        self.assertEqual(len(manifest), 10)
+        self.assertEqual(
+            {challenge["id"] for challenge in manifest},
+            {
+                "generated_openapi_refresh",
+                "logger_warn_migration",
+                "utcnow_timezone_migration",
+                "regression_test_gap",
+                "adapter_field_rename",
+                "fixture_schema_migration",
+                "docs_cli_sync",
+                "import_hygiene_fix",
+                "explicit_validation_matrix",
+                "batch_splitter_utility",
+            },
+        )
+        for challenge in manifest:
+            self.assertEqual(challenge["pack"], "maintenance_value")
+            self.assertTrue(challenge["vibe"], challenge["id"])
+            self.assertGreaterEqual(len(challenge["expected_behavior"]), 3, challenge["id"])
 
 
 class DatabaseTests(unittest.TestCase):
@@ -229,6 +253,11 @@ class DatabaseTests(unittest.TestCase):
 
             self.assertIn("challenge_pack", columns)
             self.assertIn("artifact_dir", columns)
+            self.assertIn("patch_files_touched", columns)
+            self.assertIn("patch_changed_lines", columns)
+            self.assertIn("estimated_review_minutes", columns)
+            self.assertIn("manual_review_minutes", columns)
+            self.assertIn("review_decision", columns)
 
             with connect(db_path) as connection:
                 tables = {
@@ -354,6 +383,116 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("Public-green/hidden-red target runs reviewed: 1/1 (2 review rows indexed).", report)
             self.assertIn("| `edge_case_gap` | 1 |", report)
             self.assertNotIn("| `missed_hidden_contract` | 1 |", report)
+
+    def test_patch_stats_and_review_minute_heuristic(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True, text=True)
+            (repo / "a.txt").write_text("one\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=CI Vibe Lab",
+                    "-c",
+                    "user.email=ci-vibe-lab@example.invalid",
+                    "commit",
+                    "-m",
+                    "seed",
+                ],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            (repo / "a.txt").write_text("one\ntwo\n", encoding="utf-8")
+            (repo / "b.txt").write_text("new\n", encoding="utf-8")
+
+            stats = git_patch_stats(repo)
+
+            self.assertEqual(stats.files_touched, 1)
+            self.assertEqual(stats.added_lines, 1)
+            self.assertEqual(stats.deleted_lines, 0)
+            self.assertEqual(estimate_review_minutes(stats), 4.65)
+            self.assertEqual(estimate_review_minutes(PatchStats(files_touched=100, added_lines=1000, deleted_lines=1000)), 30.0)
+
+    def test_value_metrics_select_best_hidden_passing_attempt_and_manual_override(self) -> None:
+        rows = [
+            {
+                "model": "model/a",
+                "scenario": "generated_openapi_refresh",
+                "public_pass": 1,
+                "hidden_pass": 1,
+                "patch_changed_lines": 20,
+                "estimated_review_minutes": 8,
+                "manual_review_minutes": "",
+                "started_at": "2026-01-01T00:00:02+00:00",
+            },
+            {
+                "model": "model/a",
+                "scenario": "generated_openapi_refresh",
+                "public_pass": 1,
+                "hidden_pass": 1,
+                "patch_changed_lines": 5,
+                "estimated_review_minutes": 7,
+                "manual_review_minutes": 4,
+                "started_at": "2026-01-01T00:00:03+00:00",
+            },
+            {
+                "model": "model/a",
+                "scenario": "logger_warn_migration",
+                "public_pass": 1,
+                "hidden_pass": 0,
+                "patch_changed_lines": 2,
+                "estimated_review_minutes": 4,
+                "started_at": "2026-01-01T00:00:04+00:00",
+            },
+        ]
+
+        selected = select_best_patches(rows)
+        metrics = compute_value_metrics(rows)
+
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["patch_changed_lines"], 5)
+        self.assertEqual(effective_review_minutes(selected[0]), 4.0)
+        self.assertEqual(metrics.best_of_three_scenarios, 2)
+        self.assertEqual(metrics.best_of_three_successes, 1)
+        self.assertEqual(metrics.accepted_patches_per_review_hour, 15.0)
+
+    def test_value_report_renders_expected_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "results.sqlite"
+            insert_run(
+                db_path,
+                self.run_row(
+                    run_id="run-value-1",
+                    scenario="generated_openapi_refresh",
+                    scenario_title="Generated OpenAPI Refresh",
+                    challenge_pack="maintenance_value",
+                    model="opencode/north-mini-code-free",
+                    public_pass=1,
+                    hidden_pass=1,
+                    patch_files_touched=1,
+                    patch_added_lines=4,
+                    patch_deleted_lines=1,
+                    patch_changed_lines=5,
+                    estimated_review_minutes=4.5,
+                ),
+            )
+
+            report = make_value_report(
+                db_paths=[db_path],
+                model="opencode/north-mini-code-free",
+                pack="maintenance_value",
+                include_artifact_index=True,
+            )
+
+            self.assertIn("# Maintenance Value Report", report)
+            self.assertIn("Accepted patches / review hour", report)
+            self.assertIn("Best-of-3 scenario success", report)
+            self.assertIn("## Reviewability Table", report)
+            self.assertIn("## Artifact Index", report)
 
 
 class EvaluatorTests(unittest.TestCase):

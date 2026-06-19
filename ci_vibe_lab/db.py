@@ -25,6 +25,13 @@ EXTRA_COLUMNS = {
     "public_output_path": "TEXT DEFAULT ''",
     "hidden_output_path": "TEXT DEFAULT ''",
     "patch_path": "TEXT DEFAULT ''",
+    "patch_files_touched": "INTEGER DEFAULT 0",
+    "patch_added_lines": "INTEGER DEFAULT 0",
+    "patch_deleted_lines": "INTEGER DEFAULT 0",
+    "patch_changed_lines": "INTEGER DEFAULT 0",
+    "estimated_review_minutes": "REAL DEFAULT 0",
+    "manual_review_minutes": "REAL",
+    "review_decision": "TEXT DEFAULT ''",
 }
 
 
@@ -70,6 +77,13 @@ CREATE TABLE IF NOT EXISTS runs (
   public_output_path TEXT DEFAULT '',
   hidden_output_path TEXT DEFAULT '',
   patch_path TEXT DEFAULT '',
+  patch_files_touched INTEGER DEFAULT 0,
+  patch_added_lines INTEGER DEFAULT 0,
+  patch_deleted_lines INTEGER DEFAULT 0,
+  patch_changed_lines INTEGER DEFAULT 0,
+  estimated_review_minutes REAL DEFAULT 0,
+  manual_review_minutes REAL,
+  review_decision TEXT DEFAULT '',
   patch_quality INTEGER,
   debug_discipline INTEGER,
   notes TEXT DEFAULT ''
@@ -230,6 +244,8 @@ SCENARIO_AUDIT_DEFAULTS: dict[str, dict[str, object]] = {
     },
 }
 
+UNSET = object()
+
 
 def migrate(connection: sqlite3.Connection) -> None:
     existing = {
@@ -304,15 +320,26 @@ def update_review(
     patch_quality: int | None,
     debug_discipline: int | None,
     notes: str,
+    manual_review_minutes: object = UNSET,
+    review_decision: object = UNSET,
 ) -> None:
+    assignments = [
+        "patch_quality = ?",
+        "debug_discipline = ?",
+        "notes = ?",
+    ]
+    params: list[Any] = [patch_quality, debug_discipline, notes]
+    if manual_review_minutes is not UNSET:
+        assignments.append("manual_review_minutes = ?")
+        params.append(manual_review_minutes)
+    if review_decision is not UNSET:
+        assignments.append("review_decision = ?")
+        params.append(review_decision)
+    params.append(run_id)
     with connect(db_path) as connection:
         connection.execute(
-            """
-            UPDATE runs
-            SET patch_quality = ?, debug_discipline = ?, notes = ?
-            WHERE run_id = ?
-            """,
-            [patch_quality, debug_discipline, notes, run_id],
+            f"UPDATE runs SET {', '.join(assignments)} WHERE run_id = ?",
+            params,
         )
         connection.commit()
 

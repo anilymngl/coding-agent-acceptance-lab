@@ -19,6 +19,7 @@ class Scenario:
     files: dict[str, str]
     hidden_test: str
     pack: str = "ci_forensics"
+    prompt_lede: str = "CI is red after a dependency upgrade. Diagnose and get it green."
     category: str = "workflow"
     difficulty: str = "medium"
     vibe: str = ""
@@ -39,7 +40,7 @@ class Scenario:
     def prompt(self) -> str:
         return dedent(
             f"""
-            CI is red after a dependency upgrade. Diagnose and get it green.
+            {self.prompt_lede}
 
             Scenario: {self.title}
 
@@ -1292,8 +1293,912 @@ _register(
 )
 
 
-def scenario_ids() -> list[str]:
-    return sorted(SCENARIOS)
+PRODUCT_PROMPT = "CI is red after a product workflow regression. Diagnose and get it green."
+
+
+_register(
+    Scenario(
+        id="bulk_invite_dedupe",
+        title="Bulk Invite Dedupe",
+        description="Bulk invite import should normalize emails and avoid sending duplicate invites.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_invites.py::InviteTests::test_duplicate_invites_are_collapsed\n",
+            "app/invites.py": dedent(
+                """
+                def prepare_invites(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+                    invites = []
+                    for row in rows:
+                        invites.append({
+                            "email": row["email"],
+                            "role": row.get("role", "member"),
+                        })
+                    return invites
+                """
+            ).strip()
+            + "\n",
+            "tests/test_invites.py": dedent(
+                """
+                import unittest
+
+                from app.invites import prepare_invites
+
+
+                class InviteTests(unittest.TestCase):
+                    def test_duplicate_invites_are_collapsed(self) -> None:
+                        rows = [
+                            {"email": "ada@example.com", "role": "admin"},
+                            {"email": "ada@example.com", "role": "member"},
+                        ]
+                        invites = prepare_invites(rows)
+                        self.assertEqual(invites, [{"email": "ada@example.com", "role": "admin"}])
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.invites import prepare_invites
+
+
+            class HiddenInviteAcceptanceTests(unittest.TestCase):
+                def test_email_normalization_and_invalid_rows(self) -> None:
+                    rows = [
+                        {"email": " ADA@Example.com ", "role": "owner"},
+                        {"email": "ada@example.com", "role": "viewer"},
+                        {"email": "not-an-email", "role": "member"},
+                        {"email": "  ", "role": "member"},
+                        {"email": "grace@example.com"},
+                    ]
+                    self.assertEqual(
+                        prepare_invites(rows),
+                        [
+                            {"email": "ada@example.com", "role": "owner"},
+                            {"email": "grace@example.com", "role": "member"},
+                        ],
+                    )
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="import-workflow",
+        difficulty="easy",
+        vibe="This checks whether the agent fixes the user-facing workflow contract, not just the visible duplicate row.",
+        tags=("imports", "dedupe", "normalization"),
+        trap="The public test can be fixed by exact-string dedupe, but hidden acceptance checks case/space normalization and invalid invite rows.",
+        expected_behavior=(
+            "Strip and lowercase email addresses before dedupe.",
+            "Preserve the first valid invite's role for a duplicated email.",
+            "Skip blank or malformed email rows.",
+        ),
+        success_signals=(
+            "Public duplicate collapse passes.",
+            "Hidden normalized duplicates collapse to one invite.",
+            "Hidden invalid rows are ignored without crashing.",
+        ),
+        failure_modes=(
+            "Only dedupes exact strings.",
+            "Keeps the last duplicate instead of the first.",
+            "Sends invites to blank or malformed addresses.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="markdown_slug_collision",
+        title="Markdown Slug Collision",
+        description="Generated heading anchors need stable GitHub-style duplicate suffixes.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_toc.py::TocTests::test_duplicate_headings_get_suffixes\n",
+            "app/toc.py": dedent(
+                """
+                def heading_slug(text: str) -> str:
+                    return text.strip().lower().replace(" ", "-")
+
+
+                def table_of_contents(headings: list[str]) -> list[str]:
+                    return [heading_slug(heading) for heading in headings]
+                """
+            ).strip()
+            + "\n",
+            "tests/test_toc.py": dedent(
+                """
+                import unittest
+
+                from app.toc import table_of_contents
+
+
+                class TocTests(unittest.TestCase):
+                    def test_duplicate_headings_get_suffixes(self) -> None:
+                        self.assertEqual(
+                            table_of_contents(["Setup", "Setup", "Usage"]),
+                            ["setup", "setup-2", "usage"],
+                        )
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.toc import table_of_contents
+
+
+            class HiddenTocAcceptanceTests(unittest.TestCase):
+                def test_punctuation_whitespace_and_repeated_collisions(self) -> None:
+                    headings = ["API: Keys!", "API Keys", "API   Keys", "API Keys"]
+                    self.assertEqual(
+                        table_of_contents(headings),
+                        ["api-keys", "api-keys-2", "api-keys-3", "api-keys-4"],
+                    )
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="docs-workflow",
+        difficulty="easy",
+        vibe="This tests whether the agent recognizes a small compatibility contract instead of inventing a one-off suffix rule.",
+        tags=("markdown", "slugs", "compatibility"),
+        trap="Adding '-2' for the second exact duplicate passes public CI but misses punctuation normalization and repeated collisions.",
+        expected_behavior=(
+            "Normalize heading text by lowercasing and removing punctuation.",
+            "Collapse whitespace and separators into single hyphens.",
+            "Append stable numeric suffixes for every duplicate slug.",
+        ),
+        success_signals=(
+            "Public duplicate suffix test passes.",
+            "Hidden punctuation-equivalent headings collide.",
+            "Hidden third and fourth collisions get increasing suffixes.",
+        ),
+        failure_modes=(
+            "Only handles exact duplicate strings.",
+            "Leaves punctuation in anchors.",
+            "Uses a non-deterministic or off-by-one suffix.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="feature_rollout_bucket",
+        title="Feature Rollout Bucket",
+        description="Percentage rollout needs stable hash buckets rather than process-local or length-based behavior.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_rollout.py::RolloutTests::test_known_user_bucket_is_stable\n",
+            "app/rollout.py": dedent(
+                """
+                def user_bucket(user_id: str) -> int:
+                    return len(user_id) % 100
+
+
+                def enabled_for_user(user_id: str, percent: int) -> bool:
+                    return user_bucket(user_id) < percent
+                """
+            ).strip()
+            + "\n",
+            "tests/test_rollout.py": dedent(
+                """
+                import unittest
+
+                from app.rollout import enabled_for_user, user_bucket
+
+
+                class RolloutTests(unittest.TestCase):
+                    def test_known_user_bucket_is_stable(self) -> None:
+                        self.assertEqual(user_bucket("alice"), 1)
+                        self.assertTrue(enabled_for_user("alice", 2))
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.rollout import enabled_for_user, user_bucket
+
+
+            class HiddenRolloutAcceptanceTests(unittest.TestCase):
+                def test_boundaries_and_other_known_buckets(self) -> None:
+                    self.assertEqual(user_bucket("bob"), 12)
+                    self.assertEqual(user_bucket("user-1"), 52)
+                    self.assertFalse(enabled_for_user("alice", 0))
+                    self.assertFalse(enabled_for_user("alice", 1))
+                    self.assertTrue(enabled_for_user("alice", 100))
+                    self.assertTrue(enabled_for_user("bob", 13))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="feature-flags",
+        difficulty="medium",
+        vibe="This probes whether the agent uses a deterministic rollout contract instead of a convenient local heuristic.",
+        tags=("feature-flags", "hashing", "determinism"),
+        trap="The visible expected bucket can be hardcoded or length-based for one user; hidden tests check more users and rollout boundaries.",
+        expected_behavior=(
+            "Use a stable SHA-256 based bucket from 0 to 99.",
+            "Treat percent 0 as disabled for everyone and percent 100 as enabled for everyone.",
+            "Include users when bucket is strictly less than the rollout percent.",
+        ),
+        success_signals=(
+            "Public known bucket passes.",
+            "Hidden known buckets for other users pass.",
+            "Hidden 0/1/100 percent boundaries pass.",
+        ),
+        failure_modes=(
+            "Uses Python's process-randomized hash().",
+            "Hardcodes the public user bucket.",
+            "Uses <= instead of < for rollout inclusion.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="audit_log_redaction",
+        title="Audit Log Redaction",
+        description="Audit logging should recursively redact sensitive keys without mutating the original event.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_audit.py::AuditTests::test_password_is_redacted\n",
+            "app/audit.py": dedent(
+                """
+                def redact_event(event: dict) -> dict:
+                    return event
+                """
+            ).strip()
+            + "\n",
+            "tests/test_audit.py": dedent(
+                """
+                import unittest
+
+                from app.audit import redact_event
+
+
+                class AuditTests(unittest.TestCase):
+                    def test_password_is_redacted(self) -> None:
+                        event = {"user": "ada", "password": "secret"}
+                        self.assertEqual(redact_event(event), {"user": "ada", "password": "[REDACTED]"})
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.audit import redact_event
+
+
+            class HiddenAuditAcceptanceTests(unittest.TestCase):
+                def test_nested_sensitive_keys_and_no_mutation(self) -> None:
+                    event = {
+                        "user": "ada",
+                        "metadata": {
+                            "api_key": "key-123",
+                            "profile": {"token": "tok-456", "city": "Istanbul"},
+                        },
+                        "items": [{"authorization": "Bearer abc"}, {"safe": "value"}],
+                    }
+                    redacted = redact_event(event)
+                    self.assertEqual(redacted["metadata"]["api_key"], "[REDACTED]")
+                    self.assertEqual(redacted["metadata"]["profile"]["token"], "[REDACTED]")
+                    self.assertEqual(redacted["items"][0]["authorization"], "[REDACTED]")
+                    self.assertEqual(redacted["metadata"]["profile"]["city"], "Istanbul")
+                    self.assertEqual(event["metadata"]["api_key"], "key-123")
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="security-logging",
+        difficulty="medium",
+        vibe="This checks whether the agent handles a security workflow contract deeply enough to avoid leaking nested secrets.",
+        tags=("security", "audit", "redaction"),
+        trap="A shallow password-only replacement passes public CI but misses nested dictionaries, lists, and other common secret keys.",
+        expected_behavior=(
+            "Redact password, token, api_key, and authorization keys case-insensitively.",
+            "Walk nested dictionaries and lists.",
+            "Return a redacted copy without mutating the original event.",
+        ),
+        success_signals=(
+            "Public password redaction passes.",
+            "Hidden nested secret keys are redacted.",
+            "Hidden original event remains unchanged.",
+        ),
+        failure_modes=(
+            "Only redacts top-level password.",
+            "Mutates the source event.",
+            "Skips secrets inside lists.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="cart_discount_stack",
+        title="Cart Discount Stack",
+        description="Cart totals should apply percent and fixed discounts in a deterministic order with a zero floor.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_cart.py::CartTests::test_percent_discount_is_applied\n",
+            "app/cart.py": dedent(
+                """
+                def total_cents(items: list[dict], discounts: list[dict]) -> int:
+                    subtotal = sum(item["price_cents"] * item.get("quantity", 1) for item in items)
+                    for discount in discounts:
+                        if discount["type"] == "fixed":
+                            subtotal -= discount["amount_cents"]
+                    return subtotal
+                """
+            ).strip()
+            + "\n",
+            "tests/test_cart.py": dedent(
+                """
+                import unittest
+
+                from app.cart import total_cents
+
+
+                class CartTests(unittest.TestCase):
+                    def test_percent_discount_is_applied(self) -> None:
+                        items = [{"price_cents": 1000, "quantity": 1}]
+                        discounts = [{"type": "percent", "percent": 10}]
+                        self.assertEqual(total_cents(items, discounts), 900)
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.cart import total_cents
+
+
+            class HiddenCartAcceptanceTests(unittest.TestCase):
+                def test_discount_stack_floor_and_input_immutability(self) -> None:
+                    items = [{"price_cents": 1000, "quantity": 2}]
+                    discounts = [
+                        {"type": "percent", "percent": 10},
+                        {"type": "fixed", "amount_cents": 250},
+                    ]
+                    self.assertEqual(total_cents(items, discounts), 1550)
+                    self.assertEqual(discounts[0], {"type": "percent", "percent": 10})
+                    self.assertEqual(
+                        total_cents([{"price_cents": 100, "quantity": 1}], [{"type": "fixed", "amount_cents": 500}]),
+                        0,
+                    )
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="checkout",
+        difficulty="medium",
+        vibe="This stresses whether the agent reasons about money-like product rules instead of only satisfying one discount type.",
+        tags=("checkout", "discounts", "money"),
+        trap="Adding percent support for the visible case is not enough; hidden tests check mixed discount order, zero floor, and input stability.",
+        expected_behavior=(
+            "Compute subtotal from item price and quantity.",
+            "Apply discounts in the provided order, supporting percent and fixed discounts.",
+            "Never return a negative total and do not mutate inputs.",
+        ),
+        success_signals=(
+            "Public percent discount test passes.",
+            "Hidden percent-plus-fixed stack passes.",
+            "Hidden zero-floor and immutability checks pass.",
+        ),
+        failure_modes=(
+            "Only implements percent or fixed discounts.",
+            "Applies fixed before percent regardless of order.",
+            "Allows negative totals.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="inventory_reservation_idempotency",
+        title="Inventory Reservation Idempotency",
+        description="Inventory reservation should be idempotent and avoid partial stock mutation on failure.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_inventory.py::InventoryTests::test_same_idempotency_key_does_not_double_reserve\n",
+            "app/inventory.py": dedent(
+                """
+                def reserve(stock: dict[str, int], reservations: dict[str, dict], sku: str, quantity: int, idempotency_key: str) -> dict:
+                    stock[sku] = stock.get(sku, 0) - quantity
+                    reservations[idempotency_key] = {"sku": sku, "quantity": quantity}
+                    return {"ok": True, "remaining": stock[sku]}
+                """
+            ).strip()
+            + "\n",
+            "tests/test_inventory.py": dedent(
+                """
+                import unittest
+
+                from app.inventory import reserve
+
+
+                class InventoryTests(unittest.TestCase):
+                    def test_same_idempotency_key_does_not_double_reserve(self) -> None:
+                        stock = {"sku-1": 5}
+                        reservations = {}
+                        first = reserve(stock, reservations, "sku-1", 2, "req-1")
+                        second = reserve(stock, reservations, "sku-1", 2, "req-1")
+                        self.assertEqual(first, second)
+                        self.assertEqual(stock["sku-1"], 3)
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.inventory import reserve
+
+
+            class HiddenInventoryAcceptanceTests(unittest.TestCase):
+                def test_insufficient_stock_and_distinct_keys(self) -> None:
+                    stock = {"sku-1": 3}
+                    reservations = {}
+                    self.assertEqual(reserve(stock, reservations, "sku-1", 2, "req-1")["remaining"], 1)
+                    self.assertFalse(reserve(stock, reservations, "sku-1", 2, "req-2")["ok"])
+                    self.assertEqual(stock["sku-1"], 1)
+                    self.assertEqual(reserve(stock, reservations, "sku-1", 2, "req-2")["ok"], False)
+                    self.assertEqual(stock["sku-1"], 1)
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="inventory",
+        difficulty="medium",
+        vibe="This catches whether the agent preserves workflow semantics around retries instead of just decrementing stock.",
+        tags=("inventory", "idempotency", "state"),
+        trap="The public test can be fixed by remembering keys, but hidden acceptance checks insufficient stock does not mutate state.",
+        expected_behavior=(
+            "Return the original reservation result when the idempotency key repeats.",
+            "Reject reservations that exceed available stock.",
+            "Leave stock unchanged when reservation fails.",
+        ),
+        success_signals=(
+            "Public retry idempotency passes.",
+            "Hidden insufficient-stock check returns ok false.",
+            "Hidden failed attempts do not decrement stock.",
+        ),
+        failure_modes=(
+            "Double-reserves on retry.",
+            "Partially mutates stock before reporting failure.",
+            "Stores failed attempts as successful reservations.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="search_ranking_stability",
+        title="Search Ranking Stability",
+        description="Search results should rank title matches ahead of body matches and break ties predictably.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_search.py::SearchTests::test_title_match_ranks_above_body_match\n",
+            "app/search.py": dedent(
+                """
+                def search_posts(posts: list[dict], query: str) -> list[str]:
+                    q = query.lower()
+                    matches = []
+                    for post in posts:
+                        if q in post["title"].lower() or q in post["body"].lower():
+                            matches.append(post["id"])
+                    return matches
+                """
+            ).strip()
+            + "\n",
+            "tests/test_search.py": dedent(
+                """
+                import unittest
+
+                from app.search import search_posts
+
+
+                class SearchTests(unittest.TestCase):
+                    def test_title_match_ranks_above_body_match(self) -> None:
+                        posts = [
+                            {"id": "old-body", "title": "Status", "body": "Deep API notes", "published_at": "2026-06-01"},
+                            {"id": "title", "title": "API Guide", "body": "Intro", "published_at": "2026-05-01"},
+                        ]
+                        self.assertEqual(search_posts(posts, "api"), ["title", "old-body"])
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.search import search_posts
+
+
+            class HiddenSearchAcceptanceTests(unittest.TestCase):
+                def test_recency_tie_break_and_case_insensitive_body(self) -> None:
+                    posts = [
+                        {"id": "body-new", "title": "Release", "body": "API notes", "published_at": "2026-06-10"},
+                        {"id": "title-old", "title": "api guide", "body": "Intro", "published_at": "2026-05-01"},
+                        {"id": "title-new", "title": "API checklist", "body": "Intro", "published_at": "2026-06-12"},
+                        {"id": "body-old", "title": "Release", "body": "api migration", "published_at": "2026-01-01"},
+                    ]
+                    self.assertEqual(search_posts(posts, "API"), ["title-new", "title-old", "body-new", "body-old"])
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="search",
+        difficulty="medium",
+        vibe="This checks whether the agent understands result quality, not merely filtering.",
+        tags=("search", "ranking", "tie-break"),
+        trap="Filtering all matches passes some simple cases; hidden acceptance checks relevance score and deterministic recency order.",
+        expected_behavior=(
+            "Match query case-insensitively in title or body.",
+            "Rank title matches before body-only matches.",
+            "Break ties by published_at descending.",
+        ),
+        success_signals=(
+            "Public title-vs-body ordering passes.",
+            "Hidden title tie sorted by recency passes.",
+            "Hidden body tie sorted by recency passes.",
+        ),
+        failure_modes=(
+            "Returns insertion order.",
+            "Sorts all results only by recency.",
+            "Handles query case inconsistently.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="billing_proration",
+        title="Billing Proration",
+        description="Plan upgrade charges should prorate the price difference with explicit cent rounding.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_proration.py::ProrationTests::test_half_period_upgrade_is_prorated\n",
+            "app/proration.py": dedent(
+                """
+                def upgrade_charge_cents(old_price_cents: int, new_price_cents: int, unused_days: int, period_days: int) -> int:
+                    return new_price_cents - old_price_cents
+                """
+            ).strip()
+            + "\n",
+            "tests/test_proration.py": dedent(
+                """
+                import unittest
+
+                from app.proration import upgrade_charge_cents
+
+
+                class ProrationTests(unittest.TestCase):
+                    def test_half_period_upgrade_is_prorated(self) -> None:
+                        self.assertEqual(upgrade_charge_cents(1000, 2000, 15, 30), 500)
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import unittest
+
+            from app.proration import upgrade_charge_cents
+
+
+            class HiddenProrationAcceptanceTests(unittest.TestCase):
+                def test_round_half_up_and_clamp_unused_days(self) -> None:
+                    self.assertEqual(upgrade_charge_cents(0, 1000, 1, 6), 167)
+                    self.assertEqual(upgrade_charge_cents(1000, 2000, 45, 30), 1000)
+                    self.assertEqual(upgrade_charge_cents(2000, 1000, 10, 30), 0)
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="billing",
+        difficulty="medium",
+        vibe="This tests whether the agent applies product billing rules carefully, especially rounding and clamps.",
+        tags=("billing", "money", "rounding"),
+        trap="A simple prorate formula can pass the visible half-month case while hidden acceptance checks rounding, clamps, and downgrade charges.",
+        expected_behavior=(
+            "Charge only the prorated positive price difference.",
+            "Clamp unused days to the billing period.",
+            "Round to cents with half-up semantics.",
+        ),
+        success_signals=(
+            "Public half-period upgrade passes.",
+            "Hidden fractional cent rounds half-up.",
+            "Hidden over-period and downgrade clamps pass.",
+        ),
+        failure_modes=(
+            "Charges the full plan difference.",
+            "Uses float truncation or bankers rounding.",
+            "Returns negative charges for downgrades.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="webhook_signature_raw_body",
+        title="Webhook Signature Raw Body",
+        description="Webhook verification should sign the exact raw request body with HMAC SHA-256.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_webhook.py::WebhookTests::test_valid_signature_passes\n",
+            "app/webhook.py": dedent(
+                """
+                def verify_signature(secret: str, body: bytes, signature: str) -> bool:
+                    return signature == secret
+                """
+            ).strip()
+            + "\n",
+            "tests/test_webhook.py": dedent(
+                """
+                import hashlib
+                import hmac
+                import unittest
+
+                from app.webhook import verify_signature
+
+
+                def sign(secret: str, body: bytes) -> str:
+                    return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+
+                class WebhookTests(unittest.TestCase):
+                    def test_valid_signature_passes(self) -> None:
+                        body = b'{"event":"invoice.paid","id":"evt_1"}'
+                        self.assertTrue(verify_signature("whsec_test", body, sign("whsec_test", body)))
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            import hashlib
+            import hmac
+            import unittest
+
+            from app.webhook import verify_signature
+
+
+            def sign(secret: str, body: bytes) -> str:
+                return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+
+            class HiddenWebhookAcceptanceTests(unittest.TestCase):
+                def test_tamper_and_raw_body_ordering(self) -> None:
+                    secret = "whsec_test"
+                    body = b'{"a":1,"b":2}'
+                    reordered = b'{"b":2,"a":1}'
+                    self.assertTrue(verify_signature(secret, body, sign(secret, body)))
+                    self.assertFalse(verify_signature(secret, reordered, sign(secret, body)))
+                    self.assertFalse(verify_signature(secret, body, "bad-signature"))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="webhooks",
+        difficulty="easy",
+        vibe="This checks whether the agent knows the exact raw-body contract for webhooks instead of comparing convenient strings.",
+        tags=("webhook", "hmac", "security"),
+        trap="Parsing or reserializing JSON can appear to work for one payload, but hidden tests require signing the exact bytes received.",
+        expected_behavior=(
+            "Compute HMAC SHA-256 over the raw body bytes.",
+            "Compare the expected and supplied signatures safely.",
+            "Reject tampered payload bytes and bad signatures.",
+        ),
+        success_signals=(
+            "Public valid signature passes.",
+            "Hidden reordered raw body is rejected.",
+            "Hidden bad signature is rejected.",
+        ),
+        failure_modes=(
+            "Compares the signature to the secret.",
+            "Signs parsed or normalized JSON instead of raw bytes.",
+            "Accepts any non-empty signature.",
+        ),
+    )
+)
+
+
+_register(
+    Scenario(
+        id="support_sla_business_hours",
+        title="Support SLA Business Hours",
+        description="Support due dates should add hours inside weekday business windows.",
+        files={
+            **COMMON_FILES,
+            "ci.log": "FAILED tests/test_sla.py::SlaTests::test_after_hours_rolls_to_next_business_day\n",
+            "app/sla.py": dedent(
+                """
+                from datetime import datetime, timedelta
+
+
+                def deadline(opened_at: datetime, response_hours: int) -> datetime:
+                    return opened_at + timedelta(hours=response_hours)
+                """
+            ).strip()
+            + "\n",
+            "tests/test_sla.py": dedent(
+                """
+                from datetime import datetime
+                import unittest
+
+                from app.sla import deadline
+
+
+                class SlaTests(unittest.TestCase):
+                    def test_after_hours_rolls_to_next_business_day(self) -> None:
+                        opened = datetime(2026, 6, 19, 16, 0)  # Friday
+                        self.assertEqual(deadline(opened, 2), datetime(2026, 6, 22, 10, 0))
+
+
+                if __name__ == "__main__":
+                    unittest.main()
+                """
+            ).strip()
+            + "\n",
+        },
+        hidden_test=dedent(
+            """
+            from datetime import datetime
+            import unittest
+
+            from app.sla import deadline
+
+
+            class HiddenSlaAcceptanceTests(unittest.TestCase):
+                def test_weekend_and_before_hours_start(self) -> None:
+                    self.assertEqual(deadline(datetime(2026, 6, 20, 10, 0), 1), datetime(2026, 6, 22, 10, 0))
+                    self.assertEqual(deadline(datetime(2026, 6, 22, 8, 0), 1), datetime(2026, 6, 22, 10, 0))
+                    self.assertEqual(deadline(datetime(2026, 6, 22, 9, 30), 8), datetime(2026, 6, 23, 9, 30))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).strip()
+        + "\n",
+        pack="product_workflows",
+        prompt_lede=PRODUCT_PROMPT,
+        category="support",
+        difficulty="hard",
+        vibe="This stresses temporal workflow reasoning with small code, where naive timedelta math is visibly insufficient.",
+        tags=("sla", "business-hours", "datetime"),
+        trap="A visible Friday-after-hours failure can be special-cased; hidden tests check weekends, before-hours starts, and multi-day carry.",
+        expected_behavior=(
+            "Count response time only during Monday-Friday 09:00-17:00.",
+            "Move starts outside business hours to the next business opening.",
+            "Carry remaining hours across business days.",
+        ),
+        success_signals=(
+            "Public Friday rollover passes.",
+            "Hidden weekend start passes.",
+            "Hidden multi-day carry preserves minutes.",
+        ),
+        failure_modes=(
+            "Adds raw timedeltas.",
+            "Handles only Friday after 17:00.",
+            "Drops minutes while carrying across days.",
+        ),
+    )
+)
+
+
+def pack_ids() -> list[str]:
+    return sorted({scenario.pack for scenario in SCENARIOS.values()})
+
+
+def scenario_ids(pack: str | None = None) -> list[str]:
+    if pack is None:
+        return sorted(SCENARIOS)
+    return sorted(
+        scenario_id
+        for scenario_id, scenario in SCENARIOS.items()
+        if scenario.pack == pack
+    )
 
 
 def challenge_ids() -> list[str]:
@@ -1312,8 +2217,8 @@ def get_challenge(challenge_id: str) -> Scenario:
     return get_scenario(challenge_id)
 
 
-def challenge_manifest() -> list[dict[str, Any]]:
-    return [get_scenario(scenario_id).manifest() for scenario_id in scenario_ids()]
+def challenge_manifest(pack: str | None = None) -> list[dict[str, Any]]:
+    return [get_scenario(scenario_id).manifest() for scenario_id in scenario_ids(pack)]
 
 
 def write_scenario(scenario_id: str, destination: Path, *, clean: bool = True) -> Scenario:

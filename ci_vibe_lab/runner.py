@@ -15,6 +15,7 @@ from ci_vibe_lab.db import insert_run
 from ci_vibe_lab.scenarios import (
     TEST_COMMAND,
     get_scenario,
+    pack_ids,
     scenario_ids,
     write_hidden_test,
     write_scenario,
@@ -231,23 +232,31 @@ def run_one(
     return run_id
 
 
-def expand_scenarios(value: str) -> list[str]:
+def expand_scenarios(value: str, *, pack: str | None = None) -> list[str]:
     if value == "all":
-        return scenario_ids()
+        selected = scenario_ids(pack)
+        if not selected:
+            valid = ", ".join(pack_ids())
+            raise ValueError(f"Unknown or empty pack {pack!r}. Valid packs: {valid}")
+        return selected
     get_scenario(value)
+    if pack and get_scenario(value).pack != pack:
+        raise ValueError(f"Challenge {value!r} is not in pack {pack!r}.")
     return [value]
 
 
-def print_scenarios() -> None:
-    for scenario_id in scenario_ids():
+def print_scenarios(*, pack: str | None = None) -> None:
+    for scenario_id in scenario_ids(pack):
         scenario = get_scenario(scenario_id)
-        print(f"{scenario.id}: {scenario.title}")
+        print(f"{scenario.id} [{scenario.pack}]: {scenario.title}")
         print(f"  {scenario.description}")
 
 
 def prepare_scenario(args: argparse.Namespace) -> None:
     if not args.scenario:
         raise SystemExit("prepare requires --challenge or --scenario")
+    if args.pack and get_scenario(args.scenario).pack != args.pack:
+        raise SystemExit(f"Challenge {args.scenario!r} is not in pack {args.pack!r}.")
     scenario = write_scenario(args.scenario, Path(args.out))
     print(f"Wrote {scenario.id} scenario to {Path(args.out).resolve()}")
     print(f"CI command: {' '.join(TEST_COMMAND)}")
@@ -258,7 +267,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
         raise SystemExit("run requires --challenge or --scenario")
     db_path = Path(args.db)
     runs_dir = Path(args.runs_dir)
-    selected = expand_scenarios(args.scenario)
+    selected = expand_scenarios(args.scenario, pack=args.pack)
     run_ids = []
     for index in range(args.runs):
         for scenario_id in selected:
@@ -284,14 +293,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run local OpenCode CI vibe eval challenges.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("list", help="List available challenges.")
+    list_parser = subparsers.add_parser("list", help="List available challenges.")
+    list_parser.add_argument("--pack", choices=pack_ids(), help="Only list challenges in this pack.")
 
     prepare = subparsers.add_parser("prepare", help="Write a challenge repo without running OpenCode.")
     prepare.add_argument("--challenge", "--scenario", dest="scenario", choices=scenario_ids())
+    prepare.add_argument("--pack", choices=pack_ids(), help="Require the challenge to belong to this pack.")
     prepare.add_argument("--out", required=True, help="Destination directory.")
 
     run = subparsers.add_parser("run", help="Run one or more challenges.")
     run.add_argument("--challenge", "--scenario", dest="scenario", help="Challenge id or 'all'.")
+    run.add_argument("--pack", choices=pack_ids(), help="When --challenge all, run only this pack.")
     run.add_argument("--model", help="OpenCode provider/model. Omit to use OpenCode's default.")
     run.add_argument("--agent", default="build", help="OpenCode agent name.")
     run.add_argument("--db", default=os.environ.get("CI_VIBE_DB", str(DEFAULT_DB)))
@@ -318,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "list":
-        print_scenarios()
+        print_scenarios(pack=args.pack)
         return 0
     if args.command == "prepare":
         prepare_scenario(args)

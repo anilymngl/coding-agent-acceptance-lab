@@ -13,10 +13,10 @@ per-run artifacts, and shows the runs in a Streamlit dashboard.
 See [Challenge Design](docs/challenge-design.md) for the eval philosophy and
 challenge anatomy.
 
-## Current Challenge Pack
+## Challenge Packs
 
-The `ci_forensics` challenges are intentionally small, but each one stresses a
-real coding-agent failure mode:
+The original `ci_forensics` pack is preserved. Its challenges are intentionally
+small, but each one stresses a real coding-agent failure mode:
 
 - `dependency_api_change`: handles a changed dependency contract without
   downgrading or hacking tests.
@@ -37,6 +37,20 @@ real coding-agent failure mode:
 - `idempotency_key_regression`: keeps retry dedupe keys deterministic without
   cross-order collisions.
 - `csv_header_contract`: preserves documented export columns and order.
+
+The second pack is `product_workflows`, a different set of small product/backend
+workflow regressions:
+
+- `bulk_invite_dedupe`: normalizes and deduplicates invite emails.
+- `markdown_slug_collision`: creates stable duplicate-safe heading anchors.
+- `feature_rollout_bucket`: uses deterministic percentage rollout buckets.
+- `audit_log_redaction`: recursively redacts sensitive audit-log fields.
+- `cart_discount_stack`: applies checkout discounts with a zero floor.
+- `inventory_reservation_idempotency`: preserves stock under retried reservations.
+- `search_ranking_stability`: ranks search results by relevance and recency.
+- `billing_proration`: prorates plan upgrades with explicit cent rounding.
+- `webhook_signature_raw_body`: verifies HMAC signatures over raw payload bytes.
+- `support_sla_business_hours`: computes support deadlines inside business hours.
 
 ## Setup
 
@@ -59,6 +73,7 @@ List challenges:
 
 ```bash
 uv run python -m ci_vibe_lab.runner list
+uv run python -m ci_vibe_lab.runner list --pack product_workflows
 ```
 
 Prepare a single disposable challenge repo for inspection:
@@ -74,6 +89,7 @@ Run all scenarios against a configured OpenCode model:
 ```bash
 uv run python -m ci_vibe_lab.runner run \
   --challenge all \
+  --pack ci_forensics \
   --model "provider/model" \
   --agent build \
   --auto-approve
@@ -92,6 +108,34 @@ uv run python -m ci_vibe_lab.runner run --challenge dependency_api_change --no-o
 
 That command records the failing baseline and post-test state without invoking
 OpenCode.
+
+## Hidden Failure Reports
+
+Generate a deterministic report from the saved SQLite results:
+
+```bash
+uv run ci-vibe-report hidden-failures \
+  --db data/north-mini-code-eval.sqlite \
+  --out reports/hidden-failures.md
+```
+
+Run a constrained evaluator agent over hidden failures with DeepSeek V4 Pro:
+
+```bash
+uv run ci-vibe-evaluate run \
+  --db data/north-mini-code-eval.sqlite \
+  --pack ci_forensics \
+  --hidden-only \
+  --model deepseek/deepseek-v4-pro \
+  --auto-approve \
+  --out runs/evaluator-agent/deepseek-v4-pro-hidden \
+  --report reports/deepseek-v4-pro-hidden-evaluator.md
+```
+
+Each review directory contains `EVALUATION_PACKET.md`, raw OpenCode stdout/stderr,
+and either a validated `evaluation.json` from the evaluator agent or an explicit
+`blocked/invalid` validation record. The evaluator is only allowed to cite exact
+quotes from the packet, so reports are accountable rather than free-form vibes.
 
 ## Dashboard
 

@@ -6,6 +6,11 @@ import unittest
 from pathlib import Path
 
 from ci_vibe_lab.db import connect, insert_run
+from ci_vibe_lab.evaluator import (
+    build_opencode_evaluator_command,
+    extract_scenario_from_packet,
+    validate_review,
+)
 from ci_vibe_lab.runner import run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
@@ -28,6 +33,15 @@ class ScenarioTests(unittest.TestCase):
             hidden_path = write_hidden_test("dependency_api_change", workdir)
             self.assertTrue(hidden_path.exists())
             self.assertIn("HiddenBillingAcceptanceTests", hidden_path.read_text(encoding="utf-8"))
+
+    def test_all_hidden_tests_are_valid_python(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for scenario_id in scenario_ids():
+                workdir = root / scenario_id
+                write_scenario(scenario_id, workdir)
+                hidden_path = write_hidden_test(scenario_id, workdir)
+                compile(hidden_path.read_text(encoding="utf-8"), str(hidden_path), "exec")
 
     def test_challenge_pack_has_at_least_ten_curated_cases(self) -> None:
         manifest = challenge_manifest()
@@ -119,6 +133,74 @@ class DatabaseTests(unittest.TestCase):
 
             self.assertIn("challenge_pack", columns)
             self.assertIn("artifact_dir", columns)
+
+
+class EvaluatorTests(unittest.TestCase):
+    def test_evaluator_command_uses_current_review_dir(self) -> None:
+        review_dir = Path("/tmp/ci-vibe-review")
+        command = build_opencode_evaluator_command(
+            review_dir=review_dir,
+            model="deepseek/deepseek-v4-pro",
+            agent=None,
+            opencode_bin="opencode",
+            auto_approve=True,
+        )
+        self.assertEqual(
+            command[:7],
+            ["opencode", "run", "--dir", str(review_dir.resolve()), "--format", "json", "--model"],
+        )
+        self.assertIn("deepseek/deepseek-v4-pro", command)
+        self.assertIn("--dangerously-skip-permissions", command)
+
+    def test_summary_extracts_indented_challenge_line(self) -> None:
+        packet = "        - Challenge: `csv_header_contract` - CSV Header Contract\n"
+        self.assertEqual(extract_scenario_from_packet(packet, "fallback"), "csv_header_contract")
+
+    def test_validator_requires_exact_packet_quotes(self) -> None:
+        packet = "Patch says: return EXPORT_COLUMNS\nHidden says: FAIL: test_empty_export"
+        row = {
+            "public_pass": 1,
+            "hidden_pass": 0,
+        }
+        review = {
+            "schema_version": "ci-vibe-evaluator/v1",
+            "review_source": "evaluator_agent",
+            "validation_status": "valid",
+            "verdict": "public_green_hidden_red",
+            "root_cause_category": "missed_hidden_contract",
+            "root_cause": "The patch missed an export contract.",
+            "missed_contract": "The empty export path still needs a header.",
+            "patch_quality": 3,
+            "debug_discipline": 3,
+            "severity": "medium",
+            "confidence": 0.9,
+            "evidence": [
+                {
+                    "source": "hidden_test_output",
+                    "quote": "FAIL: test_empty_export",
+                    "interpretation": "Hidden acceptance failed.",
+                },
+                {
+                    "source": "patch",
+                    "quote": "return EXPORT_COLUMNS",
+                    "interpretation": "The patch touched the visible column order only.",
+                },
+            ],
+            "recommendation": "Handle empty exports and extra fields.",
+            "review_limits": "Only packet evidence was used.",
+        }
+        self.assertEqual(validate_review(review, packet, row), [])
+
+        bad_review = dict(review)
+        bad_review["evidence"] = [
+            {
+                "source": "patch",
+                "quote": "invented quote",
+                "interpretation": "This quote is not in the packet.",
+            }
+        ]
+        errors = validate_review(bad_review, packet, row)
+        self.assertTrue(any("exact packet substring" in error for error in errors))
 
 
 if __name__ == "__main__":

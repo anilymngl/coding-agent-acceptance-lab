@@ -17,7 +17,8 @@ app = [
 
 [project.scripts]
 ci-vibe-run = "ci_vibe_lab.runner:main"
+ci-vibe-report = "ci_vibe_lab.report:main"
+ci-vibe-evaluate = "ci_vibe_lab.evaluator:main"
 
 [tool.setuptools.packages.find]
 include = ["ci_vibe_lab*"]
-

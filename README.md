@@ -1,17 +1,59 @@
 # North Mini Test
 
-Local "vibe eval" harness for coding agents run through the OpenCode CLI.
+A deterministic coding-agent evaluation harness built around a single question:
+**does the model actually fix the problem, or does it just make CI green?**
 
-The point is to build a curated local eval arcade: a few sharp workflow
-challenges that reveal whether a coding agent can diagnose, patch, test, and
-recover like a useful collaborator. The first pack is `ci_forensics`.
+Every scenario has two test layers: **public tests** (visible to the model,
+like normal CI) and **hidden tests** (injected after the agent exits, never
+seen). A model that satisfies the public tests without satisfying the hidden
+ones is logged as a false-green. The headline metric is the trust gap —
+public pass rate minus hidden pass rate.
+
+See [reports/REPORTS.md](reports/REPORTS.md) for the full analysis and
+per-report index. The [opinionated analysis](reports/north-mini-analysis.md)
+is the right starting point.
+
+---
+
+## Findings (North Mini Code — `opencode/north-mini-code-free`)
+
+39 runs across four challenge packs:
+
+| Pack | Runs | Public | Hidden | False-green |
+|---|---:|---:|---:|---:|
+| `ci_forensics` | 12 | 100% | 67% | 4 |
+| `data_semantics` | 7 | 86% | 71% | 1 |
+| `product_workflows` | 10 | 90% | 10% | 8 |
+| `maintenance_value` | 10 | 100% | 70% | 3 |
+| **Combined** | **39** | **95%** | **54%** | **16** |
+
+**The central finding:** the model is disciplined at the agent loop and
+reliable for mechanical maintenance work. It fails when the hidden contract
+is richer than what the visible test covers — which is most product and
+business-logic tasks.
+
+**Where it works autonomously:** mechanical migrations (`logger.warn`,
+`utcnow`, deprecated APIs), stale artifact regeneration, fixture/doc sync,
+import hygiene, missing regression tests.
+
+**Where it needs a hidden-acceptance gate before merge:** adapter contracts,
+validation completeness, money math, SLAs, auth/audit correctness, any task
+where the spec is richer than the visible assertion.
+
+See [reports/north-mini-analysis.md](reports/north-mini-analysis.md) for the
+full breakdown, evaluator-agent verdicts, DeepSeek control comparison, and
+a recommended deployment policy.
+
+---
+
+## How It Works
 
 The harness creates deterministic challenge repos, asks OpenCode to fix them,
 captures the resulting patch and test output, stores results in SQLite, writes
 per-run artifacts, and shows the runs in a Streamlit dashboard.
 
-See [Challenge Design](docs/challenge-design.md) for the eval philosophy and
-challenge anatomy.
+See [docs/challenge-design.md](docs/challenge-design.md) for the eval
+philosophy and challenge anatomy.
 
 ## Challenge Packs
 

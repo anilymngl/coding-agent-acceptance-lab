@@ -11,7 +11,30 @@ Each challenge should answer five concrete questions:
 4. What makes the patch feel trustworthy or untrustworthy?
 5. Can another person run the same task and get comparable results?
 
+## The Public/Hidden Split
+
+Every challenge has two layers of tests:
+
+**Public tests** live in the workspace the model works in. The model can
+read them, run them, and get feedback during its session — exactly like
+normal CI. These test the obvious, visible requirement.
+
+**Hidden tests** are injected into the workspace *after the model exits*.
+The model never sees them. They test whether the implementation is actually
+correct: edge cases, generalization, API contract preservation, policy
+completeness.
+
+This split is the core of the methodology. A model that satisfies the
+public tests without satisfying the hidden ones is a **false-green** —
+it made CI pass without fixing the underlying contract. The **trust gap**
+(public pass rate minus hidden pass rate) is the headline metric because
+it directly measures how often "looks fixed" is actually "is fixed."
+
+Standard benchmarks score pass/fail. This harness scores
+*how often you can trust a pass*.
+
 ## Challenge Anatomy
+
 
 Each challenge has:
 

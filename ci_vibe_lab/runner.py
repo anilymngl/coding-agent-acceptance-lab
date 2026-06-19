@@ -196,6 +196,7 @@ def run_opencode(command: list[str], workdir: Path, *, timeout: int) -> tuple[in
 def run_one(
     *,
     scenario_id: str,
+    experiment_id: str,
     model: str | None,
     agent: str | None,
     db_path: Path,
@@ -257,6 +258,7 @@ def run_one(
     manifest = scenario.manifest()
     row = {
         "run_id": run_id,
+        "experiment_id": experiment_id,
         "scenario": scenario.id,
         "scenario_title": scenario.title,
         "challenge_pack": scenario.pack,
@@ -337,11 +339,12 @@ def prepare_scenario(args: argparse.Namespace) -> None:
     print(f"CI command: {' '.join(TEST_COMMAND)}")
 
 
-def _completed_attempts(db_path: Path, *, model: str, scenario_ids_: list[str]) -> set[tuple[str, int]]:
-    """Return a set of (scenario_id, attempt_index) pairs already stored in db_path.
+def _completed_attempts(
+    db_path: Path, *, model: str, experiment_id: str, scenario_ids_: list[str]
+) -> set[tuple[str, int]]:
+    """Return a set of (scenario_id, attempt_index) pairs already stored for this experiment.
 
-    attempt_index is 0-based (matches the loop variable `index` in run_scenarios).
-    We count existing rows per scenario ordered by rowid to assign attempt slots.
+    Scoped to experiment_id so different experiment runs never collide.
     """
     if not db_path.exists():
         return set()
@@ -351,10 +354,10 @@ def _completed_attempts(db_path: Path, *, model: str, scenario_ids_: list[str]) 
         done: set[tuple[str, int]] = set()
         for sid in scenario_ids_:
             rows = conn.execute(
-                "SELECT opencode_exit_code FROM runs WHERE scenario = ? AND model = ? ORDER BY rowid",
-                (sid, model),
+                "SELECT opencode_exit_code FROM runs WHERE scenario = ? AND model = ? AND experiment_id = ? ORDER BY rowid",
+                (sid, model, experiment_id),
             ).fetchall()
-            for attempt_index, row in enumerate(rows):
+            for attempt_index, _row in enumerate(rows):
                 done.add((sid, attempt_index))
         conn.close()
         return done
@@ -370,9 +373,23 @@ def run_scenarios(args: argparse.Namespace) -> None:
     selected = expand_scenarios(args.scenario, pack=args.pack)
     model_key = args.model or "<opencode-default>"
 
+    # Mint or reattach to an experiment ID.
+    pack_slug = args.pack or "custom"
+    if getattr(args, "experiment_id", None):
+        experiment_id = args.experiment_id
+        print(f"Experiment: {experiment_id} (reattached)")
+    else:
+        experiment_id = (
+            f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+            f"-{pack_slug}-{uuid.uuid4().hex[:8]}"
+        )
+        print(f"Experiment: {experiment_id}")
+
     completed: set[tuple[str, int]] = set()
     if args.resume:
-        completed = _completed_attempts(db_path, model=model_key, scenario_ids_=selected)
+        completed = _completed_attempts(
+            db_path, model=model_key, experiment_id=experiment_id, scenario_ids_=selected
+        )
         if completed:
             print(f"Resume: skipping {len(completed)} already-completed attempt(s).")
 
@@ -381,8 +398,8 @@ def run_scenarios(args: argparse.Namespace) -> None:
         try:
             conn = sqlite3.connect(db_path)
             rows = conn.execute(
-                "SELECT DISTINCT scenario FROM runs WHERE model = ? AND opencode_exit_code = 124",
-                (model_key,),
+                "SELECT DISTINCT scenario FROM runs WHERE model = ? AND experiment_id = ? AND opencode_exit_code = 124",
+                (model_key, experiment_id),
             ).fetchall()
             conn.close()
             skipped_timeout = {r[0] for r in rows}
@@ -406,6 +423,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
             print(f"Running {scenario_id} ({index + 1}/{args.runs})...")
             run_id = run_one(
                 scenario_id=scenario_id,
+                experiment_id=experiment_id,
                 model=args.model,
                 agent=args.agent,
                 db_path=db_path,
@@ -545,6 +563,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--default-format",
         action="store_true",
         help="Use OpenCode formatted output instead of raw JSON events.",
+    )
+    run.add_argument(
+        "--experiment-id",
+        default=None,
+        metavar="EXPERIMENT_ID",
+        help=(
+            "Reattach to an existing experiment by ID (printed at the start of every run). "
+            "Use with --resume to continue exactly where that experiment left off."
+        ),
     )
     run.add_argument(
         "--resume",

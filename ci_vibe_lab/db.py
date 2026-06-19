@@ -7,6 +7,7 @@ from typing import Any
 
 
 EXTRA_COLUMNS = {
+    "experiment_id": "TEXT DEFAULT ''",
     "challenge_pack": "TEXT DEFAULT ''",
     "category": "TEXT DEFAULT ''",
     "difficulty": "TEXT DEFAULT ''",
@@ -39,6 +40,7 @@ TABLE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL UNIQUE,
+  experiment_id TEXT DEFAULT '',
   scenario TEXT NOT NULL,
   scenario_title TEXT NOT NULL,
   challenge_pack TEXT DEFAULT '',
@@ -96,6 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_runs_scenario ON runs(scenario);
 CREATE INDEX IF NOT EXISTS idx_runs_pack ON runs(challenge_pack);
 CREATE INDEX IF NOT EXISTS idx_runs_category ON runs(category);
 CREATE INDEX IF NOT EXISTS idx_runs_model ON runs(model);
+CREATE INDEX IF NOT EXISTS idx_runs_experiment_id ON runs(experiment_id);
 """
 
 EVIDENCE_SCHEMA = """

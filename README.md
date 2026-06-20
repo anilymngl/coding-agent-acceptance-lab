@@ -46,6 +46,20 @@ for the current full-run analysis, DeepSeek control comparison, GLM caveat,
 claim ledger, and deployment policy. Start with
 [reports/REPORTS.md](reports/REPORTS.md) for report surfacing conditions.
 
+## Current Development Direction
+
+The next phase is a general, config-driven model comparison pipeline:
+
+- define models, packs, prompt lanes, and runtime limits in one config
+- run a full model matrix with one command
+- compare completed-attempt capability separately from runtime reliability
+- generate a generic leaderboard-style evidence report without overstating
+  public benchmark claims
+
+Start with [docs/README.md](docs/README.md), then read
+[docs/model-comparison-eval-pipeline-plan-2026-06-20.md](docs/model-comparison-eval-pipeline-plan-2026-06-20.md).
+The implementation prompt for the next agent is at the end of that plan.
+
 ---
 
 ## How It Works

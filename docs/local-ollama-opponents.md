@@ -87,7 +87,7 @@ Direct Ollama chat:
 
 ```bash
 curl -s http://localhost:11434/api/chat \
-  -d '{"model":"gemma4:e4b","messages":[{"role":"user","content":"Reply with READY only."}],"stream":false}'
+  -d '{"model":"gemma4:31b","messages":[{"role":"user","content":"Reply with READY only."}],"stream":false}'
 ```
 
 OpenCode model listing:
@@ -99,7 +99,7 @@ opencode models | rg '^ollama/'
 Expected model ID for the harness:
 
 ```text
-ollama/gemma4:e4b
+ollama/gemma4:31b
 ```
 
 ## First Harness Smoke

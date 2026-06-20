@@ -5,6 +5,10 @@ Start with the current full-run report. Older reports are preserved with
 surfacing conditions so historical partial evidence does not get mixed into
 the current canonical readout.
 
+For implementation handoff and current project direction, start with
+[../docs/README.md](../docs/README.md) and
+[../docs/model-comparison-eval-pipeline-plan-2026-06-20.md](../docs/model-comparison-eval-pipeline-plan-2026-06-20.md).
+
 ## Start Here
 
 ### [north-mini-ultimate-eval-report-2026-06-20.md](north-mini-ultimate-eval-report-2026-06-20.md)
@@ -30,6 +34,12 @@ newer full-run synthesis.
 ---
 
 ## Evaluation Reports
+
+### [north-mini-fresh-run-harness-audit-2026-06-20.md](north-mini-fresh-run-harness-audit-2026-06-20.md)
+Fresh-run harness audit. Surface this when the question is whether the recent
+fresh data can be trusted. Key point: completed sparse maintenance attempts
+show real semantic misses, but several later rows were OpenCode/provider runtime
+stalls and must not be counted as semantic model failures.
 
 ### [north-mini-maintenance-value-v2-2026-06-20.md](north-mini-maintenance-value-v2-2026-06-20.md)
 Positive-value maintenance report. Surface this when the question is specifically

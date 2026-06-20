@@ -21,48 +21,59 @@ The repository includes `opencode.json` with an Ollama provider:
 - `ollama/gemma4:12b`
 - `ollama/gemma4:26b`
 - `ollama/gemma4:31b`
-- `ollama/qwen3-coder:30b`
 
 Recommended first opponents:
 
-1. `ollama/gemma4:e4b`
-   - Lightest Gemma 4 candidate in this config.
-   - Good first smoke and baseline.
-2. `ollama/qwen3-coder:30b`
-   - Better coding-agent-shaped opponent if the machine has enough memory.
-   - Use it to distinguish "Gemma general reasoner" from "local coding model".
+1. `ollama/gemma4:31b`
+   - Installed Gemma 4 candidate on this machine.
+   - Use this as the immediate local opponent because the lane is Gemma 4 only.
+2. `ollama/gemma4:12b`
+   - Optional smaller Gemma 4 pull if 31B has slow first-token latency.
+3. `ollama/gemma4:e4b`
+   - Optional light Gemma 4 pull if the goal is quick iteration.
 
-If memory is tight, use `ollama/gemma4:e4b` first. If the goal is a stronger
-Gemma-only ladder, try `ollama/gemma4:12b` after the E4B smoke passes.
+Do not mix Gemma 3, Qwen, DeepSeek, or other local models into this lane. If
+those rows exist from scratch testing, treat them as non-canonical and exclude
+them from Gemma 4 reports.
 
 ## Local State Observed On 2026-06-20
 
 Current machine checks:
 
 - `ollama` binary exists at `/opt/homebrew/bin/ollama`.
-- `curl -s http://0.0.0.0:11434/api/tags` failed, so the Ollama server was not reachable.
-- `ollama --version` crashed in MLX initialization before printing a version.
+- `curl -s http://0.0.0.0:11434/api/tags` later showed the local server and installed models.
+- `ollama --version` crashed in MLX initialization before printing a version in one Codex shell.
+- A first harness smoke against `ollama/gemma4:31b` failed because OpenCode did not see the repo-root `opencode.json` from generated worktrees.
+- The harness was then fixed to pass repo-root config through `OPENCODE_CONFIG`.
+- A retry against `ollama/gemma4:31b` reached the local path but produced no OpenCode stdout/stderr within 120 seconds.
+- A 300-second first-output smoke against `ollama/gemma4:31b` succeeded:
+  - DB: `data/local-ollama-gemma4-31b-smoke.sqlite`
+  - run id: `20260620T113108Z-docs_cli_sync-b3b1c215`
+  - duration: 224.8 seconds
+  - OpenCode exit: `0`
+  - public pass: `1`
+  - hidden pass: `1`
+  - patch: one-file README flag update
 
-This means no local model run should be interpreted until Ollama itself is
-healthy. Fixing the Ollama runtime comes before any benchmark claim.
+This means `ollama/gemma4:31b` is viable for the local Gemma 4 lane, but it has
+high first-token latency. Use `--first-output-timeout 300` for 31B unless a
+later warm-cache run proves a shorter threshold is safe.
 
 ## Pull Models
 
-Use one small local opponent first:
+Installed on this machine:
 
-```bash
-ollama pull gemma4:e4b
-```
+- `gemma4:31b`
 
-Optional heavier candidates:
+Optional smaller Gemma 4 candidates to pull if 31B is too slow:
 
 ```bash
 ollama pull gemma4:12b
-ollama pull qwen3-coder:30b
+ollama pull gemma4:e4b
 ```
 
-Avoid pulling `gemma4:26b`, `gemma4:31b`, or `qwen3-coder:30b` unless the
-machine has enough unified memory and you are willing to wait.
+Avoid pulling `gemma4:26b` unless the machine has enough unified memory and you
+are willing to wait.
 
 ## Health Checks
 
@@ -98,23 +109,23 @@ Run one small scenario before a full pack:
 ```bash
 uv run ci-vibe-run run \
   --challenge docs_cli_sync \
-  --model ollama/gemma4:e4b \
+  --model ollama/gemma4:31b \
   --agent build \
   --auto-approve \
   --timeout 900 \
-  --first-output-timeout 120 \
+  --first-output-timeout 300 \
   --prompt-mode sparse \
-  --db data/local-ollama-smoke.sqlite \
-  --runs-dir runs/local-ollama/smoke
+  --db data/local-ollama-gemma4-31b-smoke.sqlite \
+  --runs-dir runs/local-ollama/gemma4-31b/smoke
 ```
 
 Inspect the full agent envelope:
 
 ```bash
 uv run ci-vibe-run inspect \
-  --db data/local-ollama-smoke.sqlite \
+  --db data/local-ollama-gemma4-31b-smoke.sqlite \
   --latest \
-  --model ollama/gemma4:e4b \
+  --model ollama/gemma4:31b \
   --full
 ```
 
@@ -133,15 +144,15 @@ Start with `maintenance_value`, sparse lane, one attempt per scenario:
 uv run ci-vibe-run run \
   --challenge all \
   --pack maintenance_value \
-  --model ollama/gemma4:e4b \
+  --model ollama/gemma4:31b \
   --agent build \
   --auto-approve \
   --timeout 900 \
-  --first-output-timeout 120 \
+  --first-output-timeout 300 \
   --runs 1 \
   --prompt-mode sparse \
-  --db data/local-ollama-gemma4-e4b-sparse.sqlite \
-  --runs-dir runs/local-ollama/gemma4-e4b/sparse \
+  --db data/local-ollama-gemma4-31b-sparse.sqlite \
+  --runs-dir runs/local-ollama/gemma4-31b/sparse \
   --delay-seconds 30
 ```
 
@@ -151,20 +162,20 @@ Then run the contract-visible lane:
 uv run ci-vibe-run run \
   --challenge all \
   --pack maintenance_value \
-  --model ollama/gemma4:e4b \
+  --model ollama/gemma4:31b \
   --agent build \
   --auto-approve \
   --timeout 900 \
-  --first-output-timeout 120 \
+  --first-output-timeout 300 \
   --runs 1 \
   --prompt-mode contract_visible \
-  --db data/local-ollama-gemma4-e4b-contract.sqlite \
-  --runs-dir runs/local-ollama/gemma4-e4b/contract-visible \
+  --db data/local-ollama-gemma4-31b-contract.sqlite \
+  --runs-dir runs/local-ollama/gemma4-31b/contract-visible \
   --delay-seconds 30
 ```
 
-Repeat the same pattern for `ollama/qwen3-coder:30b` only after the Gemma smoke
-is healthy.
+If `gemma4:12b` or `gemma4:e4b` are pulled later, repeat the same pattern with
+model-specific DB and runs-dir names.
 
 ## Leaderboard Rules
 
@@ -183,4 +194,3 @@ They are operational reliability evidence, not semantic acceptance evidence.
 
 - OpenCode Ollama provider docs: `https://opencode.ai/docs/providers/`
 - Ollama Gemma 4 library: `https://ollama.com/library/gemma4`
-- Ollama Qwen3-Coder library: `https://ollama.com/library/qwen3-coder`

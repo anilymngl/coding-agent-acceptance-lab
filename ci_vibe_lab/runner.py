@@ -28,6 +28,7 @@ from ci_vibe_lab.scenarios import (
 
 DEFAULT_DB = Path("data/results.sqlite")
 DEFAULT_RUNS_DIR = Path("runs")
+PROJECT_OPENCODE_CONFIG = Path("opencode.json")
 
 
 @dataclass(frozen=True)
@@ -197,10 +198,16 @@ def run_opencode(
     *,
     timeout: int,
     first_output_timeout: float | None = None,
+    opencode_config: Path | None = None,
 ) -> tuple[int, str, str]:
+    env = os.environ.copy()
+    config_path = opencode_config or PROJECT_OPENCODE_CONFIG
+    if "OPENCODE_CONFIG" not in env and config_path.exists():
+        env["OPENCODE_CONFIG"] = str(config_path.resolve())
     process = subprocess.Popen(
         command,
         cwd=workdir,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=True,

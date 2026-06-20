@@ -802,7 +802,8 @@ Local fallback/opponent lane when hosted limits are exhausted:
 
 - `ollama/gemma4:e4b`
 - `ollama/gemma4:12b`
-- `ollama/qwen3-coder:30b`
+- `ollama/gemma4:26b`
+- `ollama/gemma4:31b`
 
 The local lane is useful, but it must be labeled separately from hosted-model
 controls until it has comparable coverage and a healthy Ollama/OpenCode runtime.

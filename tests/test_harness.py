@@ -356,6 +356,26 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(stdout, "")
         self.assertIn("produced no stdout/stderr within 0.2 seconds", stderr)
 
+    def test_run_opencode_passes_explicit_config_to_nested_workdir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "opencode.json"
+            config_path.write_text('{"provider": {}}', encoding="utf-8")
+            workdir = root / "runs" / "worktrees" / "case"
+            workdir.mkdir(parents=True)
+
+            return_code, stdout, stderr = run_opencode(
+                [sys.executable, "-c", "import os; print(os.environ.get('OPENCODE_CONFIG', ''))"],
+                workdir,
+                timeout=30,
+                first_output_timeout=None,
+                opencode_config=config_path,
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(stdout.strip(), str(config_path.resolve()))
+        self.assertEqual(stderr, "")
+
     def test_trust_gap_metrics_handle_zero_public_pass(self) -> None:
         metrics = compute_trust_metrics(
             [

@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -22,7 +23,14 @@ from ci_vibe_lab.analysis import (
     is_headline_accepted_audit_status,
     select_best_patches,
 )
-from ci_vibe_lab.dashboard import latest_per_model_scenario_frame, load_runs as load_dashboard_runs
+from ci_vibe_lab.dashboard import (
+    latest_per_model_scenario_frame,
+    load_runs as load_dashboard_runs,
+    _mtime_desc,
+    _matrix_latest_activity,
+    _relative_time_hint,
+    _order_filter_values_by_latest,
+)
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
     extract_scenario_from_packet,
@@ -1629,6 +1637,82 @@ class EvaluatorAwareLeaderboardTests(unittest.TestCase):
             self.assertIn("Reviewed false-green rows: 0", report)
             self.assertIn("not_indexed_yet", report)
             self.assertIn("not_reviewed", report)
+
+
+class DashboardOrderingTests(unittest.TestCase):
+    def test_relative_time_hint_formats_seconds(self) -> None:
+        self.assertEqual(_relative_time_hint(5.0), "just now")
+        self.assertEqual(_relative_time_hint(59.0), "just now")
+        self.assertEqual(_relative_time_hint(120.0), "2m ago")
+        self.assertEqual(_relative_time_hint(3600.0), "1h ago")
+        self.assertEqual(_relative_time_hint(7200.0), "2h ago")
+        self.assertEqual(_relative_time_hint(86400.0), "1d ago")
+        self.assertEqual(_relative_time_hint(172800.0), "2d ago")
+
+    def test_mtime_desc_returns_newest_first(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            old_file = root / "old.sqlite"
+            new_file = root / "new.sqlite"
+            old_file.write_text("a", encoding="utf-8")
+            import os
+            old_ts = time.time() - 3600
+            os.utime(old_file, (old_ts, old_ts))
+            new_file.write_text("b", encoding="utf-8")
+
+            ordered = _mtime_desc([old_file, new_file])
+            self.assertEqual(ordered[0], new_file)
+            self.assertEqual(ordered[1], old_file)
+
+    def test_matrix_latest_activity_is_max_of_config_and_cell_dbs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "matrix.json"
+            db_dir = root / "data" / "matrix" / "m" / "model-a"
+            db_dir.mkdir(parents=True)
+            db_path = db_dir / "maintenance_value-sparse.sqlite"
+            config_data = {
+                "matrix_id": "m",
+                "output_root": str(root / "data" / "matrix" / "m"),
+                "runs_root": str(root / "runs" / "matrix" / "m"),
+                "defaults": {
+                    "agent": "build",
+                    "timeout": 100,
+                    "runs": 1,
+                    "prompt_modes": ["sparse"],
+                    "packs": ["maintenance_value"],
+                },
+                "models": [{"alias": "model-a", "id": "test/model"}],
+                "packs": {"maintenance_value": {"runs": 1, "prompt_modes": ["sparse"], "challenge": "docs_cli_sync"}},
+            }
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            db_path.write_text("db", encoding="utf-8")
+
+            import os
+            config_ts = time.time() - 7200
+            db_ts = time.time() - 60
+            os.utime(config_path, (config_ts, config_ts))
+            os.utime(db_path, (db_ts, db_ts))
+
+            activity = _matrix_latest_activity(config_path)
+            self.assertAlmostEqual(activity, db_ts, places=0)
+
+    def test_order_filter_values_by_latest_orders_by_most_recent_run(self) -> None:
+        rows = pd.DataFrame(
+            [
+                {"model": "model-a", "started_at": "2026-01-01T00:00:00+00:00"},
+                {"model": "model-b", "started_at": "2026-01-03T00:00:00+00:00"},
+                {"model": "model-a", "started_at": "2026-01-02T00:00:00+00:00"},
+                {"model": "model-c", "started_at": "2026-01-05T00:00:00+00:00"},
+            ]
+        )
+        ordered = _order_filter_values_by_latest(rows, "model")
+        self.assertEqual(ordered, ["model-c", "model-b", "model-a"])
+
+    def test_order_filter_values_handles_empty_and_missing_column(self) -> None:
+        self.assertEqual(_order_filter_values_by_latest(pd.DataFrame(), "model"), [])
+        rows = pd.DataFrame([{"model": "a"}])
+        self.assertEqual(_order_filter_values_by_latest(rows, "nonexistent"), [])
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -32,20 +33,70 @@ DEFAULT_DB = os.environ.get("CI_VIBE_DB", "data/results.sqlite")
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MATRIX_CONFIG_GLOB = "configs/matrix/*.json"
 SQLITE_GLOB = "data/**/*.sqlite"
+ACTIVE_THRESHOLD_SECONDS = 60.0
+
+
+def _path_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def _mtime_desc(paths: list[Path]) -> list[Path]:
+    return sorted(paths, key=_path_mtime, reverse=True)
+
+
+def _matrix_latest_activity(config_path: Path) -> float:
+    config_mtime = _path_mtime(config_path)
+    try:
+        config = load_config(config_path)
+        cells = expand_cells(config)
+    except Exception:
+        return config_mtime
+    cell_mtimes = [_path_mtime(REPO_ROOT / cell.db_path) for cell in cells]
+    return max([config_mtime, *cell_mtimes])
+
+
+def _relative_time_hint(seconds: float) -> str:
+    if seconds < ACTIVE_THRESHOLD_SECONDS:
+        return "just now"
+    minutes = seconds / 60.0
+    if minutes < 60.0:
+        return f"{int(minutes)}m ago"
+    hours = minutes / 60.0
+    if hours < 24.0:
+        return f"{int(hours)}h ago"
+    days = hours / 24.0
+    return f"{int(days)}d ago"
+
+
+def _order_filter_values_by_latest(rows: pd.DataFrame, column: str) -> list[str]:
+    if rows.empty or column not in rows.columns:
+        return []
+    latest = (
+        rows.dropna(subset=[column])
+        .groupby(column, as_index=False)["started_at"]
+        .max()
+        .sort_values("started_at", ascending=False)
+    )
+    return [str(v) for v in latest[column].tolist()]
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def discover_matrix_configs() -> list[Path]:
     root = REPO_ROOT
-    paths = sorted(root.glob(MATRIX_CONFIG_GLOB))
-    return [p.relative_to(root) for p in paths]
+    paths = list(root.glob(MATRIX_CONFIG_GLOB))
+    ordered = sorted(paths, key=_matrix_latest_activity, reverse=True)
+    return [p.relative_to(root) for p in ordered]
 
 
 @st.cache_data(ttl=30, show_spinner=False)
 def discover_sqlite_dbs() -> list[Path]:
     root = REPO_ROOT
-    paths = sorted(root.glob(SQLITE_GLOB))
-    return [p.relative_to(root) for p in paths]
+    paths = list(root.glob(SQLITE_GLOB))
+    ordered = _mtime_desc(paths)
+    return [p.relative_to(root) for p in ordered]
 
 
 def db_paths_from_matrix_config(config_path: Path) -> list[Path]:
@@ -59,9 +110,23 @@ def db_paths_from_matrix_config(config_path: Path) -> list[Path]:
 
 def db_path_label(path: Path) -> str:
     label = str(path)
-    exists = (REPO_ROOT / path).exists()
-    marker = "" if exists else " (missing)"
-    return f"{label}{marker}"
+    full = REPO_ROOT / path
+    if not full.exists():
+        return f"{label} (missing)"
+    hint = _relative_time_hint(time.time() - _path_mtime(full))
+    return f"{label} · {hint}"
+
+
+def matrix_config_label(config_path: Path) -> str:
+    full = REPO_ROOT / config_path
+    if not full.exists():
+        return f"{config_path} (missing)"
+    activity = _matrix_latest_activity(full)
+    age = time.time() - activity
+    hint = _relative_time_hint(age)
+    if age < ACTIVE_THRESHOLD_SECONDS:
+        return f"{config_path} · active"
+    return f"{config_path} · {hint}"
 
 
 def apply_base_styles() -> None:
@@ -598,7 +663,7 @@ def render_runs(rows: pd.DataFrame) -> None:
             hide_index=True,
         )
 
-    model_values = sorted(rows["model"].dropna().unique())
+    model_values = _order_filter_values_by_latest(rows, "model")
     if len(model_values) >= 2:
         st.subheader("Model Compare")
         compare_cols = st.columns(2)
@@ -665,10 +730,11 @@ def render_challenge_card(run: pd.Series) -> None:
 
 
 def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
-    options = rows["run_id"].tolist()
+    sorted_rows = rows.sort_values("started_at", ascending=False) if "started_at" in rows.columns else rows
+    options = sorted_rows["run_id"].tolist()
     labels = {
         row["run_id"]: f"{run_label(row['run_id'], row['started_at'])} - {row['scenario']} - {row['model']}"
-        for _, row in rows.iterrows()
+        for _, row in sorted_rows.iterrows()
     }
     selected_run_id = st.selectbox("Inspect run", options, format_func=lambda rid: labels.get(rid, rid))
     run = rows[rows["run_id"] == selected_run_id].iloc[0]
@@ -1022,20 +1088,21 @@ def main() -> None:
             if not matrix_configs:
                 st.warning("No matrix configs found in `configs/matrix/*.json`. Switch to another mode.")
             else:
-                config_options = {p.name: p for p in matrix_configs}
-                selected_name = st.selectbox(
+                config_labels = {matrix_config_label(p): p for p in matrix_configs}
+                selected_label = st.selectbox(
                     "Matrix config",
-                    options=list(config_options.keys()),
-                    help="JSON configs discovered in configs/matrix/.",
+                    options=list(config_labels.keys()),
+                    help="JSON configs discovered in configs/matrix/, ordered by latest activity.",
                 )
-                matrix_config_path = str(config_options[selected_name])
-                derived_dbs = db_paths_from_matrix_config(config_options[selected_name])
+                selected_config = config_labels[selected_label]
+                matrix_config_path = str(selected_config)
+                derived_dbs = db_paths_from_matrix_config(selected_config)
                 if derived_dbs:
                     existing = [p for p in derived_dbs if (REPO_ROOT / p).exists()]
                     st.caption(f"Auto-derived {len(derived_dbs)} DB path(s) ({len(existing)} exist on disk).")
                     for db in derived_dbs:
                         label = db_path_label(db)
-                        if "(missing)" in label:
+                        if "missing" in label:
                             st.caption(f"  - {label}")
                     db_paths = derived_dbs
                 else:
@@ -1046,13 +1113,13 @@ def main() -> None:
                 st.warning("No SQLite files found under `data/`. Run a matrix or single-model eval first.")
                 db_paths = []
             else:
-                existing = [p for p in sqlite_dbs if (REPO_ROOT / p).exists()]
-                st.caption(f"Found {len(sqlite_dbs)} SQLite file(s) under `data/`.")
+                st.caption(f"Found {len(sqlite_dbs)} SQLite file(s) under `data/`, newest first.")
                 db_options = {db_path_label(p): p for p in sqlite_dbs}
+                newest_existing = [p for p in sqlite_dbs if (REPO_ROOT / p).exists()][:3]
                 selected_labels = st.multiselect(
                     "Select databases",
                     options=list(db_options.keys()),
-                    default=[db_path_label(p) for p in existing[:3]] if existing else [],
+                    default=[db_path_label(p) for p in newest_existing] if newest_existing else [],
                 )
                 db_paths = [db_options[label] for label in selected_labels]
         else:
@@ -1079,12 +1146,12 @@ def main() -> None:
 
     with st.sidebar:
         st.markdown("### Filters")
-        pack_options = ["all", *sorted(runs["challenge_pack"].dropna().unique())]
-        category_options = ["all", *sorted(runs["category"].dropna().unique())]
-        difficulty_options = ["all", *sorted(runs["difficulty"].dropna().unique())]
-        scenario_options = ["all", *sorted(runs["scenario"].dropna().unique())]
-        model_options = ["all", *sorted(runs["model"].dropna().unique())]
-        prompt_mode_options = ["all", *sorted(runs.get("prompt_mode", pd.Series(dtype=str)).dropna().unique())]
+        pack_options = ["all", *_order_filter_values_by_latest(runs, "challenge_pack")]
+        category_options = ["all", *_order_filter_values_by_latest(runs, "category")]
+        difficulty_options = ["all", *_order_filter_values_by_latest(runs, "difficulty")]
+        scenario_options = ["all", *_order_filter_values_by_latest(runs, "scenario")]
+        model_options = ["all", *_order_filter_values_by_latest(runs, "model")]
+        prompt_mode_options = ["all", *_order_filter_values_by_latest(runs, "prompt_mode")]
         selected_pack = st.selectbox("Challenge pack", pack_options)
         selected_category = st.selectbox("Category", category_options)
         selected_difficulty = st.selectbox("Difficulty", difficulty_options)

@@ -17,21 +17,21 @@ trust a pass*.
 
 ## Findings (North Mini Code — `opencode/north-mini-code-free`)
 
-38 runs across four challenge packs:
+Current canonical North Mini evidence: 57 attempts across four challenge packs.
 
 | Pack | Runs | Public | Hidden | False-green |
 |---|---:|---:|---:|---:|
 | `ci_forensics` | 12 | 100% | 67% | 4 |
-| `data_semantics` | 5 | 80% | 60% | 1 |
-| `product_workflows` | 11 | 91% | 9% | 9 |
-| `maintenance_value` | 10 | 100% | 70% | 3 |
-| **Combined** | **38** | **95%** | **50%** | **17** |
+| `data_semantics` | 4 | 100% | 75% | 1 |
+| `product_workflows` | 11 | 100% | 18% | 9 |
+| `maintenance_value` | 30 | 100% | 60% | 12 |
+| **Combined** | **57** | **100%** | **54%** | **26** |
 
-**The central finding:** the model is disciplined at the agent loop and
-reliable for mechanical maintenance work. It fails when the hidden contract
-is richer than what the visible test covers — which is most product and
-business-logic tasks. 17 of 36 public-green patches were still
-contract-broken — a 47% false-green rate.
+**The central finding:** the model is disciplined at the agent loop and useful
+for bounded maintenance work. It fails when the hidden contract is richer than
+what the visible test covers — especially product and business-logic tasks.
+26 of 57 public-green patches were still contract-broken — a 45.6%
+false-green rate.
 
 **Where it works autonomously:** mechanical migrations (`logger.warn`,
 `utcnow`, deprecated APIs), stale artifact regeneration, fixture/doc sync,
@@ -41,10 +41,10 @@ import hygiene, missing regression tests.
 validation completeness, money math, SLAs, auth/audit correctness, any task
 where the spec is richer than the visible assertion.
 
-See [reports/north-mini-analysis.md](reports/north-mini-analysis.md) for the
-full breakdown, evaluator-agent verdicts, DeepSeek control comparison, and
-a recommended deployment policy. Start with
-[reports/REPORTS.md](reports/REPORTS.md) for the per-report index.
+See [reports/north-mini-ultimate-eval-report-2026-06-20.md](reports/north-mini-ultimate-eval-report-2026-06-20.md)
+for the current full-run analysis, DeepSeek control comparison, GLM caveat,
+claim ledger, and deployment policy. Start with
+[reports/REPORTS.md](reports/REPORTS.md) for report surfacing conditions.
 
 ---
 

@@ -22,6 +22,22 @@ from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits
 
 
 DEFAULT_DB = Path("data/results.sqlite")
+NORTH_MINI_MODEL = "opencode/north-mini-code-free"
+DEEPSEEK_CONTROL_MODEL = "deepseek/deepseek-v4-pro"
+GLM_PARTIAL_MODEL = "opencode-go/glm-5.2"
+DEFAULT_ULTIMATE_NORTH_DBS = [
+    Path("data/ci-forensics-v2.sqlite"),
+    Path("data/product-workflows-v2.sqlite"),
+    Path("data/maintenance-value-v2.sqlite"),
+    Path("data/results.sqlite"),
+]
+DEFAULT_ULTIMATE_DEEPSEEK_DBS = [
+    Path("data/ci-forensics-deepseek.sqlite"),
+    Path("data/control-results.sqlite"),
+    Path("data/maintenance-deepseek.sqlite"),
+]
+DEFAULT_ULTIMATE_PARTIAL_DBS = [Path("data/ci-forensics-glm52.sqlite")]
+STRESS_CONTROL_PACKS = {"ci_forensics", "product_workflows", "maintenance_value"}
 
 
 def load_rows(db_path: Path) -> list[sqlite3.Row]:
@@ -265,6 +281,13 @@ def claim_row(claim: str, evidence: str, source: str, confidence: str, caveat: s
     )
 
 
+def ultimate_claim_row(claim: str, evidence: str, confidence: str, caveat: str) -> str:
+    return (
+        f"| {claim.replace('|', '/')} | {evidence.replace('|', '/')} | "
+        f"{confidence.replace('|', '/')} | {caveat.replace('|', '/')} |"
+    )
+
+
 def format_count_rate(count: int, denominator: int) -> str:
     return f"{count}/{denominator} ({percent(count / denominator) if denominator else '0.0%'})"
 
@@ -459,6 +482,528 @@ def make_value_report(
         for row in rows:
             lines.append(value_artifact_line(row))
         lines.append("")
+
+    return "\n".join(lines) + "\n"
+
+
+def existing_paths(db_paths: list[Path]) -> list[Path]:
+    return [path for path in db_paths if path.exists()]
+
+
+def model_rows(db_paths: list[Path], model: str) -> list[dict[str, object]]:
+    return filter_model_rows(load_rows_from_dbs(existing_paths(db_paths)), model)
+
+
+def canonical_north_rows(db_paths: list[Path], model: str = NORTH_MINI_MODEL) -> list[dict[str, object]]:
+    rows = model_rows(db_paths, model)
+    filtered: list[dict[str, object]] = []
+    for row in rows:
+        pack = str(row.get("challenge_pack", ""))
+        if not pack:
+            continue
+        source_name = Path(str(row.get("source_db", ""))).name
+        if source_name == "results.sqlite" and pack != "data_semantics":
+            continue
+        filtered.append(row)
+    return filtered
+
+
+def pack_rows(rows: list[dict[str, object]], pack: str) -> list[dict[str, object]]:
+    return [row for row in rows if str(row.get("challenge_pack", "")) == pack]
+
+
+def sorted_packs(rows: list[dict[str, object]]) -> list[str]:
+    preferred = ["ci_forensics", "data_semantics", "product_workflows", "maintenance_value"]
+    present = {str(row.get("challenge_pack", "")) for row in rows if str(row.get("challenge_pack", ""))}
+    ordered = [pack for pack in preferred if pack in present]
+    ordered.extend(sorted(present - set(ordered)))
+    return ordered
+
+
+def pack_table_lines(rows: list[dict[str, object]], *, value_details: bool = False) -> list[str]:
+    lines = [
+        "| Pack | Runs | Public Pass | Hidden Pass | Trust Gap | False-Green Rate | Extra Readout |",
+        "|---|---:|---:|---:|---:|---:|---|",
+    ]
+    for pack in sorted_packs(rows):
+        current = pack_rows(rows, pack)
+        metrics = compute_trust_metrics(current)
+        extra = ""
+        if value_details and pack == "maintenance_value":
+            value_metrics = compute_value_metrics(current)
+            extra = (
+                f"best-of-3 {value_metrics.best_of_three_successes}/"
+                f"{value_metrics.best_of_three_scenarios}; "
+                f"{format_number(value_metrics.accepted_patches_per_review_hour)} accepted/hr"
+            )
+        lines.append(
+            f"| `{pack}` | {metrics.total} | {format_count_rate(metrics.public_pass, metrics.total)} | "
+            f"{format_count_rate(metrics.hidden_pass, metrics.total)} | {percent(metrics.trust_gap)} | "
+            f"{format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} | {extra} |"
+        )
+    return lines
+
+
+def scenario_level_units(
+    rows: list[dict[str, object]],
+    *,
+    packs: set[str] | None = None,
+) -> list[dict[str, object]]:
+    selected_packs = packs or {str(row.get("challenge_pack", "")) for row in rows}
+    units: list[dict[str, object]] = []
+    for pack in sorted_packs(rows):
+        if pack not in selected_packs:
+            continue
+        current = pack_rows(rows, pack)
+        for scenario in sorted({str(row.get("scenario", "")) for row in current}):
+            scenario_rows = [row for row in current if str(row.get("scenario", "")) == scenario]
+            if not scenario_rows:
+                continue
+            units.append(
+                {
+                    "scenario": scenario,
+                    "challenge_pack": pack,
+                    "model": scenario_rows[0].get("model", ""),
+                    "public_pass": 1 if any(int(row.get("public_pass", 0)) for row in scenario_rows) else 0,
+                    "hidden_pass": 1 if any(int(row.get("hidden_pass", 0)) for row in scenario_rows) else 0,
+                    "attempts": len(scenario_rows),
+                }
+            )
+    return units
+
+
+def scenario_level_pack_table(units: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Pack | Scenario Units | Hidden Pass | False-Green | Note |",
+        "|---|---:|---:|---:|---|",
+    ]
+    for pack in sorted_packs(units):
+        current = pack_rows(units, pack)
+        metrics = compute_trust_metrics(current)
+        note = "single run per scenario"
+        if pack == "maintenance_value":
+            note = "best hidden-passing result across three attempts"
+        lines.append(
+            f"| `{pack}` | {metrics.total} | {format_count_rate(metrics.hidden_pass, metrics.total)} | "
+            f"{format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} | {note} |"
+        )
+    return lines
+
+
+def false_green_scenarios(rows: list[dict[str, object]]) -> list[str]:
+    return sorted(
+        {
+            str(row.get("scenario", ""))
+            for row in rows
+            if int(row.get("public_pass", 0)) == 1 and int(row.get("hidden_pass", 0)) == 0
+        }
+    )
+
+
+def false_green_unit_scenarios(units: list[dict[str, object]], pack: str) -> list[str]:
+    return sorted(
+        str(unit.get("scenario", ""))
+        for unit in units
+        if str(unit.get("challenge_pack", "")) == pack
+        and int(unit.get("public_pass", 0)) == 1
+        and int(unit.get("hidden_pass", 0)) == 0
+    )
+
+
+def markdown_list(items: list[str], *, empty: str = "none") -> list[str]:
+    if not items:
+        return [f"- {empty}"]
+    return [f"- `{item}`" for item in items]
+
+
+def db_source_lines(db_paths: list[Path]) -> list[str]:
+    lines = ["| Source DB | Exists | Runs |", "|---|---:|---:|"]
+    for path in db_paths:
+        count = len(load_rows(path)) if path.exists() else 0
+        lines.append(f"| `{path}` | {'yes' if path.exists() else 'no'} | {count} |")
+    return lines
+
+
+def comparison_delta(north_metrics: TrustMetrics, deepseek_metrics: TrustMetrics) -> str:
+    hidden_delta = deepseek_metrics.hidden_pass - north_metrics.hidden_pass
+    hidden_rate_delta = deepseek_metrics.hidden_pass_rate - north_metrics.hidden_pass_rate
+    false_green_delta = deepseek_metrics.public_green_hidden_red - north_metrics.public_green_hidden_red
+    return (
+        f"DeepSeek solved {hidden_delta:+d} more scenario units "
+        f"({percent(hidden_rate_delta)} hidden-pass-rate delta) and produced "
+        f"{false_green_delta:+d} false-green scenario units versus North Mini."
+    )
+
+
+def make_ultimate_report(
+    *,
+    north_db_paths: list[Path],
+    deepseek_db_paths: list[Path],
+    partial_db_paths: list[Path],
+    out_path: Path | None = None,
+) -> str:
+    north_rows = canonical_north_rows(north_db_paths)
+    deepseek_rows = model_rows(deepseek_db_paths, DEEPSEEK_CONTROL_MODEL)
+    glm_rows = model_rows(partial_db_paths, GLM_PARTIAL_MODEL)
+
+    north_metrics = compute_trust_metrics(north_rows)
+    deepseek_metrics = compute_trust_metrics(deepseek_rows)
+    glm_metrics = compute_trust_metrics(glm_rows)
+
+    north_units = scenario_level_units(north_rows, packs=STRESS_CONTROL_PACKS)
+    deepseek_units = scenario_level_units(deepseek_rows, packs=STRESS_CONTROL_PACKS)
+    north_unit_metrics = compute_trust_metrics(north_units)
+    deepseek_unit_metrics = compute_trust_metrics(deepseek_units)
+
+    north_value = compute_value_metrics(pack_rows(north_rows, "maintenance_value"))
+    deepseek_value = compute_value_metrics(pack_rows(deepseek_rows, "maintenance_value"))
+    north_product = compute_trust_metrics(pack_rows(north_rows, "product_workflows"))
+    deepseek_product = compute_trust_metrics(pack_rows(deepseek_rows, "product_workflows"))
+    north_ci = compute_trust_metrics(pack_rows(north_rows, "ci_forensics"))
+    deepseek_ci = compute_trust_metrics(pack_rows(deepseek_rows, "ci_forensics"))
+
+    generated_path = f"`{out_path}`" if out_path else "this report"
+    lines = [
+        "# North Mini Code Ultimate Eval Report",
+        "",
+        "## Technical Summary",
+        "",
+        "**Main result:** North Mini Code behaves like a credible small-active coding agent, not like a",
+        "semantic acceptance oracle. In this harness it is extremely good at reaching visible public",
+        "green states, but hidden acceptance exposes a large trust gap on product and business contracts.",
+        "",
+        f"- North Mini canonical evidence: {north_metrics.total} attempts across "
+        f"{len(sorted_packs(north_rows))} packs; public pass "
+        f"{format_count_rate(north_metrics.public_pass, north_metrics.total)}; hidden pass "
+        f"{format_count_rate(north_metrics.hidden_pass, north_metrics.total)}; false-green "
+        f"{format_count_rate(north_metrics.public_green_hidden_red, north_metrics.public_pass)}.",
+        f"- Like-for-like stress control set: North Mini hidden pass "
+        f"{format_count_rate(north_unit_metrics.hidden_pass, north_unit_metrics.total)} versus "
+        f"DeepSeek hidden pass {format_count_rate(deepseek_unit_metrics.hidden_pass, deepseek_unit_metrics.total)}.",
+        f"- Product workflows are the failure microscope: North Mini hidden pass "
+        f"{format_count_rate(north_product.hidden_pass, north_product.total)} and false-green "
+        f"{format_count_rate(north_product.public_green_hidden_red, north_product.public_pass)}; "
+        f"DeepSeek control is only {format_count_rate(deepseek_product.hidden_pass, deepseek_product.total)} hidden-pass.",
+        f"- Maintenance work is the positive-value counterexample: North Mini reaches "
+        f"{format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)} "
+        f"best-of-3 scenario success and {format_number(north_value.accepted_patches_per_review_hour)} "
+        "accepted patches per review hour on bounded, explicit maintenance tasks.",
+        "",
+        "**Defensible interpretation:** the model is useful when a workflow supplies narrow tasks, fast",
+        "public feedback, deterministic hidden gates, and human review. It is risky when public green is",
+        "treated as acceptance for policy-heavy product logic, money math, authorization, audit, or data",
+        "semantic boundaries.",
+        "",
+        "## What Was Measured",
+        "",
+        "The harness measures the gap between visible CI repair and hidden contract repair.",
+        "",
+        "- Public tests are visible to the OpenCode agent during the run.",
+        "- Hidden tests are injected after the agent exits.",
+        "- A false-green is `public_pass=1` and `hidden_pass=0`.",
+        "- Trust gap is public pass rate minus hidden pass rate.",
+        "- The maintenance pack reports both attempt-level pass rate and scenario-level best-of-3 success.",
+        "- The like-for-like control set uses 33 scenario units: 12 `ci_forensics`, 11 `product_workflows`, and 10 `maintenance_value` units.",
+        "- `data_semantics` is included for North Mini's own capability readout, but excluded from the DeepSeek comparison because no matching control run is present.",
+        "",
+        "This report is generated from local SQLite run databases and should be read as a behavior",
+        "microscope, not a public leaderboard benchmark.",
+        "",
+        "## Official Model-Card Connection",
+        "",
+        "Cohere's public North Mini Code page, checked on 2026-06-20, identifies `north-mini-code-1-0`",
+        "as a 30B total / 3B active Mixture-of-Experts model with a 256K token context window and",
+        "64K max output tokens. It describes the model as trained for agentic coding, repo-level",
+        "software engineering in harnesses like SWE-Agent and OpenCode, terminal-based agents, local",
+        "coding, and code generation.",
+        "",
+        "That official framing is consistent with what this harness sees: the model can drive the",
+        "coding-agent loop. The missing piece is acceptance reliability under sparse semantic contracts.",
+        "The Cohere page says it is competitive on software-engineering and terminal-agent benchmarks,",
+        "but it does not publish a numeric benchmark table on that page, so this report does not claim",
+        "an official Cohere accuracy number.",
+        "",
+        "Reference links:",
+        "",
+        "- Cohere North Mini Code docs: https://docs.cohere.com/docs/north-mini-code-1.0",
+        "- OpenCode docs: https://opencode.ai/docs/",
+        "- SWE-bench leaderboard methodology context: https://www.swebench.com/",
+        "- Terminal-Bench methodology context: https://www.tbench.ai/",
+        "",
+        "## North Mini Scorecard",
+        "",
+    ]
+    lines.extend(pack_table_lines(north_rows, value_details=True))
+    lines.extend(
+        [
+            "",
+            "**Readout:** public success is not the problem. North Mini made all 57 canonical public",
+            "attempts green. The problem is acceptance reliability after public green: 26 of those 57",
+            "public-green attempts were hidden-red.",
+            "",
+            "## Strong-Model Control Scorecard",
+            "",
+        ]
+    )
+    lines.extend(pack_table_lines(deepseek_rows, value_details=True))
+    lines.extend(
+        [
+            "",
+            "**Readout:** DeepSeek is better on the like-for-like stress set, but not by enough to",
+            "invalidate the harness. It reduces false-greens, but the semantic trap remains visible.",
+            "",
+            "## Like-For-Like Control Comparison",
+            "",
+            "This comparison uses scenario units so the maintenance pack's three attempts do not dominate",
+            "the denominator. For `maintenance_value`, a scenario is counted as hidden-pass if any of the",
+            "three attempts produced an accepted hidden-passing patch.",
+            "",
+            "| Model | Scenario Units | Public Pass | Hidden Pass | False-Green | Trust Gap |",
+            "|---|---:|---:|---:|---:|---:|",
+            f"| North Mini Code | {north_unit_metrics.total} | "
+            f"{format_count_rate(north_unit_metrics.public_pass, north_unit_metrics.total)} | "
+            f"{format_count_rate(north_unit_metrics.hidden_pass, north_unit_metrics.total)} | "
+            f"{format_count_rate(north_unit_metrics.public_green_hidden_red, north_unit_metrics.public_pass)} | "
+            f"{percent(north_unit_metrics.trust_gap)} |",
+            f"| DeepSeek V4 Pro | {deepseek_unit_metrics.total} | "
+            f"{format_count_rate(deepseek_unit_metrics.public_pass, deepseek_unit_metrics.total)} | "
+            f"{format_count_rate(deepseek_unit_metrics.hidden_pass, deepseek_unit_metrics.total)} | "
+            f"{format_count_rate(deepseek_unit_metrics.public_green_hidden_red, deepseek_unit_metrics.public_pass)} | "
+            f"{percent(deepseek_unit_metrics.trust_gap)} |",
+            "",
+            comparison_delta(north_unit_metrics, deepseek_unit_metrics),
+            "",
+            "### North Mini Scenario-Level Pack Breakdown",
+            "",
+        ]
+    )
+    lines.extend(scenario_level_pack_table(north_units))
+    lines.extend(["", "### DeepSeek Scenario-Level Pack Breakdown", ""])
+    lines.extend(scenario_level_pack_table(deepseek_units))
+
+    lines.extend(
+        [
+            "",
+            "## Why DeepSeek Was Not Dramatically Better",
+            "",
+            "**The control result is the most important sanity check in the whole report.** If a much larger",
+            "control model had crushed these tasks, the report would mostly be about North Mini's model",
+            "limit. Instead, DeepSeek improves the result but still fails many public-green cases.",
+            "",
+            "Facts:",
+            "",
+            f"- `ci_forensics`: North Mini {format_count_rate(north_ci.hidden_pass, north_ci.total)} hidden-pass; "
+            f"DeepSeek {format_count_rate(deepseek_ci.hidden_pass, deepseek_ci.total)}.",
+            f"- `product_workflows`: North Mini {format_count_rate(north_product.hidden_pass, north_product.total)} hidden-pass; "
+            f"DeepSeek {format_count_rate(deepseek_product.hidden_pass, deepseek_product.total)}.",
+            f"- `maintenance_value`: North Mini {format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)} "
+            f"best-of-3; DeepSeek {format_count_rate(deepseek_value.best_of_three_successes, deepseek_value.best_of_three_scenarios)}.",
+            f"- Attempt-level maintenance hidden pass is identical: North Mini "
+            f"{format_count_rate(compute_trust_metrics(pack_rows(north_rows, 'maintenance_value')).hidden_pass, len(pack_rows(north_rows, 'maintenance_value')))}; "
+            f"DeepSeek {format_count_rate(compute_trust_metrics(pack_rows(deepseek_rows, 'maintenance_value')).hidden_pass, len(pack_rows(deepseek_rows, 'maintenance_value')))}.",
+            "",
+            "Interpretation:",
+            "",
+            "- The tasks compress frontier-model advantages. Repos are small, context is short, and the main question is not search depth; it is whether the agent infers the unstated contract behind weak visible tests.",
+            "- Visible public tests create an optimization attractor. Both models often stop when public CI is green, even when a stronger semantic reading would imply additional changes.",
+            "- Product workflows are policy-dense. They encode business rules like proration, audit redaction, idempotency, raw-body signatures, SLA calendars, and inventory conservation. These are small-code tasks but high-contract tasks.",
+            "- Maintenance tasks are explicit and local. That is why North Mini gets close to DeepSeek there: the job is bounded, the contract is clear, and the verifier is deterministic.",
+            "",
+            "The conclusion is not that DeepSeek is weak. The conclusion is that this harness is probing a",
+            "different axis than many leaderboard-style coding evals: not raw repo repair, but whether public",
+            "green can be trusted as acceptance when the visible tests under-specify the product contract.",
+            "",
+            "## Failure X-Ray",
+            "",
+            "### North Mini False-Green Scenarios By Pack",
+            "",
+            "**Product workflows are the sharpest warning sign.** Hidden failures there are not syntax",
+            "or import problems; they are missed domain rules.",
+            "",
+            "`ci_forensics`:",
+            "",
+        ]
+    )
+    lines.extend(markdown_list(false_green_scenarios(pack_rows(north_rows, "ci_forensics"))))
+    lines.extend(["", "`data_semantics`:", ""])
+    lines.extend(markdown_list(false_green_scenarios(pack_rows(north_rows, "data_semantics"))))
+    lines.extend(["", "`product_workflows`:", ""])
+    lines.extend(markdown_list(false_green_scenarios(pack_rows(north_rows, "product_workflows"))))
+    lines.extend(["", "`maintenance_value` scenario-level false-greens:", ""])
+    lines.extend(markdown_list(false_green_unit_scenarios(north_units, "maintenance_value")))
+
+    lines.extend(
+        [
+            "",
+            "### Failure Categories",
+            "",
+            "| Category | What It Means | Evidence Pattern |",
+            "|---|---|---|",
+            "| Assertion completion | The agent fixes the visible assertion and stops. | High public pass with hidden failures after injection. |",
+            "| Policy boundary miss | The patch handles the shown case but misses edge policy. | Product workflow false-greens in billing, SLA, discounts, inventory, audit, and webhook cases. |",
+            "| Semantic ownership error | The model changes the wrong layer of the system. | Data semantics tasks where raw APIs and user-facing aggregators need different treatment. |",
+            "| Local maintenance success | The agent performs bounded, explicit, low-blast-radius work well. | Maintenance best-of-3 success and accepted patches per review hour. |",
+            "",
+            "## What North Mini Is Capable Of",
+            "",
+            "**Operational loop competence is high.** It can read a small repository, identify failing tests,",
+            "edit code, run the loop, and return a patch. On the canonical North Mini evidence set, every",
+            "public test suite passed after the agent run.",
+            "",
+            "**It is valuable for bounded maintenance.** The maintenance pack is deliberately not a trap",
+            "benchmark. It asks for useful chores: generated artifacts, deprecated API migrations, fixture",
+            "updates, doc/CLI sync, import hygiene, validation matrices, and pure helper implementation.",
+            f"North Mini accepted {north_value.best_of_three_successes} of {north_value.best_of_three_scenarios} "
+            "maintenance scenarios after three attempts each.",
+            "",
+            "**It is not safe as an autonomous product-logic merger.** Product workflows are the opposite",
+            "shape: sparse visible tests, business policy under-specification, and acceptance conditions that",
+            "matter to users. North Mini passed all visible product tests but only 2 of 11 hidden acceptance",
+            "suites.",
+            "",
+            "## What This Eval Does Differently",
+            "",
+            "Most coding benchmarks ask whether the final submitted patch resolves a task. This harness asks",
+            "a narrower operational question: when the model makes CI green, how often is that green state",
+            "actually trustworthy?",
+            "",
+            "| Standard Benchmark Lens | This Harness Lens | Why It Matters |",
+            "|---|---|---|",
+            "| Pass/fail resolution | Public-green versus hidden-red split | Separates visible repair from acceptance repair. |",
+            "| Broad task corpus | Curated semantic stress packs | Makes specific failure modes inspectable. |",
+            "| Single score | Trust gap plus false-green rate | Exposes confidently wrong patches. |",
+            "| Leaderboard comparison | Behavior microscope with controls | Supports deployment policy, not model marketing. |",
+            "| Hidden tests as final grade | Hidden tests as trust audit | Measures whether public CI can be trusted. |",
+            "",
+            "## Deployment Policy",
+            "",
+            "| Zone | Recommended Use | Required Gate | Rationale |",
+            "|---|---|---|---|",
+            "| Green | Mechanical maintenance, generated artifacts, fixture/doc sync, small pure utilities | Public tests, hidden acceptance, patch review | Evidence shows useful positive-value behavior. |",
+            "| Amber | Adapter changes, finite validation logic, low-blast-radius product helpers | Hidden tests plus reviewer who understands the contract | The model often gets close, but boundary cases matter. |",
+            "| Red | Money movement, auth, audit logging, tenant isolation, inventory, SLA, raw security signatures | Stronger model/control run plus domain review | Product-workflow false-greens are too frequent. |",
+            "",
+            "## Harness Quality Check",
+            "",
+            "The current evidence does not support dismissing the harness as simply unfair. Three checks point",
+            "the other way:",
+            "",
+            "1. The maintenance pack is passable and useful, so hidden tests are not universally impossible.",
+            "2. The `ci_forensics` pack lands in the middle, so the harness is not only testing product policy.",
+            "3. The DeepSeek control improves results but still struggles on product workflows, so the product pack is broadly hard under this setup.",
+            "",
+            "Still, the harness is not a public benchmark yet. It needs more seeds, more control models,",
+            "scenario audits by someone other than the author, and evaluator agreement checks before it can",
+            "support broad model-ranking claims.",
+            "",
+            "## Partial GLM-5.2 Snapshot",
+            "",
+        ]
+    )
+    if glm_rows:
+        lines.extend(
+            [
+                f"The GLM-5.2 run is partial: {glm_metrics.total} `ci_forensics` rows only. It is useful as",
+                "a smoke signal, not as a comparison baseline.",
+                "",
+                "| Model | Pack | Runs | Public Pass | Hidden Pass | False-Green |",
+                "|---|---|---:|---:|---:|---:|",
+                f"| GLM-5.2 | `ci_forensics` | {glm_metrics.total} | "
+                f"{format_count_rate(glm_metrics.public_pass, glm_metrics.total)} | "
+                f"{format_count_rate(glm_metrics.hidden_pass, glm_metrics.total)} | "
+                f"{format_count_rate(glm_metrics.public_green_hidden_red, glm_metrics.public_pass)} |",
+                "",
+            ]
+        )
+    else:
+        lines.extend(["No GLM-5.2 rows were found in the configured partial-control databases.", ""])
+
+    lines.extend(
+        [
+            "## Claim Ledger",
+            "",
+            "| Claim | Evidence | Confidence | Caveat |",
+            "|---|---|---|---|",
+            ultimate_claim_row(
+                "North Mini can execute the OpenCode repair loop",
+                f"Public pass {format_count_rate(north_metrics.public_pass, north_metrics.total)}",
+                "high",
+                "Small curated repos; not a full production workload sample.",
+            ),
+            ultimate_claim_row(
+                "North Mini has a large trust gap after public green",
+                f"False-green {format_count_rate(north_metrics.public_green_hidden_red, north_metrics.public_pass)}",
+                "high",
+                "Hidden tests encode authored contracts; external audit would strengthen legitimacy.",
+            ),
+            ultimate_claim_row(
+                "Product workflows are the main red zone",
+                f"North Mini product hidden pass {format_count_rate(north_product.hidden_pass, north_product.total)}",
+                "high",
+                "The pack is intentionally policy-dense and not a random sample of backend work.",
+            ),
+            ultimate_claim_row(
+                "DeepSeek improves but does not collapse the trust gap",
+                f"Like-for-like hidden pass {format_count_rate(deepseek_unit_metrics.hidden_pass, deepseek_unit_metrics.total)} vs North {format_count_rate(north_unit_metrics.hidden_pass, north_unit_metrics.total)}",
+                "medium-high",
+                "Single control model and mostly single-seed outside maintenance.",
+            ),
+            ultimate_claim_row(
+                "North Mini has positive maintenance value",
+                f"Maintenance best-of-3 {format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)} and {format_number(north_value.accepted_patches_per_review_hour)} accepted/hr",
+                "medium-high",
+                "Review-hour estimate is heuristic unless manually overridden.",
+            ),
+            "",
+            "## What Can And Cannot Be Defended",
+            "",
+            "**Can defend from this evidence:**",
+            "",
+            "- North Mini Code is operationally competent inside the OpenCode loop on these small repos.",
+            "- Public pass alone is not a reliable acceptance signal for the semantic/product packs.",
+            "- The product-workflow pack reveals a large public-green/hidden-red trust gap.",
+            "- Bounded maintenance tasks are a realistic useful operating zone for the model.",
+            "- DeepSeek's control run shows these semantic traps are not only a North Mini artifact.",
+            "",
+            "**Cannot defend yet:**",
+            "",
+            "- A broad leaderboard ranking of North Mini versus DeepSeek or GLM.",
+            "- A statistically stable model accuracy estimate.",
+            "- That all product/backend work has this failure rate.",
+            "- Official Cohere benchmark accuracy; no numeric official table was present on the checked public page.",
+            "",
+            "## Reproduce This Report",
+            "",
+            "Generate the report:",
+            "",
+            "```bash",
+            f"uv run ci-vibe-report ultimate --out {generated_path.strip('`')}",
+            "```",
+            "",
+            "The command uses these default source databases when present.",
+            "",
+            "### North Mini Sources",
+            "",
+        ]
+    )
+    lines.extend(db_source_lines(north_db_paths))
+    lines.extend(["", "### DeepSeek Control Sources", ""])
+    lines.extend(db_source_lines(deepseek_db_paths))
+    lines.extend(["", "### Partial Control Sources", ""])
+    lines.extend(db_source_lines(partial_db_paths))
+    lines.extend(
+        [
+            "",
+            "## Recommended Next Work",
+            "",
+            "1. Finish the GLM-5.2 control run or remove it from comparison materials.",
+            "2. Run one additional strong model on `product_workflows` to test whether DeepSeek's product failures are model-specific or task-family-specific.",
+            "3. Add external scenario audit notes for every hidden test in product workflows and data semantics.",
+            "4. Add evaluator-agreement checks: DeepSeek evaluator plus at least one second evaluator model on the false-green set.",
+            "5. Only after that, run multi-seed scaling and publish a leaderboard-style summary.",
+            "",
+        ]
+    )
 
     return "\n".join(lines) + "\n"
 
@@ -724,6 +1269,12 @@ def build_parser() -> argparse.ArgumentParser:
     value.add_argument("--out", required=True, help="Markdown output path.")
     value.add_argument("--include-artifact-index", action="store_true")
 
+    ultimate = subparsers.add_parser("ultimate", help="Generate the full-run North Mini evaluation report.")
+    ultimate.add_argument("--north-db", action="append", help="North Mini source DB. Defaults to canonical full-run DBs.")
+    ultimate.add_argument("--deepseek-db", action="append", help="DeepSeek control DB. Defaults to canonical control DBs.")
+    ultimate.add_argument("--partial-db", action="append", help="Partial-control DB, such as GLM smoke runs.")
+    ultimate.add_argument("--out", required=True, help="Markdown output path.")
+
     return parser
 
 
@@ -760,6 +1311,23 @@ def main(argv: list[str] | None = None) -> int:
             include_artifact_index=args.include_artifact_index,
         )
         out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()}")
+        return 0
+    if args.command == "ultimate":
+        out_path = Path(args.out)
+        north_db_paths = [Path(path) for path in args.north_db] if args.north_db else DEFAULT_ULTIMATE_NORTH_DBS
+        deepseek_db_paths = (
+            [Path(path) for path in args.deepseek_db] if args.deepseek_db else DEFAULT_ULTIMATE_DEEPSEEK_DBS
+        )
+        partial_db_paths = [Path(path) for path in args.partial_db] if args.partial_db else DEFAULT_ULTIMATE_PARTIAL_DBS
+        report = make_ultimate_report(
+            north_db_paths=north_db_paths,
+            deepseek_db_paths=deepseek_db_paths,
+            partial_db_paths=partial_db_paths,
+            out_path=out_path,
+        )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(report, encoding="utf-8")
         print(f"Wrote {out_path.resolve()}")

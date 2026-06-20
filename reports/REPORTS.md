@@ -1,18 +1,40 @@
 # Reports Index
 
 All evaluation reports for North Mini Code runs using this harness.
-Start with the analysis; then use the x-ray for the detailed run evidence.
+Start with the current full-run report. Older reports are preserved with
+surfacing conditions so historical partial evidence does not get mixed into
+the current canonical readout.
 
 ## Start Here
 
+### [north-mini-ultimate-eval-report-2026-06-20.md](north-mini-ultimate-eval-report-2026-06-20.md)
+**Current canonical full-run analysis.** Use this when you need the defensible
+model readout: North Mini full evidence, DeepSeek controls across the same
+stress packs, partial GLM caveat, claim ledger, deployment policy, and the
+"why was DeepSeek not dramatically better?" analysis.
+
+Surface this report when the question is: what is North Mini Code capable of,
+where does it fail, how strong is the public-green/hidden-red trust-gap claim,
+and what can we defend with current evidence?
+
+---
+
+## Preserved Conditional Reports
+
 ### [north-mini-analysis.md](north-mini-analysis.md)
-**The opinionated analysis.** Synthesizes all 39 runs across four packs into
-a single verdict: what this model is, where it works, where it fails, and
-what deployment policy the evidence supports. Read this first.
+**Historical narrative analysis.** Keep this report for the earlier narrative
+framing and first-pass operating policy. Do not surface it as the current
+canonical scorecard because it predates the full DeepSeek control evidence and
+newer full-run synthesis.
 
 ---
 
 ## Evaluation Reports
+
+### [north-mini-maintenance-value-v2-2026-06-20.md](north-mini-maintenance-value-v2-2026-06-20.md)
+Positive-value maintenance report. Surface this when the question is specifically
+about useful bounded maintenance tasks, best-of-3 maintenance success, patch
+review cost, and accepted patches per review hour.
 
 ### [north-mini-code-xray-2026-06-19.md](north-mini-code-xray-2026-06-19.md)
 Deep-dive x-ray on the primary + expanded run sets. Per-scenario public/hidden
@@ -22,9 +44,12 @@ index linking every run to its raw patch, prompt, and test output.
 ### [north-mini-code-evidence-pack-2026-06-20.md](north-mini-code-evidence-pack-2026-06-20.md)
 Defensible evidence pack combining the primary and expanded databases.
 Includes severity-weighted scoring and scenario audit status.
+Surface this when you need evaluator review tables, audit status, or artifact
+index detail rather than the full-run model interpretation.
 
 ### [north-mini-code-opencode-2026-06-19.md](north-mini-code-opencode-2026-06-19.md)
 Original primary run report (`ci_forensics` pack, 10 runs).
+Surface only as a historical primary-run artifact.
 
 ---
 

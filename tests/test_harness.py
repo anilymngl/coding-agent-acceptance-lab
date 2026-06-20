@@ -22,7 +22,7 @@ from ci_vibe_lab.evaluator import (
     validate_working_board,
     working_board_template,
 )
-from ci_vibe_lab.report import make_value_report, make_xray_report
+from ci_vibe_lab.report import make_ultimate_report, make_value_report, make_xray_report
 from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command
 from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
 
@@ -493,6 +493,101 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("Best-of-3 scenario success", report)
             self.assertIn("## Reviewability Table", report)
             self.assertIn("## Artifact Index", report)
+
+    def test_ultimate_report_renders_full_run_comparison_and_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            north_db = root / "north.sqlite"
+            deepseek_db = root / "deepseek.sqlite"
+            partial_db = root / "glm.sqlite"
+            insert_run(
+                north_db,
+                self.run_row(
+                    run_id="north-ci",
+                    scenario="dependency_api_change",
+                    challenge_pack="ci_forensics",
+                    model="opencode/north-mini-code-free",
+                    public_pass=1,
+                    hidden_pass=1,
+                ),
+            )
+            insert_run(
+                north_db,
+                self.run_row(
+                    run_id="north-product",
+                    scenario="billing_proration",
+                    scenario_title="Billing Proration",
+                    challenge_pack="product_workflows",
+                    model="opencode/north-mini-code-free",
+                    public_pass=1,
+                    hidden_pass=0,
+                ),
+            )
+            insert_run(
+                north_db,
+                self.run_row(
+                    run_id="north-maint-1",
+                    scenario="generated_openapi_refresh",
+                    scenario_title="Generated OpenAPI Refresh",
+                    challenge_pack="maintenance_value",
+                    model="opencode/north-mini-code-free",
+                    public_pass=1,
+                    hidden_pass=0,
+                    estimated_review_minutes=4.0,
+                ),
+            )
+            insert_run(
+                north_db,
+                self.run_row(
+                    run_id="north-maint-2",
+                    scenario="generated_openapi_refresh",
+                    scenario_title="Generated OpenAPI Refresh",
+                    challenge_pack="maintenance_value",
+                    model="opencode/north-mini-code-free",
+                    public_pass=1,
+                    hidden_pass=1,
+                    patch_changed_lines=4,
+                    estimated_review_minutes=4.0,
+                ),
+            )
+            insert_run(
+                deepseek_db,
+                self.run_row(
+                    run_id="deep-product",
+                    scenario="billing_proration",
+                    scenario_title="Billing Proration",
+                    challenge_pack="product_workflows",
+                    model="deepseek/deepseek-v4-pro",
+                    public_pass=1,
+                    hidden_pass=1,
+                ),
+            )
+            insert_run(
+                partial_db,
+                self.run_row(
+                    run_id="glm-ci",
+                    scenario="dependency_api_change",
+                    challenge_pack="ci_forensics",
+                    model="opencode-go/glm-5.2",
+                    public_pass=1,
+                    hidden_pass=0,
+                ),
+            )
+
+            report = make_ultimate_report(
+                north_db_paths=[north_db],
+                deepseek_db_paths=[deepseek_db],
+                partial_db_paths=[partial_db],
+                out_path=root / "ultimate.md",
+            )
+
+            self.assertIn("# North Mini Code Ultimate Eval Report", report)
+            self.assertIn("## Like-For-Like Control Comparison", report)
+            self.assertIn("## Why DeepSeek Was Not Dramatically Better", report)
+            self.assertIn("## Partial GLM-5.2 Snapshot", report)
+            self.assertIn("## Reproduce This Report", report)
+            self.assertIn("`billing_proration`", report)
+            self.assertIn(str(north_db), report)
 
 
 class EvaluatorTests(unittest.TestCase):

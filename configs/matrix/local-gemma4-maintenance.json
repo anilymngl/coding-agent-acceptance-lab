@@ -1,0 +1,30 @@
+{
+  "matrix_id": "local-gemma4-maintenance-2026-06-20",
+  "description": "Gemma 4 local maintenance-value comparison smoke.",
+  "output_root": "data/matrix/local-gemma4-maintenance-2026-06-20",
+  "runs_root": "runs/matrix/local-gemma4-maintenance-2026-06-20",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "first_output_timeout": 300,
+    "delay_seconds": 30,
+    "runs": 1,
+    "prompt_modes": ["sparse"],
+    "packs": ["maintenance_value"]
+  },
+  "models": [
+    {
+      "alias": "gemma4-31b",
+      "id": "ollama/gemma4:31b",
+      "runtime": "ollama",
+      "notes": "Local Gemma 4 31B. Valid smoke docs_cli_sync passed in 224.8s."
+    }
+  ],
+  "packs": {
+    "maintenance_value": {
+      "runs": 1,
+      "prompt_modes": ["sparse"]
+    }
+  }
+}

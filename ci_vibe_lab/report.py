@@ -21,6 +21,18 @@ from ci_vibe_lab.analysis import (
     select_best_patches,
 )
 from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits
+from ci_vibe_lab.matrix import (
+    MatrixCell,
+    classify_row,
+    expected_attempts_for_cell,
+    expand_cells,
+    is_completed_outcome,
+    is_runtime_failure_outcome,
+    load_config,
+    load_cell_rows,
+    summarize_cell_status,
+)
+from ci_vibe_lab.scenarios import scenario_ids
 
 
 DEFAULT_DB = Path("data/results.sqlite")
@@ -298,6 +310,10 @@ def format_count_rate(count: int, denominator: int) -> str:
 
 def format_number(value: float) -> str:
     return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def safe_cell(value: object) -> str:
+    return str(value or "").replace("|", "/").replace("\n", "<br>")
 
 
 def metrics_table(metrics: TrustMetrics) -> list[str]:
@@ -1029,6 +1045,354 @@ def make_ultimate_report(
     return "\n".join(lines) + "\n"
 
 
+def completed_capability_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [row for row in rows if is_completed_outcome(classify_row(row))]
+
+
+def runtime_failure_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [row for row in rows if is_runtime_failure_outcome(classify_row(row))]
+
+
+def leaderboard_matrix_context(matrix_path: Path) -> tuple[list[MatrixCell], list[dict[str, object]]]:
+    config = load_config(matrix_path)
+    cells = expand_cells(config)
+    rows: list[dict[str, object]] = []
+    for cell in cells:
+        for row in load_cell_rows(cell):
+            item = dict(row)
+            item["matrix_id"] = cell.matrix_id
+            item["model_alias"] = cell.model_alias
+            item["matrix_pack"] = cell.pack
+            item["matrix_prompt_mode"] = cell.prompt_mode
+            item["expected_attempts"] = expected_attempts_for_cell(cell)
+            item["source_db"] = str(cell.db_path)
+            rows.append(item)
+    return cells, rows
+
+
+def leaderboard_db_context(db_paths: list[Path]) -> tuple[list[MatrixCell], list[dict[str, object]]]:
+    rows = load_rows_from_dbs(existing_paths(db_paths))
+    for row in rows:
+        row["matrix_id"] = "ad-hoc"
+        row["model_alias"] = str(row.get("model", ""))
+        row["matrix_pack"] = str(row.get("challenge_pack", ""))
+        row["matrix_prompt_mode"] = str(row.get("prompt_mode", "sparse") or "sparse")
+        row["expected_attempts"] = ""
+    return [], rows
+
+
+def group_key(row: dict[str, object]) -> tuple[str, str, str]:
+    return (
+        str(row.get("model_alias") or row.get("model") or ""),
+        str(row.get("challenge_pack") or row.get("matrix_pack") or ""),
+        str(row.get("prompt_mode") or row.get("matrix_prompt_mode") or "sparse"),
+    )
+
+
+def group_rows_for_leaderboard(rows: list[dict[str, object]]) -> dict[tuple[str, str, str], list[dict[str, object]]]:
+    grouped: dict[tuple[str, str, str], list[dict[str, object]]] = {}
+    for row in rows:
+        grouped.setdefault(group_key(row), []).append(row)
+    return grouped
+
+
+def evidence_status_lines(cells: list[MatrixCell], rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Model | Pack | Lane | Expected Attempts | Rows | Valid Completed | Runtime Failures | Missing Coverage | Evidence Status |",
+        "|---|---|---|---:|---:|---:|---:|---:|---|",
+    ]
+    if cells:
+        for status in [summarize_cell_status(cell) for cell in cells]:
+            cell = status.cell
+            lines.append(
+                f"| `{cell.model_alias}` | `{cell.pack}` | `{cell.prompt_mode}` | "
+                f"{status.expected_attempts} | {status.rows} | {status.valid_completed} | "
+                f"{status.runtime_failures} | {status.missing_coverage} | `{status.evidence_status}` |"
+            )
+        return lines
+
+    for (model_alias, pack, lane), group in sorted(group_rows_for_leaderboard(rows).items()):
+        outcomes = [classify_row(row) for row in group]
+        completed = sum(1 for outcome in outcomes if is_completed_outcome(outcome))
+        runtime_failures = sum(1 for outcome in outcomes if is_runtime_failure_outcome(outcome))
+        status = "legacy" if group else "missing"
+        lines.append(
+            f"| `{model_alias}` | `{pack}` | `{lane}` | {len(group)} | {len(group)} | "
+            f"{completed} | {runtime_failures} | 0 | `{status}` |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | 0 | 0 | 0 | 0 | 0 | `missing` |")
+    return lines
+
+
+def completed_scorecard_lines(cells: list[MatrixCell], rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Model | Pack | Lane | Valid Rows | Public Pass | Hidden Pass | Trust Gap | False-Green Rate |",
+        "|---|---|---|---:|---:|---:|---:|---:|",
+    ]
+    grouped = group_rows_for_leaderboard(rows)
+    keys: list[tuple[str, str, str]]
+    if cells:
+        keys = [(cell.model_alias, cell.pack, cell.prompt_mode) for cell in cells]
+    else:
+        keys = sorted(grouped)
+    for model_alias, pack, lane in keys:
+        group = grouped.get((model_alias, pack, lane), [])
+        completed = completed_capability_rows(group)
+        metrics = compute_trust_metrics(completed)
+        lines.append(
+            f"| `{model_alias}` | `{pack}` | `{lane}` | {metrics.total} | "
+            f"{format_count_rate(metrics.public_pass, metrics.total)} | "
+            f"{format_count_rate(metrics.hidden_pass, metrics.total)} | {percent(metrics.trust_gap)} | "
+            f"{format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | 0 | 0/0 (0.0%) | 0/0 (0.0%) | 0.0% | 0/0 (0.0%) |")
+    return lines
+
+
+def reliability_scorecard_lines(cells: list[MatrixCell], rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Model | Pack | Lane | Total Rows | Completed | Timeout | No-Output Timeout | Provider/Config Error | Completion Rate |",
+        "|---|---|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    grouped = group_rows_for_leaderboard(rows)
+    keys: list[tuple[str, str, str]]
+    if cells:
+        keys = [(cell.model_alias, cell.pack, cell.prompt_mode) for cell in cells]
+    else:
+        keys = sorted(grouped)
+    for model_alias, pack, lane in keys:
+        group = grouped.get((model_alias, pack, lane), [])
+        outcomes = [classify_row(row) for row in group]
+        completed = sum(1 for outcome in outcomes if is_completed_outcome(outcome))
+        agent_timeout = outcomes.count("agent_timeout")
+        no_output = outcomes.count("no_output_timeout")
+        provider = outcomes.count("provider_or_config_error")
+        total = len(group)
+        lines.append(
+            f"| `{model_alias}` | `{pack}` | `{lane}` | {total} | {completed} | "
+            f"{agent_timeout} | {no_output} | {provider} | "
+            f"{percent(completed / total) if total else '0.0%'} |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | 0 | 0 | 0 | 0 | 0 | 0.0% |")
+    return lines
+
+
+def false_green_lines(rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Model | Pack | Lane | Scenario | Run ID | Fairness Classification | Missed Contract | Artifact Link |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for row in sorted(rows, key=lambda item: (group_key(item), str(item.get("scenario", "")), str(item.get("run_id", "")))):
+        if classify_row(row) != "false_green":
+            continue
+        fairness = str(row.get("scenario_audit_status") or "unclassified")
+        missed_contract = safe_cell(row.get("trap") or row.get("hidden_output_path") or "")
+        lines.append(
+            f"| `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
+            f"`{safe_cell(row.get('challenge_pack'))}` | `{safe_cell(row.get('prompt_mode'))}` | "
+            f"`{safe_cell(row.get('scenario'))}` | `{safe_cell(row.get('run_id'))}` | "
+            f"`{safe_cell(fairness)}` | {missed_contract} | `{safe_cell(row.get('hidden_output_path'))}` |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | none | n/a |")
+    return lines
+
+
+def runtime_failure_lines(rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Model | Pack | Lane | Scenario | Run ID | Failure Type | Duration | Stderr Summary | Stdout Bytes |",
+        "|---|---|---|---|---|---|---:|---|---:|",
+    ]
+    for row in sorted(runtime_failure_rows(rows), key=lambda item: (group_key(item), str(item.get("scenario", "")), str(item.get("run_id", "")))):
+        stdout = str(row.get("opencode_stdout", "") or "")
+        stderr = str(row.get("opencode_stderr", "") or "")
+        lines.append(
+            f"| `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
+            f"`{safe_cell(row.get('challenge_pack'))}` | `{safe_cell(row.get('prompt_mode'))}` | "
+            f"`{safe_cell(row.get('scenario'))}` | `{safe_cell(row.get('run_id'))}` | "
+            f"`{classify_row(row)}` | {format_number(float(row.get('duration_seconds') or 0))} | "
+            f"{safe_cell(shorten(stderr.strip() or '<empty>', width=180, placeholder='...'))} | {len(stdout.encode('utf-8'))} |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | 0 | none | 0 |")
+    return lines
+
+
+def aggregate_scenario_outcome(rows: list[dict[str, object]]) -> str:
+    if not rows:
+        return "missing"
+    outcomes = [classify_row(row) for row in rows]
+    for candidate in [
+        "hidden_pass",
+        "false_green",
+        "public_red",
+        "agent_timeout",
+        "no_output_timeout",
+        "provider_or_config_error",
+        "runner_error",
+    ]:
+        if candidate in outcomes:
+            return candidate
+    return "missing"
+
+
+def scenario_comparison_lines(cells: list[MatrixCell], rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Scenario | Pack | Lane | Model | Outcome | Runs | Notes |",
+        "|---|---|---|---|---|---:|---|",
+    ]
+    if cells:
+        for cell in cells:
+            selected_scenarios = scenario_ids(cell.pack) if cell.challenge == "all" else [cell.challenge]
+            for scenario in selected_scenarios:
+                scenario_rows = [
+                    row
+                    for row in rows
+                    if str(row.get("model_alias")) == cell.model_alias
+                    and str(row.get("challenge_pack")) == cell.pack
+                    and str(row.get("prompt_mode")) == cell.prompt_mode
+                    and str(row.get("scenario")) == scenario
+                ]
+                outcome = aggregate_scenario_outcome(scenario_rows)
+                notes = "" if scenario_rows else "missing coverage"
+                lines.append(
+                    f"| `{scenario}` | `{cell.pack}` | `{cell.prompt_mode}` | `{cell.model_alias}` | "
+                    f"`{outcome}` | {len(scenario_rows)} | {notes} |"
+                )
+        return lines
+
+    grouped = group_rows_for_leaderboard(rows)
+    for (model_alias, pack, lane), group in sorted(grouped.items()):
+        for scenario in sorted({str(row.get("scenario", "")) for row in group}):
+            scenario_rows = [row for row in group if str(row.get("scenario", "")) == scenario]
+            lines.append(
+                f"| `{scenario}` | `{pack}` | `{lane}` | `{model_alias}` | "
+                f"`{aggregate_scenario_outcome(scenario_rows)}` | {len(scenario_rows)} |  |"
+            )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | n/a | `missing` | 0 | no rows loaded |")
+    return lines
+
+
+def leaderboard_artifact_lines(rows: list[dict[str, object]]) -> list[str]:
+    lines = [
+        "| Run ID | Model | Pack | Lane | Scenario | Outcome | Prompt | Patch | Public | Hidden | OpenCode Stdout | OpenCode Stderr |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for row in sorted(rows, key=lambda item: (group_key(item), str(item.get("scenario", "")), str(item.get("run_id", "")))):
+        lines.append(
+            f"| `{safe_cell(row.get('run_id'))}` | `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
+            f"`{safe_cell(row.get('challenge_pack'))}` | `{safe_cell(row.get('prompt_mode'))}` | "
+            f"`{safe_cell(row.get('scenario'))}` | `{classify_row(row)}` | "
+            f"`{safe_cell(row.get('prompt_path'))}` | `{safe_cell(row.get('patch_path'))}` | "
+            f"`{safe_cell(row.get('public_output_path'))}` | `{safe_cell(row.get('hidden_output_path'))}` | "
+            f"`{safe_cell(row.get('opencode_stdout_path'))}` | `{safe_cell(row.get('opencode_stderr_path'))}` |"
+        )
+    if len(lines) == 2:
+        lines.append("| n/a | n/a | n/a | n/a | n/a | `missing` | n/a | n/a | n/a | n/a | n/a | n/a |")
+    return lines
+
+
+def make_leaderboard_report(
+    *,
+    matrix_path: Path | None,
+    db_paths: list[Path],
+    include_artifact_index: bool,
+) -> str:
+    if matrix_path:
+        cells, rows = leaderboard_matrix_context(matrix_path)
+        matrix_label = str(matrix_path)
+        matrix_id = cells[0].matrix_id if cells else Path(matrix_path).stem
+    else:
+        cells, rows = leaderboard_db_context(db_paths)
+        matrix_label = ", ".join(str(path) for path in db_paths) if db_paths else "none"
+        matrix_id = "ad-hoc"
+
+    completed_rows = completed_capability_rows(rows)
+    runtime_rows = runtime_failure_rows(rows)
+    completed_metrics = compute_trust_metrics(completed_rows)
+    total_rows = len(rows)
+
+    lines = [
+        "# Model Comparison Evidence Report",
+        "",
+        "## Executive Summary",
+        "",
+        "This report compares coding-agent matrix evidence without treating visible CI green as",
+        "acceptance. Completed model attempts are scored separately from provider, configuration,",
+        "and timeout failures.",
+        "",
+        f"- Matrix: `{safe_cell(matrix_id)}`",
+        f"- Source: `{safe_cell(matrix_label)}`",
+        f"- Stored rows: {total_rows}",
+        f"- Completed-attempt rows: {len(completed_rows)}",
+        f"- Runtime failure rows: {len(runtime_rows)}",
+        f"- Completed-attempt hidden pass: {format_count_rate(completed_metrics.hidden_pass, completed_metrics.total)}",
+        f"- Completed-attempt trust gap: {percent(completed_metrics.trust_gap)}",
+        "",
+        "## Matrix Definition",
+        "",
+        "| Model | Model ID | Pack | Lane | Expected Attempts | DB | Runs Dir |",
+        "|---|---|---|---|---:|---|---|",
+    ]
+    if cells:
+        for cell in cells:
+            lines.append(
+                f"| `{cell.model_alias}` | `{cell.model_id}` | `{cell.pack}` | `{cell.prompt_mode}` | "
+                f"{expected_attempts_for_cell(cell)} | `{cell.db_path}` | `{cell.runs_dir}` |"
+            )
+    else:
+        for db_path in db_paths:
+            lines.append(f"| ad-hoc | unknown | observed | observed | n/a | `{db_path}` | n/a |")
+
+    lines.extend(["", "## Evidence Health", ""])
+    lines.extend(evidence_status_lines(cells, rows))
+    lines.extend(["", "## Completed-Attempt Scorecard", ""])
+    lines.extend(completed_scorecard_lines(cells, rows))
+    lines.extend(["", "## Operational Reliability Scorecard", ""])
+    lines.extend(reliability_scorecard_lines(cells, rows))
+    lines.extend(["", "## Pack And Lane Breakdown", ""])
+    lines.extend(completed_scorecard_lines(cells, rows))
+    lines.extend(["", "## False-Green Breakdown", ""])
+    lines.extend(false_green_lines(rows))
+    lines.extend(["", "## Runtime Failure Inbox", ""])
+    lines.extend(runtime_failure_lines(rows))
+    lines.extend(["", "## Scenario-Level Comparison", ""])
+    lines.extend(scenario_comparison_lines(cells, rows))
+
+    if include_artifact_index:
+        lines.extend(["", "## Artifact Index", ""])
+        lines.extend(leaderboard_artifact_lines(rows))
+
+    lines.extend(
+        [
+            "",
+            "## What Can Be Defended",
+            "",
+            "- Completed-attempt metrics describe rows where OpenCode produced a usable model attempt.",
+            "- Operational reliability metrics describe whether the model/provider/runner path produced usable attempts.",
+            "- Sparse and contract-visible lanes are kept separate in every scorecard.",
+            "",
+            "## What Cannot Be Defended",
+            "",
+            "- This is not a public benchmark leaderboard.",
+            "- Missing, no-output timeout, provider/config, and runner-error rows are not semantic model failures.",
+            "- No-output timeouts are not counted as false-greens.",
+            "",
+            "## Next Runs",
+            "",
+            "- Fill missing cells before making model-level claims.",
+            "- Inspect artifact links for every false-green before publishing conclusions.",
+            "- Add contract-visible lanes when sparse false-greens need spec-exposure diagnosis.",
+            "",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def make_scenario_audit_report(*, db_paths: list[Path]) -> str:
     audits = load_audits_from_dbs(db_paths)
     audit_rows = [audits[scenario] for scenario in sorted(audits)]
@@ -1382,6 +1746,13 @@ def build_parser() -> argparse.ArgumentParser:
     scenario_audit.add_argument("--db", action="append", required=True, help="SQLite result database. Can be provided more than once.")
     scenario_audit.add_argument("--out", required=True, help="Markdown output path.")
 
+    leaderboard = subparsers.add_parser("leaderboard", help="Generate a model comparison evidence report.")
+    leaderboard_source = leaderboard.add_mutually_exclusive_group(required=True)
+    leaderboard_source.add_argument("--matrix", help="JSON matrix config to derive cells and DB paths.")
+    leaderboard_source.add_argument("--db", action="append", help="SQLite result database. Can be provided more than once.")
+    leaderboard.add_argument("--out", required=True, help="Markdown output path.")
+    leaderboard.add_argument("--include-artifact-index", action="store_true")
+
     return parser
 
 
@@ -1442,6 +1813,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "scenario-audit":
         db_paths = [Path(path) for path in args.db]
         report = make_scenario_audit_report(db_paths=db_paths)
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()}")
+        return 0
+    if args.command == "leaderboard":
+        report = make_leaderboard_report(
+            matrix_path=Path(args.matrix) if args.matrix else None,
+            db_paths=[Path(path) for path in args.db] if args.db else [],
+            include_artifact_index=args.include_artifact_index,
+        )
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(report, encoding="utf-8")

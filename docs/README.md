@@ -23,6 +23,43 @@ Read:
 The ultimate goal prompt for the next implementation agent is at the end of
 that file.
 
+## Matrix Quickstart
+
+The reusable matrix pipeline is the safe path for multi-model, multi-pack, and
+multi-lane comparisons. Start by validating and previewing a small config:
+
+```bash
+uv run ci-vibe-matrix validate configs/matrix/local-gemma4-maintenance.json
+uv run ci-vibe-matrix plan configs/matrix/local-gemma4-maintenance.json
+```
+
+Run the configured cells through the existing `ci-vibe-run` execution contract:
+
+```bash
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json
+```
+
+Resume or inspect without launching new model work:
+
+```bash
+uv run ci-vibe-matrix status configs/matrix/local-gemma4-maintenance.json
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json --dry-run --resume
+uv run ci-vibe-matrix dbs configs/matrix/local-gemma4-maintenance.json
+```
+
+Generate the comparison evidence report:
+
+```bash
+uv run ci-vibe-report leaderboard \
+  --matrix configs/matrix/local-gemma4-maintenance.json \
+  --out reports/leaderboard-local-gemma4-maintenance-2026-06-20.md \
+  --include-artifact-index
+```
+
+The report keeps completed-attempt capability metrics separate from operational
+reliability metrics. Do not treat no-output timeouts, provider/config failures,
+or missing cells as semantic model failures.
+
 ## Key Docs
 
 ### `model-comparison-eval-pipeline-plan-2026-06-20.md`
@@ -95,14 +132,14 @@ Done:
 - Gemma 4-only local Ollama config in `opencode.json`
 - valid `ollama/gemma4:31b` smoke
 - detailed model-comparison pipeline plan
+- `ci-vibe-matrix` JSON config validation, planning, status, DB listing, and run orchestration
+- `ci-vibe-report leaderboard` matrix evidence report
+- initial `configs/matrix/local-gemma4-maintenance.json`
 
 Not done:
 
-- `ci-vibe-matrix`
-- JSON matrix config parser
-- generic `ci-vibe-report leaderboard`
-- dashboard matrix/leaderboard tab
 - full Gemma 4 maintenance matrix run
+- dashboard matrix/leaderboard tab
 - final multi-model comparison report
 
 ## Operational Rules

@@ -32,7 +32,20 @@ from ci_vibe_lab.evaluator import (
     validate_working_board,
     working_board_template,
 )
-from ci_vibe_lab.report import make_scenario_audit_report, make_ultimate_report, make_value_report, make_xray_report
+from ci_vibe_lab.matrix import (
+    MatrixConfig,
+    cell_command,
+    classify_row,
+    expand_cells,
+    summarize_cell_status,
+)
+from ci_vibe_lab.report import (
+    make_leaderboard_report,
+    make_scenario_audit_report,
+    make_ultimate_report,
+    make_value_report,
+    make_xray_report,
+)
 from ci_vibe_lab.runner import (
     PatchStats,
     estimate_review_minutes,
@@ -248,6 +261,224 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("Baseline/Public/Hidden pass: 0/1/1", text)
             self.assertIn("## Baseline Test Output", text)
             self.assertIn("baseline red", text)
+
+
+class MatrixPipelineTests(unittest.TestCase):
+    def matrix_config(self, root: Path) -> dict[str, object]:
+        return {
+            "matrix_id": "test-matrix",
+            "output_root": str(root / "data" / "matrix" / "test-matrix"),
+            "runs_root": str(root / "runs" / "matrix" / "test-matrix"),
+            "defaults": {
+                "agent": "build",
+                "auto_approve": True,
+                "timeout": 123,
+                "first_output_timeout": 45,
+                "delay_seconds": 2,
+                "runs": 1,
+                "prompt_modes": ["sparse"],
+                "packs": ["maintenance_value"],
+            },
+            "models": [{"alias": "test-model", "id": "test/model"}],
+            "packs": {
+                "maintenance_value": {
+                    "runs": 1,
+                    "prompt_modes": ["sparse", "contract_visible"],
+                }
+            },
+        }
+
+    def run_row(self, **overrides: object) -> dict[str, object]:
+        base: dict[str, object] = {
+            "run_id": "run-1",
+            "experiment_id": "test-matrix-test-model-maintenance_value-sparse",
+            "prompt_mode": "sparse",
+            "contract_visibility": "",
+            "scenario_audit_status": "",
+            "scenario_audit_version": "",
+            "scenario": "dependency_api_change",
+            "scenario_title": "Dependency API Change",
+            "challenge_pack": "ci_forensics",
+            "category": "dependency-boundary",
+            "difficulty": "medium",
+            "vibe": "",
+            "tags": "[]",
+            "trap": "hidden contract",
+            "expected_behavior": "[]",
+            "success_signals": "[]",
+            "failure_modes": "[]",
+            "rubric": "[]",
+            "model": "test/model",
+            "agent": "build",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "ended_at": "2026-01-01T00:00:01+00:00",
+            "duration_seconds": 1.0,
+            "workdir": "/tmp/work",
+            "prompt": "fix it",
+            "opencode_command": "[]",
+            "opencode_exit_code": 0,
+            "baseline_pass": 0,
+            "public_pass": 1,
+            "hidden_pass": 0,
+            "baseline_output": "fail",
+            "opencode_stdout": "{\"type\":\"text\"}\n",
+            "opencode_stderr": "",
+            "public_output": "public ok",
+            "hidden_output": "fail",
+            "patch": "diff --git",
+            "artifact_dir": "/tmp/artifacts",
+            "prompt_path": "/tmp/artifacts/prompt.txt",
+            "baseline_output_path": "/tmp/artifacts/baseline.txt",
+            "opencode_stdout_path": "/tmp/artifacts/opencode_stdout.jsonl",
+            "opencode_stderr_path": "/tmp/artifacts/opencode_stderr.txt",
+            "public_output_path": "/tmp/artifacts/public.txt",
+            "hidden_output_path": "/tmp/artifacts/hidden.txt",
+            "patch_path": "/tmp/artifacts/patch.diff",
+        }
+        base.update(overrides)
+        return base
+
+    def test_matrix_config_expands_deterministic_cells_and_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = MatrixConfig.model_validate(self.matrix_config(root))
+            cells = expand_cells(config)
+            self.assertEqual(len(cells), 2)
+            sparse = cells[0]
+            self.assertEqual(sparse.model_alias, "test-model")
+            self.assertEqual(sparse.pack, "maintenance_value")
+            self.assertEqual(sparse.prompt_mode, "sparse")
+            self.assertEqual(
+                sparse.db_path,
+                root / "data" / "matrix" / "test-matrix" / "test-model" / "maintenance_value-sparse.sqlite",
+            )
+            self.assertEqual(
+                sparse.runs_dir,
+                root / "runs" / "matrix" / "test-matrix" / "test-model" / "maintenance_value" / "sparse",
+            )
+            self.assertEqual(sparse.experiment_id, "test-matrix-test-model-maintenance_value-sparse")
+            command = cell_command(sparse, resume=True, skip_timeouts=True)
+            self.assertEqual(command[:4], ["uv", "run", "ci-vibe-run", "run"])
+            self.assertIn("--resume", command)
+            self.assertIn("--skip-timeouts", command)
+            self.assertIn("--first-output-timeout", command)
+            self.assertIn("--auto-approve", command)
+
+    def test_matrix_config_rejects_invalid_alias_and_prompt_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            invalid_alias = self.matrix_config(root)
+            invalid_alias["models"] = [{"alias": "bad/slash", "id": "test/model"}]
+            with self.assertRaises(Exception):
+                MatrixConfig.model_validate(invalid_alias)
+
+            invalid_prompt = self.matrix_config(root)
+            invalid_prompt["packs"] = {"maintenance_value": {"prompt_modes": ["not_a_lane"]}}
+            with self.assertRaises(Exception):
+                MatrixConfig.model_validate(invalid_prompt)
+
+    def test_evidence_classification_separates_semantic_and_runtime_outcomes(self) -> None:
+        self.assertEqual(classify_row(None), "missing")
+        self.assertEqual(classify_row(self.run_row(hidden_pass=1)), "hidden_pass")
+        self.assertEqual(classify_row(self.run_row(run_id="fg", hidden_pass=0)), "false_green")
+        self.assertEqual(classify_row(self.run_row(run_id="red", public_pass=0, hidden_pass=0)), "public_red")
+        self.assertEqual(
+            classify_row(
+                self.run_row(
+                    run_id="stall",
+                    opencode_exit_code=124,
+                    opencode_stdout="",
+                    opencode_stderr="OpenCode produced no stdout/stderr within 30 seconds.",
+                    patch="",
+                    public_pass=0,
+                    hidden_pass=0,
+                )
+            ),
+            "no_output_timeout",
+        )
+        self.assertEqual(
+            classify_row(
+                self.run_row(
+                    run_id="agent-timeout",
+                    opencode_exit_code=124,
+                    opencode_stdout="{\"type\":\"text\"}\n",
+                    opencode_stderr="OpenCode timed out after 900 seconds.",
+                    patch="",
+                    public_pass=0,
+                    hidden_pass=0,
+                )
+            ),
+            "agent_timeout",
+        )
+        self.assertEqual(
+            classify_row(
+                self.run_row(
+                    run_id="provider",
+                    opencode_exit_code=1,
+                    opencode_stdout="",
+                    opencode_stderr="ProviderModelNotFoundError: Model not found",
+                    patch="",
+                    public_pass=0,
+                    hidden_pass=0,
+                )
+            ),
+            "provider_or_config_error",
+        )
+
+    def test_leaderboard_report_renders_separate_capability_and_reliability(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "matrix.json"
+            config_data = self.matrix_config(root)
+            config_data["packs"] = {"maintenance_value": {"prompt_modes": ["sparse"], "challenge": "docs_cli_sync"}}
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            config = MatrixConfig.model_validate(config_data)
+            cell = expand_cells(config)[0]
+            matrix_row = {
+                "scenario": "docs_cli_sync",
+                "scenario_title": "Docs CLI Sync",
+                "challenge_pack": "maintenance_value",
+                "category": "docs",
+                "difficulty": "easy",
+            }
+            insert_run(cell.db_path, self.run_row(run_id="pass", hidden_pass=1, hidden_output="hidden ok", **matrix_row))
+            insert_run(cell.db_path, self.run_row(run_id="false-green", hidden_pass=0, **matrix_row))
+            insert_run(
+                cell.db_path,
+                self.run_row(
+                    run_id="no-output",
+                    opencode_exit_code=124,
+                    opencode_stdout="",
+                    opencode_stderr="OpenCode produced no stdout/stderr within 45 seconds.",
+                    patch="",
+                    public_pass=0,
+                    hidden_pass=0,
+                    **matrix_row,
+                ),
+            )
+
+            status = summarize_cell_status(cell)
+            self.assertEqual(status.evidence_status, "mixed")
+            self.assertEqual(status.valid_completed, 2)
+            self.assertEqual(status.runtime_failures, 1)
+
+            report = make_leaderboard_report(
+                matrix_path=config_path,
+                db_paths=[],
+                include_artifact_index=True,
+            )
+            self.assertIn("# Model Comparison Evidence Report", report)
+            self.assertIn("Runtime failure rows: 1", report)
+            self.assertIn("| `test-model` | `maintenance_value` | `sparse` | 2 | 2/2 (100.0%) | 1/2 (50.0%)", report)
+            self.assertIn("| `test-model` | `maintenance_value` | `sparse` | 3 | 2 | 0 | 1 | 0 | 66.7% |", report)
+            self.assertIn("`false_green`", report)
+            self.assertIn("`no_output_timeout`", report)
+            self.assertIn("## Artifact Index", report)
+
+
+class HarnessDatabaseReportTests(unittest.TestCase):
+    def run_row(self, **overrides: object) -> dict[str, object]:
+        return DatabaseTests().run_row(**overrides)
 
     def test_legacy_database_is_migrated_before_indexes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

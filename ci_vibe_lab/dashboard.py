@@ -211,6 +211,8 @@ def model_comparison(rows: pd.DataFrame, model_a: str, model_b: str) -> pd.DataF
         on=["scenario", "scenario_title", "category"],
         suffixes=("_a", "_b"),
     )
+    if merged.empty:
+        return merged
     merged["outcome_a"] = merged.apply(lambda row: pass_status(row["public_pass_a"], row["hidden_pass_a"]), axis=1)
     merged["outcome_b"] = merged.apply(lambda row: pass_status(row["public_pass_b"], row["hidden_pass_b"]), axis=1)
     merged["delta"] = merged["hidden_pass_b"].astype(int) - merged["hidden_pass_a"].astype(int)

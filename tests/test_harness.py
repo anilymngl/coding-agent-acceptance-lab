@@ -326,7 +326,7 @@ class DatabaseTests(unittest.TestCase):
 
             self.assertIsNotNone(row)
             self.assertEqual(row["prompt_mode"], "contract_visible")
-            self.assertEqual(row["contract_visibility"], "edge_inferable")
+            self.assertEqual(row["contract_visibility"], "explicit")
             self.assertEqual(row["scenario_audit_status"], "accepted")
             self.assertIn("Acceptance contract:", row["prompt"])
             self.assertNotIn("HiddenBatchSplitterTests", row["prompt"])

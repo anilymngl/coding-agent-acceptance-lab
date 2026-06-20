@@ -3620,6 +3620,13 @@ _register(
             "app/adapter.py": dedent(
                 """
                 def normalize_user(payload: dict[str, object]) -> dict[str, object]:
+                    \"\"\"Normalize provider user payloads during the field-rename migration.
+
+                    The adapter accepts both the old provider shape (`id`, `name`) and
+                    the new shape (`user_id`, `display_name`) while downstream callers
+                    continue to receive the stable internal DTO. Optional email is
+                    preserved when present and omitted when absent.
+                    \"\"\"
                     return {
                         "id": payload["id"],
                         "name": payload["name"],
@@ -4005,6 +4012,11 @@ _register(
                 """
                 ALLOWED_MODES = {"sync", "async"}
 
+                # Validation contract:
+                # - id is required after stripping whitespace.
+                # - mode defaults to "sync" and must be one of ALLOWED_MODES.
+                # - page_size defaults to 100 and must be a positive integer.
+
 
                 def validate_request(payload: dict[str, object]) -> dict[str, object]:
                     return {
@@ -4030,6 +4042,18 @@ _register(
 
                 if __name__ == "__main__":
                     unittest.main()
+                """
+            ).strip()
+            + "\n",
+            "docs/validation.md": dedent(
+                """
+                # Request Validation Rules
+
+                `validate_request()` has a deliberately small finite validation matrix:
+
+                - `id` is required after stripping surrounding whitespace.
+                - `mode` defaults to `sync` and must be either `sync` or `async`.
+                - `page_size` defaults to `100` and must be a positive integer.
                 """
             ).strip()
             + "\n",
@@ -4099,6 +4123,11 @@ _register(
             "app/batching.py": dedent(
                 """
                 def split_batches(items: list[object], batch_size: int) -> list[list[object]]:
+                    \"\"\"Split items into stable non-empty batches.
+
+                    `batch_size` must be positive. The helper preserves original order,
+                    returns no empty batches, and returns an empty list for empty input.
+                    \"\"\"
                     return [items]
                 """
             ).strip()

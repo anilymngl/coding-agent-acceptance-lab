@@ -26,7 +26,16 @@ that file.
 ## Matrix Quickstart
 
 The reusable matrix pipeline is the safe path for multi-model, multi-pack, and
-multi-lane comparisons. Start by validating and previewing a small config:
+multi-lane comparisons. Start by validating and previewing the small Gemma 4
+smoke config before launching the 31B maintenance lane:
+
+```bash
+uv run ci-vibe-matrix validate configs/matrix/local-gemma4-e4b-smoke.json
+uv run ci-vibe-matrix plan configs/matrix/local-gemma4-e4b-smoke.json
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-e4b-smoke.json
+```
+
+Then validate and preview the broader local maintenance config:
 
 ```bash
 uv run ci-vibe-matrix validate configs/matrix/local-gemma4-maintenance.json
@@ -59,6 +68,10 @@ uv run ci-vibe-report leaderboard \
 The report keeps completed-attempt capability metrics separate from operational
 reliability metrics. Do not treat no-output timeouts, provider/config failures,
 or missing cells as semantic model failures.
+
+For Ollama cells, `ci-vibe-matrix run` prewarms the model before invoking
+`ci-vibe-run`. The warmup duration is written to `matrix-run.log`; it is not
+part of the run row's `duration_seconds` or first-output timeout.
 
 ## Key Docs
 
@@ -135,6 +148,7 @@ Done:
 - `ci-vibe-matrix` JSON config validation, planning, status, DB listing, and run orchestration
 - `ci-vibe-report leaderboard` matrix evidence report
 - initial `configs/matrix/local-gemma4-maintenance.json`
+- small `configs/matrix/local-gemma4-e4b-smoke.json` with Ollama warmup
 
 Not done:
 

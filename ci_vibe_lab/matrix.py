@@ -8,6 +8,9 @@ import shlex
 import sqlite3
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,8 +76,11 @@ class DefaultsConfig(BaseModel):
     runs: int = 1
     prompt_modes: list[str] = Field(default_factory=lambda: ["sparse"])
     packs: list[str] = Field(default_factory=list)
+    warmup: bool = True
+    warmup_timeout: int = 600
+    warmup_keep_alive: str = "30m"
 
-    @field_validator("timeout", "runs")
+    @field_validator("timeout", "runs", "warmup_timeout")
     @classmethod
     def positive_int(cls, value: int) -> int:
         if value <= 0:
@@ -119,6 +125,9 @@ class ModelConfig(BaseModel):
     first_output_timeout: float | None = None
     delay_seconds: float | None = None
     auto_approve: bool | None = None
+    warmup: bool | None = None
+    warmup_timeout: int | None = None
+    warmup_keep_alive: str | None = None
     environment: dict[str, str] = Field(default_factory=dict)
     notes: str = ""
 
@@ -127,11 +136,11 @@ class ModelConfig(BaseModel):
     def valid_alias(cls, value: str) -> str:
         return _validate_slug(value, "model alias")
 
-    @field_validator("timeout")
+    @field_validator("timeout", "warmup_timeout")
     @classmethod
     def valid_timeout(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
-            raise ValueError("timeout must be positive")
+            raise ValueError("must be positive")
         return value
 
     @field_validator("first_output_timeout", "delay_seconds")
@@ -243,6 +252,9 @@ class MatrixCell:
     runs_dir: Path
     experiment_id: str
     environment: dict[str, str]
+    warmup: bool
+    warmup_timeout: int
+    warmup_keep_alive: str
     notes: str = ""
 
 
@@ -324,6 +336,17 @@ def expand_cells(config: MatrixConfig) -> list[MatrixCell]:
                         runs_dir=runs_dir,
                         experiment_id=f"{config.matrix_id}-{model.alias}-{pack}-{prompt_mode}",
                         environment=dict(model.environment),
+                        warmup=(
+                            model.warmup
+                            if model.warmup is not None
+                            else config.defaults.warmup
+                        ),
+                        warmup_timeout=(
+                            model.warmup_timeout
+                            if model.warmup_timeout is not None
+                            else config.defaults.warmup_timeout
+                        ),
+                        warmup_keep_alive=model.warmup_keep_alive or config.defaults.warmup_keep_alive,
                         notes=model.notes,
                     )
                 )
@@ -408,6 +431,48 @@ def cell_command(
 
 def db_paths_for_cells(cells: Iterable[MatrixCell]) -> list[Path]:
     return [cell.db_path for cell in cells]
+
+
+def ollama_model_name(model_id: str) -> str | None:
+    if not model_id.startswith("ollama/"):
+        return None
+    name = model_id.split("/", 1)[1].strip()
+    return name or None
+
+
+def should_warmup_cell(cell: MatrixCell) -> bool:
+    return cell.warmup and ollama_model_name(cell.model_id) is not None
+
+
+def warmup_ollama_model(
+    model_name: str,
+    *,
+    timeout: int,
+    keep_alive: str,
+    base_url: str = "http://localhost:11434",
+) -> float:
+    """Load an Ollama model before the timed OpenCode attempt starts."""
+    payload = json.dumps(
+        {
+            "model": model_name,
+            "prompt": "Reply READY only.",
+            "stream": False,
+            "keep_alive": keep_alive,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/api/generate",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    started = time.monotonic()
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response.read()
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Ollama warmup failed for {model_name}: {exc}") from exc
+    return time.monotonic() - started
 
 
 def expected_attempts_for_cell(cell: MatrixCell) -> int:
@@ -555,6 +620,11 @@ def print_plan(cells: list[MatrixCell], *, resume: bool, skip_timeouts: bool) ->
         print(f"  runs: {cell.runs_dir}")
         print(f"  experiment: {cell.experiment_id}")
         print(f"  expected attempts: {expected_attempts_for_cell(cell)}")
+        if should_warmup_cell(cell):
+            print(
+                f"  warmup: ollama model {ollama_model_name(cell.model_id)} "
+                f"(timeout {cell.warmup_timeout}s, keep_alive {cell.warmup_keep_alive})"
+            )
         print(f"  command: {shlex.join(command)}")
 
 
@@ -595,6 +665,30 @@ def run_cells(
         env = None
         if cell.environment:
             env = {**os.environ, **cell.environment}
+        if should_warmup_cell(cell):
+            model_name = ollama_model_name(cell.model_id)
+            assert model_name is not None
+            print(f"Prewarming Ollama model {model_name} before timed OpenCode attempt...", flush=True)
+            try:
+                warmup_seconds = warmup_ollama_model(
+                    model_name,
+                    timeout=cell.warmup_timeout,
+                    keep_alive=cell.warmup_keep_alive,
+                )
+            except RuntimeError as exc:
+                with log_path.open("a", encoding="utf-8") as log:
+                    log.write(f"warmup_error={exc}\n")
+                print(str(exc), flush=True)
+                if stop_on_failure:
+                    return 1
+                exit_code = 1
+                continue
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write(
+                    f"warmup_model={model_name} warmup_seconds={warmup_seconds:.2f} "
+                    f"keep_alive={cell.warmup_keep_alive}\n"
+                )
+            print(f"Warmup complete in {warmup_seconds:.1f}s; starting ci-vibe-run.", flush=True)
         completed = subprocess.run(command, check=False, env=env)
         with log_path.open("a", encoding="utf-8") as log:
             log.write(f"exit_code={completed.returncode}\n")

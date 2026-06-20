@@ -37,6 +37,8 @@ from ci_vibe_lab.matrix import (
     cell_command,
     classify_row,
     expand_cells,
+    ollama_model_name,
+    should_warmup_cell,
     summarize_cell_status,
 )
 from ci_vibe_lab.report import (
@@ -278,6 +280,9 @@ class MatrixPipelineTests(unittest.TestCase):
                 "runs": 1,
                 "prompt_modes": ["sparse"],
                 "packs": ["maintenance_value"],
+                "warmup": True,
+                "warmup_timeout": 321,
+                "warmup_keep_alive": "15m",
             },
             "models": [{"alias": "test-model", "id": "test/model"}],
             "packs": {
@@ -341,7 +346,9 @@ class MatrixPipelineTests(unittest.TestCase):
     def test_matrix_config_expands_deterministic_cells_and_commands(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            config = MatrixConfig.model_validate(self.matrix_config(root))
+            config_data = self.matrix_config(root)
+            config_data["models"] = [{"alias": "test-model", "id": "ollama/test-model"}]
+            config = MatrixConfig.model_validate(config_data)
             cells = expand_cells(config)
             self.assertEqual(len(cells), 2)
             sparse = cells[0]
@@ -357,12 +364,26 @@ class MatrixPipelineTests(unittest.TestCase):
                 root / "runs" / "matrix" / "test-matrix" / "test-model" / "maintenance_value" / "sparse",
             )
             self.assertEqual(sparse.experiment_id, "test-matrix-test-model-maintenance_value-sparse")
+            self.assertEqual(sparse.warmup_timeout, 321)
+            self.assertEqual(sparse.warmup_keep_alive, "15m")
+            self.assertEqual(ollama_model_name(sparse.model_id), "test-model")
+            self.assertTrue(should_warmup_cell(sparse))
             command = cell_command(sparse, resume=True, skip_timeouts=True)
             self.assertEqual(command[:4], ["uv", "run", "ci-vibe-run", "run"])
             self.assertIn("--resume", command)
             self.assertIn("--skip-timeouts", command)
             self.assertIn("--first-output-timeout", command)
             self.assertIn("--auto-approve", command)
+
+    def test_non_ollama_cells_do_not_warmup(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_data = self.matrix_config(root)
+            config_data["models"] = [{"alias": "hosted", "id": "hosted/model"}]
+            cell = expand_cells(MatrixConfig.model_validate(config_data))[0]
+
+            self.assertIsNone(ollama_model_name(cell.model_id))
+            self.assertFalse(should_warmup_cell(cell))
 
     def test_matrix_config_rejects_invalid_alias_and_prompt_mode(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

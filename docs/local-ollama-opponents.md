@@ -64,12 +64,13 @@ later warm-cache run proves a shorter threshold is safe.
 Installed on this machine:
 
 - `gemma4:31b`
+- `gemma4:e4b`
 
 Optional smaller Gemma 4 candidates to pull if 31B is too slow:
 
 ```bash
-ollama pull gemma4:12b
 ollama pull gemma4:e4b
+ollama pull gemma4:12b
 ```
 
 Avoid pulling `gemma4:26b` unless the machine has enough unified memory and you
@@ -102,7 +103,31 @@ Expected model ID for the harness:
 ollama/gemma4:31b
 ```
 
-## First Harness Smoke
+## First Matrix Smoke
+
+Use the small Gemma 4 smoke before the 31B lane:
+
+```bash
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-e4b-smoke.json --stop-on-failure
+```
+
+This cell runs only `docs_cli_sync` in the sparse lane. The matrix runner
+prewarms Ollama before invoking `ci-vibe-run`, so model-load time is logged in
+`matrix-run.log` rather than counted in the run row's `duration_seconds` or
+first-output timeout.
+
+Observed on 2026-06-20:
+
+- model: `ollama/gemma4:e4b`
+- config: `configs/matrix/local-gemma4-e4b-smoke.json`
+- run id: `20260620T121600Z-docs_cli_sync-6bb20fc9`
+- warmup: 2.73s in `matrix-run.log`
+- run duration: 62.8s in SQLite
+- OpenCode exit: `0`
+- public pass: `1`
+- hidden pass: `1`
+
+## First Direct Harness Smoke
 
 Run one small scenario before a full pack:
 

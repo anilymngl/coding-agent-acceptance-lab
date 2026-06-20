@@ -1,0 +1,34 @@
+{
+  "matrix_id": "local-gemma4-e4b-smoke-2026-06-20",
+  "description": "Small Gemma 4 local smoke for matrix and Ollama warmup validation.",
+  "output_root": "data/matrix/local-gemma4-e4b-smoke-2026-06-20",
+  "runs_root": "runs/matrix/local-gemma4-e4b-smoke-2026-06-20",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "first_output_timeout": 120,
+    "delay_seconds": 0,
+    "runs": 1,
+    "prompt_modes": ["sparse"],
+    "packs": ["maintenance_value"],
+    "warmup": true,
+    "warmup_timeout": 600,
+    "warmup_keep_alive": "30m"
+  },
+  "models": [
+    {
+      "alias": "gemma4-e4b",
+      "id": "ollama/gemma4:e4b",
+      "runtime": "ollama",
+      "notes": "Small Gemma 4 model for proving matrix orchestration before 31B."
+    }
+  ],
+  "packs": {
+    "maintenance_value": {
+      "challenge": "docs_cli_sync",
+      "runs": 1,
+      "prompt_modes": ["sparse"]
+    }
+  }
+}

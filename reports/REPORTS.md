@@ -23,6 +23,25 @@ and what can we defend with current evidence?
 
 ---
 
+## Gemma 4 Local Matrix (Multi-Model Comparison)
+
+### [gemma4-matrix-analysis-2026-06-20.md](gemma4-matrix-analysis-2026-06-20.md)
+**First multi-model local comparison.** Gemma 4 e4b (small) vs 31b on
+`maintenance_value` sparse. Key finding: 31b matches North Mini at 7/10 hidden,
+e4b at 5/10. The same 3 scenarios fail hidden across all models. Trust gap
+is stable at 30% regardless of model. Read this for the cross-model picture.
+
+### [leaderboard-local-gemma4-two-model.md](leaderboard-local-gemma4-two-model.md)
+Auto-generated leaderboard report from the matrix pipeline. Contains the
+raw scorecard, false-green breakdown with evaluator verdicts, operational
+reliability, and scenario-level comparison tables.
+
+### [integrity-local-gemma4-two-model.md](integrity-local-gemma4-two-model.md)
+Artifact integrity verification for the Gemma 4 matrix. All 120 artifacts
+present, 0 issues, 6/6 false-greens evaluator-reviewed.
+
+---
+
 ## Preserved Conditional Reports
 
 ### [north-mini-analysis.md](north-mini-analysis.md)

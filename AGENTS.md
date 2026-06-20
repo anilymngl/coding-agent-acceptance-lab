@@ -36,9 +36,12 @@ quality and caveats when comparing models.
 - `ci_vibe_lab/scenarios.py` — scenario definitions, hidden tests, prompt modes,
   and pack metadata.
 - `ci_vibe_lab/analysis.py` — trust-gap, false-green, and value metrics.
-- `ci_vibe_lab/report.py` — Markdown reports.
+- `ci_vibe_lab/report.py` — Markdown reports including `leaderboard` with
+  evaluator review coverage and `integrity` for SHA256 artifact verification.
+- `ci_vibe_lab/integrity.py` — artifact path, SHA256 hash, and audit-coverage
+  verification for pre-report integrity gates.
 - `ci_vibe_lab/evaluator.py` — evaluator-agent workbench and Pydantic review schema.
-- `ci_vibe_lab/dashboard.py` — Streamlit dashboard.
+- `ci_vibe_lab/dashboard.py` — Streamlit dashboard with Matrix tab.
 - `docs/` — methodology and implementation plans. Start with `docs/README.md`.
 - `reports/` — generated reports. Start with `reports/REPORTS.md`.
 - `data/` and `runs/` — gitignored runtime evidence. Do not commit them.
@@ -57,18 +60,37 @@ quality and caveats when comparing models.
 
 ## Current Next Task
 
-The next substantial implementation should follow the ultimate goal prompt at
-the end of `docs/model-comparison-eval-pipeline-plan-2026-06-20.md`.
+The matrix pipeline, leaderboard report with evaluator coverage, integrity
+verification, matrix evaluator integration, and dashboard Matrix tab are done.
+The next substantial work is running the full Gemma 4 maintenance matrix and
+generating the final multi-model comparison report from real evidence.
 
-Expected first deliverables:
+Runtime workflow:
 
-- `ci_vibe_lab/matrix.py`
-- `ci-vibe-matrix` console script
-- JSON matrix config validation/planning
-- deterministic model x pack x prompt-mode DB/run-dir expansion
-- generic `ci-vibe-report leaderboard`
-- `configs/matrix/local-gemma4-maintenance.json`
-- tests for config expansion and evidence-status classification
+```bash
+# Preview and run a matrix
+uv run ci-vibe-matrix plan configs/matrix/local-gemma4-maintenance.json
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json
+
+# Run evaluator reviews over false-greens
+uv run ci-vibe-matrix evaluate configs/matrix/local-gemma4-maintenance.json \
+  --model deepseek/deepseek-v4-pro --loose
+
+# Generate the comparison report with evals
+uv run ci-vibe-report leaderboard \
+  --matrix configs/matrix/local-gemma4-maintenance.json \
+  --out reports/leaderboard-local-gemma4-maintenance.md \
+  --include-artifact-index
+
+# Verify artifact integrity
+uv run ci-vibe-report integrity \
+  --matrix configs/matrix/local-gemma4-maintenance.json \
+  --out reports/integrity-local-gemma4-maintenance.md
+
+# Inspect in the dashboard
+CI_VIBE_DB="$(uv run ci-vibe-matrix dbs configs/matrix/local-gemma4-maintenance.json)" \
+  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
+```
 
 ## Build, Test, Verify
 

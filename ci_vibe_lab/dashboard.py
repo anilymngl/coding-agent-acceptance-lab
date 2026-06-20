@@ -17,6 +17,15 @@ from ci_vibe_lab.analysis import (
     select_best_patches,
 )
 from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits, update_review
+from ci_vibe_lab.matrix import (
+    MatrixCell,
+    classify_row,
+    expand_cells,
+    is_completed_outcome,
+    is_runtime_failure_outcome,
+    load_config,
+    summarize_cell_status,
+)
 
 
 DEFAULT_DB = os.environ.get("CI_VIBE_DB", "data/results.sqlite")
@@ -779,6 +788,161 @@ def render_evidence(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFr
         )
 
 
+def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_path: str) -> None:
+    if not matrix_config_path:
+        st.info(
+            "Provide a matrix config path in the sidebar to load cell-aware views. "
+            "Example: `configs/matrix/local-gemma4-maintenance.json`"
+        )
+        return
+
+    try:
+        config = load_config(Path(matrix_config_path))
+        cells = expand_cells(config)
+    except (SystemExit, Exception) as exc:
+        st.error(f"Could not load matrix config: {exc}")
+        return
+
+    if runs.empty:
+        st.info("No runs loaded for matrix view.")
+        return
+
+    run_records = runs.to_dict("records")
+    review_by_run: dict[str, dict[str, object]] = {}
+    if not reviews.empty:
+        for _, review_row in reviews.sort_values("created_at", ascending=False).iterrows():
+            run_id = str(review_row.get("target_run_id", ""))
+            if run_id and run_id not in review_by_run:
+                review_by_run[run_id] = review_row.to_dict()
+
+    st.subheader("Matrix Definition")
+    st.write(f"**Matrix ID:** `{config.matrix_id}`")
+    if config.description:
+        st.caption(config.description)
+    cell_defs = [
+        {
+            "model_alias": cell.model_alias,
+            "model_id": cell.model_id,
+            "pack": cell.pack,
+            "lane": cell.prompt_mode,
+            "db": str(cell.db_path),
+            "runs_dir": str(cell.runs_dir),
+        }
+        for cell in cells
+    ]
+    st.dataframe(pd.DataFrame(cell_defs), use_container_width=True, hide_index=True)
+
+    st.subheader("Evidence Health")
+    health_rows = []
+    for cell in cells:
+        status = summarize_cell_status(cell)
+        health_rows.append(
+            {
+                "model": cell.model_alias,
+                "pack": cell.pack,
+                "lane": cell.prompt_mode,
+                "expected": status.expected_attempts,
+                "rows": status.rows,
+                "completed": status.valid_completed,
+                "runtime_failures": status.runtime_failures,
+                "missing": status.missing_coverage,
+                "evidence_status": status.evidence_status,
+                "latest_ended": status.latest_ended_at,
+            }
+        )
+    st.dataframe(pd.DataFrame(health_rows), use_container_width=True, hide_index=True)
+
+    st.subheader("Completed-Attempt Scorecard")
+    scorecard_rows = []
+    for cell in cells:
+        cell_rows = [
+            row
+            for row in run_records
+            if str(row.get("model")) == cell.model_id
+            and str(row.get("challenge_pack")) == cell.pack
+            and str(row.get("prompt_mode", "sparse")) == cell.prompt_mode
+        ]
+        completed = [row for row in cell_rows if is_completed_outcome(classify_row(row))]
+        metrics = compute_trust_metrics(completed)
+        scorecard_rows.append(
+            {
+                "model": cell.model_alias,
+                "pack": cell.pack,
+                "lane": cell.prompt_mode,
+                "valid_rows": metrics.total,
+                "public_pass": f"{metrics.public_pass}/{metrics.total}",
+                "hidden_pass": f"{metrics.hidden_pass}/{metrics.total}",
+                "trust_gap": percent(metrics.trust_gap),
+                "false_green_rate": percent(metrics.false_green_rate) if metrics.public_pass else "0.0%",
+            }
+        )
+    st.dataframe(pd.DataFrame(scorecard_rows), use_container_width=True, hide_index=True)
+
+    st.subheader("Operational Reliability")
+    reliability_rows = []
+    for cell in cells:
+        cell_rows = [
+            row
+            for row in run_records
+            if str(row.get("model")) == cell.model_id
+            and str(row.get("challenge_pack")) == cell.pack
+            and str(row.get("prompt_mode", "sparse")) == cell.prompt_mode
+        ]
+        outcomes = [classify_row(row) for row in cell_rows]
+        completed = sum(1 for o in outcomes if is_completed_outcome(o))
+        agent_timeout = outcomes.count("agent_timeout")
+        no_output = outcomes.count("no_output_timeout")
+        provider = outcomes.count("provider_or_config_error")
+        total = len(cell_rows)
+        reliability_rows.append(
+            {
+                "model": cell.model_alias,
+                "pack": cell.pack,
+                "lane": cell.prompt_mode,
+                "total": total,
+                "completed": completed,
+                "agent_timeout": agent_timeout,
+                "no_output_timeout": no_output,
+                "provider_config_error": provider,
+                "completion_rate": percent(completed / total) if total else "0.0%",
+            }
+        )
+    st.dataframe(pd.DataFrame(reliability_rows), use_container_width=True, hide_index=True)
+
+    st.subheader("False-Green Inbox")
+    false_green_rows = []
+    for row in run_records:
+        if classify_row(row) != "false_green":
+            continue
+        run_id = str(row.get("run_id", ""))
+        review = review_by_run.get(run_id, {})
+        false_green_rows.append(
+            {
+                "model": row.get("model", ""),
+                "pack": row.get("challenge_pack", ""),
+                "lane": row.get("prompt_mode", "sparse"),
+                "scenario": row.get("scenario", ""),
+                "run_id": run_id,
+                "audit_status": row.get("scenario_audit_status", "unclassified"),
+                "evaluator_verdict": review.get("verdict", "not_reviewed") if review else "not_reviewed",
+                "root_cause": review.get("root_cause_category", "") if review else "",
+                "hidden_output": row.get("hidden_output_path", ""),
+            }
+        )
+    if false_green_rows:
+        st.dataframe(pd.DataFrame(false_green_rows), use_container_width=True, hide_index=True)
+    else:
+        st.success("No false-green rows in the current data.")
+
+    st.subheader("Evaluator Review Coverage")
+    total_false_greens = len(false_green_rows)
+    reviewed = sum(1 for item in false_green_rows if item["evaluator_verdict"] != "not_reviewed")
+    cols = st.columns(3)
+    cols[0].metric("False-Greens", total_false_greens)
+    cols[1].metric("Reviewed", reviewed)
+    cols[2].metric("Coverage", f"{percent(reviewed / total_false_greens) if total_false_greens else '0.0%'}")
+
+
 def render_exports(rows: pd.DataFrame, audits: pd.DataFrame) -> None:
     st.subheader("Exports")
     st.write("Export the filtered result set for deeper review or sharing with another local agent.")
@@ -828,6 +992,7 @@ def main() -> None:
     accepted_only = st.sidebar.checkbox("Audited accepted scenarios only", value=False)
     public_green_hidden_red_only = st.sidebar.checkbox("Public-green / hidden-red only", value=False)
     show_weighted = st.sidebar.checkbox("Show severity-weighted metric", value=True)
+    matrix_config_path = st.sidebar.text_input("Matrix config (optional)", value="", help="Path to a JSON matrix config for the Matrix tab.")
 
     filtered = runs.copy()
     if selected_pack != "all":
@@ -870,7 +1035,9 @@ def main() -> None:
         ]
     )
 
-    report_tab, runs_tab, inspector_tab, evidence_tab, exports_tab = st.tabs(["Report", "Runs", "Inspector", "Evidence", "Exports"])
+    report_tab, runs_tab, inspector_tab, evidence_tab, matrix_tab, exports_tab = st.tabs(
+        ["Report", "Runs", "Inspector", "Evidence", "Matrix", "Exports"]
+    )
     with report_tab:
         render_report(filtered, audits, reviews, show_weighted=show_weighted)
     with runs_tab:
@@ -879,6 +1046,8 @@ def main() -> None:
         render_inspector(filtered, db_paths[0])
     with evidence_tab:
         render_evidence(filtered, audits, reviews)
+    with matrix_tab:
+        render_matrix_tab(filtered, reviews, matrix_config_path)
     with exports_tab:
         render_exports(filtered, audits)
 

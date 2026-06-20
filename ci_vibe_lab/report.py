@@ -21,15 +21,16 @@ from ci_vibe_lab.analysis import (
     select_best_patches,
 )
 from ci_vibe_lab.db import connect, load_evaluator_reviews, load_scenario_audits
+from ci_vibe_lab.integrity import integrity_report_markdown, verify_artifact_integrity
 from ci_vibe_lab.matrix import (
     MatrixCell,
     classify_row,
-    expected_attempts_for_cell,
     expand_cells,
+    expected_attempts_for_cell,
     is_completed_outcome,
     is_runtime_failure_outcome,
-    load_config,
     load_cell_rows,
+    load_config,
     summarize_cell_status,
 )
 from ci_vibe_lab.scenarios import scenario_ids
@@ -1180,24 +1181,31 @@ def reliability_scorecard_lines(cells: list[MatrixCell], rows: list[dict[str, ob
     return lines
 
 
-def false_green_lines(rows: list[dict[str, object]]) -> list[str]:
+def false_green_lines(
+    rows: list[dict[str, object]],
+    review_by_run: dict[str, dict[str, object]] | None = None,
+) -> list[str]:
     lines = [
-        "| Model | Pack | Lane | Scenario | Run ID | Fairness Classification | Missed Contract | Artifact Link |",
-        "|---|---|---|---|---|---|---|---|",
+        "| Model | Pack | Lane | Scenario | Run ID | Fairness Classification | Missed Contract | Evaluator Verdict | Artifact Link |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for row in sorted(rows, key=lambda item: (group_key(item), str(item.get("scenario", "")), str(item.get("run_id", "")))):
         if classify_row(row) != "false_green":
             continue
         fairness = str(row.get("scenario_audit_status") or "unclassified")
         missed_contract = safe_cell(row.get("trap") or row.get("hidden_output_path") or "")
+        run_id = str(row.get("run_id", ""))
+        review = (review_by_run or {}).get(run_id)
+        evaluator_verdict = safe_cell(review.get("verdict")) if review else "not_reviewed"
         lines.append(
             f"| `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
             f"`{safe_cell(row.get('challenge_pack'))}` | `{safe_cell(row.get('prompt_mode'))}` | "
-            f"`{safe_cell(row.get('scenario'))}` | `{safe_cell(row.get('run_id'))}` | "
-            f"`{safe_cell(fairness)}` | {missed_contract} | `{safe_cell(row.get('hidden_output_path'))}` |"
+            f"`{safe_cell(row.get('scenario'))}` | `{safe_cell(run_id)}` | "
+            f"`{safe_cell(fairness)}` | {missed_contract} | `{evaluator_verdict}` | "
+            f"`{safe_cell(row.get('hidden_output_path'))}` |"
         )
     if len(lines) == 2:
-        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | none | n/a |")
+        lines.append("| n/a | n/a | n/a | n/a | n/a | n/a | none | n/a | n/a |")
     return lines
 
 
@@ -1277,22 +1285,90 @@ def scenario_comparison_lines(cells: list[MatrixCell], rows: list[dict[str, obje
     return lines
 
 
-def leaderboard_artifact_lines(rows: list[dict[str, object]]) -> list[str]:
+def leaderboard_artifact_lines(
+    rows: list[dict[str, object]],
+    review_by_run: dict[str, dict[str, object]] | None = None,
+) -> list[str]:
     lines = [
-        "| Run ID | Model | Pack | Lane | Scenario | Outcome | Prompt | Patch | Public | Hidden | OpenCode Stdout | OpenCode Stderr |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Run ID | Model | Pack | Lane | Scenario | Outcome | Prompt | Patch | Public | Hidden | OpenCode Stdout | OpenCode Stderr | Evaluator Review |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in sorted(rows, key=lambda item: (group_key(item), str(item.get("scenario", "")), str(item.get("run_id", "")))):
+        run_id = str(row.get("run_id", ""))
+        review = (review_by_run or {}).get(run_id)
+        review_path = safe_cell(review.get("evaluation_json_path")) if review else ""
         lines.append(
-            f"| `{safe_cell(row.get('run_id'))}` | `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
+            f"| `{safe_cell(run_id)}` | `{safe_cell(row.get('model_alias') or row.get('model'))}` | "
             f"`{safe_cell(row.get('challenge_pack'))}` | `{safe_cell(row.get('prompt_mode'))}` | "
             f"`{safe_cell(row.get('scenario'))}` | `{classify_row(row)}` | "
             f"`{safe_cell(row.get('prompt_path'))}` | `{safe_cell(row.get('patch_path'))}` | "
             f"`{safe_cell(row.get('public_output_path'))}` | `{safe_cell(row.get('hidden_output_path'))}` | "
-            f"`{safe_cell(row.get('opencode_stdout_path'))}` | `{safe_cell(row.get('opencode_stderr_path'))}` |"
+            f"`{safe_cell(row.get('opencode_stdout_path'))}` | `{safe_cell(row.get('opencode_stderr_path'))}` | "
+            f"`{review_path}` |"
         )
     if len(lines) == 2:
-        lines.append("| n/a | n/a | n/a | n/a | n/a | `missing` | n/a | n/a | n/a | n/a | n/a | n/a |")
+        lines.append("| n/a | n/a | n/a | n/a | n/a | `missing` | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
+    return lines
+
+
+def evaluator_coverage_lines(
+    rows: list[dict[str, object]],
+    review_by_run: dict[str, dict[str, object]],
+) -> list[str]:
+    false_green_rows = [row for row in rows if classify_row(row) == "false_green"]
+    false_green_ids = {str(row.get("run_id", "")) for row in false_green_rows}
+    reviewed_false_greens = [
+        review for run_id, review in review_by_run.items() if run_id in false_green_ids
+    ]
+    all_reviews = list(review_by_run.values())
+    verdict_counts = Counter(str(review.get("verdict", "")) for review in reviewed_false_greens)
+    root_cause_counts = Counter(str(review.get("root_cause_category", "")) for review in reviewed_false_greens)
+
+    lines = [
+        "## Evaluator Review Coverage",
+        "",
+        f"- Total false-green rows: {len(false_green_rows)}",
+        f"- Reviewed false-green rows: {len(reviewed_false_greens)}",
+        f"- Total indexed reviews: {len(all_reviews)}",
+        f"- Review coverage rate: {format_count_rate(len(reviewed_false_greens), len(false_green_rows))}",
+        "",
+        "### Verdict Counts (reviewed false-greens)",
+        "",
+        "| Verdict | Count |",
+        "|---|---:|",
+    ]
+    for verdict, count in sorted(verdict_counts.items()):
+        lines.append(f"| `{verdict or 'blank'}` | {count} |")
+    if not verdict_counts:
+        lines.append("| `not_reviewed` | 0 |")
+
+    lines.extend(["", "### Root Cause Taxonomy (reviewed false-greens)", "", "| Root Cause Category | Count |", "|---|---:|"])
+    for category, count in sorted(root_cause_counts.items(), key=lambda item: (-item[1], item[0])):
+        lines.append(f"| `{category or 'blank'}` | {count} |")
+    if not root_cause_counts:
+        lines.append("| `not_indexed_yet` | 0 |")
+
+    lines.extend(["", "### Evaluator Review Details", ""])
+    if reviewed_false_greens:
+        lines.extend(
+            [
+                "| Scenario | Run ID | Verdict | Severity | Confidence | Patch Quality | Root Cause | Review Artifact |",
+                "|---|---|---|---|---:|---:|---|---|",
+            ]
+        )
+        for review in sorted(reviewed_false_greens, key=lambda item: (str(item.get("scenario", "")), str(item.get("target_run_id", "")))):
+            lines.append(
+                f"| `{safe_cell(review.get('scenario'))}` | `{safe_cell(review.get('target_run_id'))}` | "
+                f"{safe_cell(review.get('verdict'))} | {safe_cell(review.get('severity'))} | "
+                f"{safe_cell(review.get('confidence'))} | {safe_cell(review.get('patch_quality'))} | "
+                f"{safe_cell(review.get('root_cause'))} | `{safe_cell(review.get('evaluation_json_path'))}` |"
+            )
+    else:
+        lines.append(
+            "No evaluator reviews indexed yet. Run `ci-vibe-matrix evaluate <config> --model <evaluator>` "
+            "or `ci-vibe-evaluate run --write-db` to populate this section."
+        )
+    lines.append("")
     return lines
 
 
@@ -1306,15 +1382,26 @@ def make_leaderboard_report(
         cells, rows = leaderboard_matrix_context(matrix_path)
         matrix_label = str(matrix_path)
         matrix_id = cells[0].matrix_id if cells else Path(matrix_path).stem
+        review_db_paths = [cell.db_path for cell in cells]
     else:
         cells, rows = leaderboard_db_context(db_paths)
         matrix_label = ", ".join(str(path) for path in db_paths) if db_paths else "none"
         matrix_id = "ad-hoc"
+        review_db_paths = db_paths
+
+    reviews = load_reviews_from_dbs(existing_paths(review_db_paths))
+    latest_reviews = latest_reviews_by_target_run(reviews)
+    review_by_run = {str(review.get("target_run_id", "")): review for review in latest_reviews}
 
     completed_rows = completed_capability_rows(rows)
     runtime_rows = runtime_failure_rows(rows)
     completed_metrics = compute_trust_metrics(completed_rows)
     total_rows = len(rows)
+    false_green_total = sum(1 for row in rows if classify_row(row) == "false_green")
+    reviewed_false_greens = sum(
+        1 for run_id in {str(row.get("run_id", "")) for row in rows if classify_row(row) == "false_green"}
+        if run_id in review_by_run
+    )
 
     lines = [
         "# Model Comparison Evidence Report",
@@ -1323,7 +1410,7 @@ def make_leaderboard_report(
         "",
         "This report compares coding-agent matrix evidence without treating visible CI green as",
         "acceptance. Completed model attempts are scored separately from provider, configuration,",
-        "and timeout failures.",
+        "and timeout failures. Evaluator-agent reviews are included where indexed.",
         "",
         f"- Matrix: `{safe_cell(matrix_id)}`",
         f"- Source: `{safe_cell(matrix_label)}`",
@@ -1332,6 +1419,8 @@ def make_leaderboard_report(
         f"- Runtime failure rows: {len(runtime_rows)}",
         f"- Completed-attempt hidden pass: {format_count_rate(completed_metrics.hidden_pass, completed_metrics.total)}",
         f"- Completed-attempt trust gap: {percent(completed_metrics.trust_gap)}",
+        f"- False-green rows: {false_green_total}",
+        f"- Evaluator-reviewed false-greens: {reviewed_false_greens}/{false_green_total}",
         "",
         "## Matrix Definition",
         "",
@@ -1357,15 +1446,17 @@ def make_leaderboard_report(
     lines.extend(["", "## Pack And Lane Breakdown", ""])
     lines.extend(completed_scorecard_lines(cells, rows))
     lines.extend(["", "## False-Green Breakdown", ""])
-    lines.extend(false_green_lines(rows))
+    lines.extend(false_green_lines(rows, review_by_run))
     lines.extend(["", "## Runtime Failure Inbox", ""])
     lines.extend(runtime_failure_lines(rows))
     lines.extend(["", "## Scenario-Level Comparison", ""])
     lines.extend(scenario_comparison_lines(cells, rows))
+    lines.extend(["", ""])
+    lines.extend(evaluator_coverage_lines(rows, review_by_run))
 
     if include_artifact_index:
-        lines.extend(["", "## Artifact Index", ""])
-        lines.extend(leaderboard_artifact_lines(rows))
+        lines.extend(["## Artifact Index", ""])
+        lines.extend(leaderboard_artifact_lines(rows, review_by_run))
 
     lines.extend(
         [
@@ -1753,6 +1844,12 @@ def build_parser() -> argparse.ArgumentParser:
     leaderboard.add_argument("--out", required=True, help="Markdown output path.")
     leaderboard.add_argument("--include-artifact-index", action="store_true")
 
+    integrity = subparsers.add_parser("integrity", help="Verify artifact paths, SHA256 hashes, and audit coverage.")
+    integrity_source = integrity.add_mutually_exclusive_group(required=True)
+    integrity_source.add_argument("--matrix", help="JSON matrix config to derive cells and DB paths.")
+    integrity_source.add_argument("--db", action="append", help="SQLite result database. Can be provided more than once.")
+    integrity.add_argument("--out", required=True, help="Markdown output path.")
+
     return parser
 
 
@@ -1829,6 +1926,23 @@ def main(argv: list[str] | None = None) -> int:
         out_path.write_text(report, encoding="utf-8")
         print(f"Wrote {out_path.resolve()}")
         return 0
+    if args.command == "integrity":
+        if args.matrix:
+            matrix_path = Path(args.matrix)
+            config = load_config(matrix_path)
+            cells = expand_cells(config)
+            db_paths = [cell.db_path for cell in cells]
+        else:
+            db_paths = [Path(path) for path in args.db] if args.db else []
+        rows = load_rows_from_dbs(existing_paths(db_paths))
+        audits = load_audits_from_dbs(existing_paths(db_paths))
+        integrity_report = verify_artifact_integrity(rows, audits)
+        report = integrity_report_markdown(integrity_report)
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()} ({'PASS' if integrity_report.passed else 'FAIL'})")
+        return 0 if integrity_report.passed else 1
     parser.error(f"Unknown command {args.command}")
     return 2
 

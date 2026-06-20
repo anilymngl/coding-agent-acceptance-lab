@@ -700,6 +700,132 @@ def run_cells(
     return exit_code
 
 
+@dataclass(frozen=True)
+class EvaluateOptions:
+    evaluator_model: str
+    agent: str | None = None
+    opencode_bin: str = "opencode"
+    timeout: int = 900
+    auto_approve: bool = True
+    stream: bool = False
+    loose: bool = True
+    budget_minutes: int | None = None
+    token_budget: int | None = None
+    tool_call_budget: int | None = None
+    shadow_fix_mode: str = "optional"
+    shadow_fix_budget_minutes: int | None = None
+    max_rows: int | None = None
+
+
+def cell_evaluate_command(cell: MatrixCell, out_dir: Path, options: EvaluateOptions) -> list[str]:
+    command = [
+        "uv",
+        "run",
+        "ci-vibe-evaluate",
+        "run",
+        "--db",
+        str(cell.db_path),
+        "--out",
+        str(out_dir),
+        "--target-model",
+        cell.model_id,
+        "--model",
+        options.evaluator_model,
+        "--timeout",
+        str(options.timeout),
+        "--hidden-only",
+        "--public-green-only",
+        "--write-db",
+        "--shadow-fix-mode",
+        options.shadow_fix_mode,
+    ]
+    if options.agent:
+        command.extend(["--agent", options.agent])
+    if options.auto_approve:
+        command.append("--auto-approve")
+    if options.stream:
+        command.append("--stream")
+    if options.loose:
+        command.append("--loose")
+    if options.budget_minutes is not None:
+        command.extend(["--budget-minutes", str(options.budget_minutes)])
+    if options.token_budget is not None:
+        command.extend(["--token-budget", str(options.token_budget)])
+    if options.tool_call_budget is not None:
+        command.extend(["--tool-call-budget", str(options.tool_call_budget)])
+    if options.shadow_fix_budget_minutes is not None:
+        command.extend(["--shadow-fix-budget-minutes", str(options.shadow_fix_budget_minutes)])
+    if options.max_rows is not None:
+        command.extend(["--max-rows", str(options.max_rows)])
+    return command
+
+
+def cell_false_green_count(cell: MatrixCell) -> int:
+    rows = load_cell_rows(cell)
+    return sum(1 for row in rows if classify_row(row) == "false_green")
+
+
+def print_evaluate_plan(cells: list[MatrixCell], options: EvaluateOptions) -> None:
+    print(f"Evaluator model: {options.evaluator_model}")
+    print(f"Cells to evaluate: {len(cells)}")
+    total_false_greens = sum(cell_false_green_count(cell) for cell in cells)
+    print(f"Total false-green rows to review: {total_false_greens}")
+    for index, cell in enumerate(cells, start=1):
+        out_dir = cell.runs_dir / "evaluator"
+        command = cell_evaluate_command(cell, out_dir, options)
+        count = cell_false_green_count(cell)
+        print("")
+        print(f"[{index}] {cell.model_alias} / {cell.pack} / {cell.prompt_mode}")
+        print(f"  db: {cell.db_path}")
+        print(f"  out: {out_dir}")
+        print(f"  false-greens: {count}")
+        print(f"  command: {shlex.join(command)}")
+
+
+def evaluate_cells(
+    cells: list[MatrixCell],
+    options: EvaluateOptions,
+    *,
+    dry_run: bool,
+    stop_on_failure: bool,
+) -> int:
+    if dry_run:
+        print_evaluate_plan(cells, options)
+        return 0
+    exit_code = 0
+    for index, cell in enumerate(cells, start=1):
+        out_dir = cell.runs_dir / "evaluator"
+        command = cell_evaluate_command(cell, out_dir, options)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        cell.db_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path = cell.runs_dir / "matrix-evaluate.log"
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(f"$ {shlex.join(command)}\n")
+        count = cell_false_green_count(cell)
+        print(
+            f"[{index}/{len(cells)}] Evaluating {cell.model_alias} / {cell.pack} / {cell.prompt_mode} "
+            f"({count} false-green rows)"
+        )
+        print(shlex.join(command), flush=True)
+        if count == 0:
+            print("  no false-green rows to review; skipping.", flush=True)
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write("skipped=no_false_greens\n")
+            continue
+        completed = subprocess.run(command, check=False)
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(f"exit_code={completed.returncode}\n")
+        if completed.returncode != 0:
+            exit_code = completed.returncode
+            print(
+                f"Cell evaluation failed with exit code {completed.returncode}: "
+                f"{cell.model_alias}/{cell.pack}/{cell.prompt_mode}"
+            )
+            if stop_on_failure:
+                return exit_code
+    return exit_code
+
+
 def common_filter_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--only-model", help="Run or show only one model alias.")
     parser.add_argument("--only-pack", choices=pack_ids(), help="Run or show only one pack.")
@@ -748,6 +874,32 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--stop-on-failure", action="store_true", help="Stop after the first failing matrix cell.")
     common_filter_args(run)
 
+    evaluate = subparsers.add_parser(
+        "evaluate",
+        help="Run evaluator-agent reviews over false-green rows in matrix cell DBs.",
+    )
+    evaluate.add_argument("config")
+    evaluate.add_argument("--model", required=True, help="Evaluator OpenCode model (e.g. deepseek/deepseek-v4-pro).")
+    evaluate.add_argument("--agent", help="Optional OpenCode agent name for the evaluator.")
+    evaluate.add_argument("--timeout", type=int, default=900, help="Hard process timeout per evaluator cell.")
+    evaluate.add_argument("--max-rows", type=int, help="Evaluate at most this many false-green rows per cell.")
+    evaluate.add_argument("--dry-run", action="store_true", help="Print evaluator commands without executing.")
+    evaluate.add_argument("--stop-on-failure", action="store_true", help="Stop after the first failing evaluator cell.")
+    evaluate.add_argument("--stream", action="store_true", help="Stream evaluator stdout/stderr.")
+    evaluate.add_argument("--no-loose", action="store_true", help="Disable loose evaluator fallback (hard-block on schema errors).")
+    evaluate.add_argument("--no-auto-approve", action="store_true", help="Do not pass --dangerously-skip-permissions.")
+    evaluate.add_argument("--budget-minutes", type=int, help="Soft evaluator working-time budget.")
+    evaluate.add_argument("--token-budget", type=int, help="Soft evaluator token budget.")
+    evaluate.add_argument("--tool-call-budget", type=int, help="Soft evaluator tool-call budget.")
+    evaluate.add_argument(
+        "--shadow-fix-mode",
+        choices=["off", "optional", "required"],
+        default="optional",
+        help="How much the evaluator should use shadow_repo.",
+    )
+    evaluate.add_argument("--shadow-fix-budget-minutes", type=int, help="Soft time budget for shadow fix attempts.")
+    common_filter_args(evaluate)
+
     return parser
 
 
@@ -780,6 +932,23 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             stop_on_failure=args.stop_on_failure,
         )
+    if args.command == "evaluate":
+        _config, cells = selected_cells_from_args(args)
+        options = EvaluateOptions(
+            evaluator_model=args.model,
+            agent=args.agent,
+            timeout=args.timeout,
+            auto_approve=not args.no_auto_approve,
+            stream=args.stream,
+            loose=not args.no_loose,
+            budget_minutes=args.budget_minutes,
+            token_budget=args.token_budget,
+            tool_call_budget=args.tool_call_budget,
+            shadow_fix_mode=args.shadow_fix_mode,
+            shadow_fix_budget_minutes=args.shadow_fix_budget_minutes,
+            max_rows=args.max_rows,
+        )
+        return evaluate_cells(cells, options, dry_run=args.dry_run, stop_on_failure=args.stop_on_failure)
     parser.error(f"Unknown command {args.command}")
     return 2
 

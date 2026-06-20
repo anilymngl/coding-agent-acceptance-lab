@@ -146,14 +146,16 @@ Done:
 - valid `ollama/gemma4:31b` smoke
 - detailed model-comparison pipeline plan
 - `ci-vibe-matrix` JSON config validation, planning, status, DB listing, and run orchestration
-- `ci-vibe-report leaderboard` matrix evidence report
+- `ci-vibe-report leaderboard` matrix evidence report with evaluator review coverage
+- `ci-vibe-matrix evaluate` subcommand for batch evaluator reviews over matrix false-greens
+- `ci-vibe-report integrity` subcommand for SHA256 artifact and audit verification
+- dashboard Matrix tab with evidence health, scorecards, false-green inbox, and evaluator coverage
 - initial `configs/matrix/local-gemma4-maintenance.json`
 - small `configs/matrix/local-gemma4-e4b-smoke.json` with Ollama warmup
 
 Not done:
 
 - full Gemma 4 maintenance matrix run
-- dashboard matrix/leaderboard tab
 - final multi-model comparison report
 
 ## Operational Rules

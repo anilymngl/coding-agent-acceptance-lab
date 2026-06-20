@@ -13,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 
 from ci_vibe_lab.db import connect, insert_run, upsert_evaluator_review
+from ci_vibe_lab.integrity import integrity_report_markdown, verify_artifact_integrity
 from ci_vibe_lab.analysis import (
     compute_false_green_breakdown,
     compute_trust_metrics,
@@ -33,8 +34,11 @@ from ci_vibe_lab.evaluator import (
     working_board_template,
 )
 from ci_vibe_lab.matrix import (
+    EvaluateOptions,
     MatrixConfig,
     cell_command,
+    cell_evaluate_command,
+    cell_false_green_count,
     classify_row,
     expand_cells,
     ollama_model_name,
@@ -1249,6 +1253,382 @@ class EvaluatorTests(unittest.TestCase):
         extra_key_review["surprise"] = "not allowed"
         errors = validate_review(extra_key_review, packet, row)
         self.assertTrue(any("pydantic schema error" in error for error in errors))
+
+
+class IntegrityTests(unittest.TestCase):
+    def test_integrity_detects_missing_artifacts_and_unclassified_false_greens(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            artifact_dir = root / "artifacts" / "run-1"
+            artifact_dir.mkdir(parents=True)
+            existing_prompt = artifact_dir / "prompt.txt"
+            existing_prompt.write_text("prompt", encoding="utf-8")
+            existing_patch = artifact_dir / "patch.diff"
+            existing_patch.write_text("diff --git", encoding="utf-8")
+
+            rows = [
+                {
+                    "run_id": "run-1",
+                    "scenario": "dependency_api_change",
+                    "public_pass": 1,
+                    "hidden_pass": 0,
+                    "opencode_exit_code": 0,
+                    "opencode_stdout": "{}",
+                    "opencode_stderr": "",
+                    "patch": "diff --git",
+                    "prompt_path": str(existing_prompt),
+                    "patch_path": str(existing_patch),
+                    "public_output_path": str(artifact_dir / "missing_public.txt"),
+                    "hidden_output_path": str(artifact_dir / "missing_hidden.txt"),
+                    "opencode_stdout_path": "",
+                    "opencode_stderr_path": "",
+                }
+            ]
+            audits = {
+                "dependency_api_change": {
+                    "scenario": "dependency_api_change",
+                    "audit_status": "accepted",
+                    "fairness_classification": "search_miss",
+                }
+            }
+            report = verify_artifact_integrity(rows, audits)
+            self.assertEqual(report.rows_checked, 1)
+            self.assertEqual(report.false_greens_total, 1)
+            self.assertEqual(report.false_greens_unclassified, 0)
+            self.assertEqual(report.artifacts_missing, 2)
+            self.assertFalse(report.passed)
+            markdown = integrity_report_markdown(report)
+            self.assertIn("# Artifact Integrity Report", markdown)
+            self.assertIn("missing_artifact", markdown)
+            self.assertIn("FAIL", markdown)
+
+    def test_integrity_flags_quarantined_in_headline_and_missing_audit(self) -> None:
+        rows = [
+            {
+                "run_id": "run-q",
+                "scenario": "batch_splitter_utility",
+                "public_pass": 1,
+                "hidden_pass": 1,
+                "opencode_exit_code": 0,
+                "opencode_stdout": "{}",
+                "opencode_stderr": "",
+                "patch": "diff",
+                "prompt_path": "",
+                "patch_path": "",
+                "public_output_path": "",
+                "hidden_output_path": "",
+                "opencode_stdout_path": "",
+                "opencode_stderr_path": "",
+            }
+        ]
+        audits = {
+            "batch_splitter_utility": {
+                "scenario": "batch_splitter_utility",
+                "audit_status": "quarantine",
+                "fairness_classification": "harness_or_test_bug",
+            }
+        }
+        report = verify_artifact_integrity(rows, audits)
+        self.assertEqual(report.quarantined_in_headline, 1)
+        self.assertTrue(any(issue.category == "quarantined_in_headline" for issue in report.issues))
+
+    def test_integrity_passes_for_clean_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            artifact_dir = root / "artifacts" / "run-ok"
+            artifact_dir.mkdir(parents=True)
+            for name in ["prompt.txt", "patch.diff", "public.txt", "hidden.txt", "stdout.jsonl", "stderr.txt"]:
+                (artifact_dir / name).write_text(name, encoding="utf-8")
+            rows = [
+                {
+                    "run_id": "run-ok",
+                    "scenario": "dependency_api_change",
+                    "public_pass": 1,
+                    "hidden_pass": 1,
+                    "opencode_exit_code": 0,
+                    "opencode_stdout": "{}",
+                    "opencode_stderr": "",
+                    "patch": "diff",
+                    "prompt_path": str(artifact_dir / "prompt.txt"),
+                    "patch_path": str(artifact_dir / "patch.diff"),
+                    "public_output_path": str(artifact_dir / "public.txt"),
+                    "hidden_output_path": str(artifact_dir / "hidden.txt"),
+                    "opencode_stdout_path": str(artifact_dir / "stdout.jsonl"),
+                    "opencode_stderr_path": str(artifact_dir / "stderr.txt"),
+                }
+            ]
+            audits = {
+                "dependency_api_change": {
+                    "scenario": "dependency_api_change",
+                    "audit_status": "accepted",
+                    "fairness_classification": "search_miss",
+                }
+            }
+            report = verify_artifact_integrity(rows, audits)
+            self.assertTrue(report.passed)
+            self.assertEqual(report.artifacts_missing, 0)
+            self.assertEqual(report.hashes_computed, 3)
+
+
+class MatrixEvaluateTests(unittest.TestCase):
+    def matrix_config(self, root: Path) -> dict[str, object]:
+        return {
+            "matrix_id": "test-matrix",
+            "output_root": str(root / "data" / "matrix" / "test-matrix"),
+            "runs_root": str(root / "runs" / "matrix" / "test-matrix"),
+            "defaults": {
+                "agent": "build",
+                "auto_approve": True,
+                "timeout": 123,
+                "first_output_timeout": 45,
+                "delay_seconds": 2,
+                "runs": 1,
+                "prompt_modes": ["sparse"],
+                "packs": ["maintenance_value"],
+            },
+            "models": [{"alias": "test-model", "id": "test/model"}],
+            "packs": {
+                "maintenance_value": {
+                    "runs": 1,
+                    "prompt_modes": ["sparse"],
+                    "challenge": "docs_cli_sync",
+                }
+            },
+        }
+
+    def run_row(self, **overrides: object) -> dict[str, object]:
+        base: dict[str, object] = {
+            "run_id": "run-1",
+            "experiment_id": "test-matrix-test-model-maintenance_value-sparse",
+            "prompt_mode": "sparse",
+            "scenario": "docs_cli_sync",
+            "scenario_title": "Docs CLI Sync",
+            "challenge_pack": "maintenance_value",
+            "category": "docs",
+            "difficulty": "easy",
+            "model": "test/model",
+            "agent": "build",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "ended_at": "2026-01-01T00:00:01+00:00",
+            "duration_seconds": 1.0,
+            "workdir": "/tmp/work",
+            "prompt": "fix it",
+            "opencode_command": "[]",
+            "opencode_exit_code": 0,
+            "baseline_pass": 0,
+            "public_pass": 1,
+            "hidden_pass": 0,
+            "baseline_output": "fail",
+            "opencode_stdout": "{}",
+            "opencode_stderr": "",
+            "public_output": "public ok",
+            "hidden_output": "fail",
+            "patch": "diff --git",
+        }
+        base.update(overrides)
+        return base
+
+    def test_cell_evaluate_command_targets_false_greens(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = MatrixConfig.model_validate(self.matrix_config(root))
+            cell = expand_cells(config)[0]
+            out_dir = root / "eval-out"
+            options = EvaluateOptions(
+                evaluator_model="deepseek/deepseek-v4-pro",
+                timeout=300,
+                budget_minutes=6,
+            )
+            command = cell_evaluate_command(cell, out_dir, options)
+            self.assertEqual(command[:4], ["uv", "run", "ci-vibe-evaluate", "run"])
+            self.assertIn("--db", command)
+            self.assertIn("--target-model", command)
+            self.assertIn("test/model", command)
+            self.assertIn("--model", command)
+            self.assertIn("deepseek/deepseek-v4-pro", command)
+            self.assertIn("--hidden-only", command)
+            self.assertIn("--public-green-only", command)
+            self.assertIn("--write-db", command)
+            self.assertIn("--loose", command)
+            self.assertIn("--auto-approve", command)
+            self.assertIn("--budget-minutes", command)
+
+    def test_cell_false_green_count_counts_only_false_greens(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = MatrixConfig.model_validate(self.matrix_config(root))
+            cell = expand_cells(config)[0]
+            insert_run(cell.db_path, self.run_row(run_id="fg-1", hidden_pass=0))
+            insert_run(cell.db_path, self.run_row(run_id="pass-1", hidden_pass=1, hidden_output="pass"))
+            insert_run(cell.db_path, self.run_row(run_id="red-1", public_pass=0, hidden_pass=0))
+            self.assertEqual(cell_false_green_count(cell), 1)
+
+    def test_evaluate_dry_run_prints_plan_without_executing(self) -> None:
+        from ci_vibe_lab.matrix import evaluate_cells
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config = MatrixConfig.model_validate(self.matrix_config(root))
+            cell = expand_cells(config)[0]
+            options = EvaluateOptions(evaluator_model="deepseek/deepseek-v4-pro")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                exit_code = evaluate_cells([cell], options, dry_run=True, stop_on_failure=False)
+            self.assertEqual(exit_code, 0)
+            text = output.getvalue()
+            self.assertIn("Evaluator model: deepseek/deepseek-v4-pro", text)
+            self.assertIn("ci-vibe-evaluate", text)
+
+
+class EvaluatorAwareLeaderboardTests(unittest.TestCase):
+    def matrix_config(self, root: Path) -> dict[str, object]:
+        return {
+            "matrix_id": "eval-test-matrix",
+            "output_root": str(root / "data" / "matrix" / "eval-test-matrix"),
+            "runs_root": str(root / "runs" / "matrix" / "eval-test-matrix"),
+            "defaults": {
+                "agent": "build",
+                "auto_approve": True,
+                "timeout": 123,
+                "runs": 1,
+                "prompt_modes": ["sparse"],
+                "packs": ["maintenance_value"],
+            },
+            "models": [{"alias": "test-model", "id": "test/model"}],
+            "packs": {
+                "maintenance_value": {
+                    "runs": 1,
+                    "prompt_modes": ["sparse"],
+                    "challenge": "docs_cli_sync",
+                }
+            },
+        }
+
+    def run_row(self, **overrides: object) -> dict[str, object]:
+        base: dict[str, object] = {
+            "run_id": "run-1",
+            "experiment_id": "eval-test-matrix-test-model-maintenance_value-sparse",
+            "prompt_mode": "sparse",
+            "scenario": "docs_cli_sync",
+            "scenario_title": "Docs CLI Sync",
+            "challenge_pack": "maintenance_value",
+            "category": "docs",
+            "difficulty": "easy",
+            "model": "test/model",
+            "agent": "build",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "ended_at": "2026-01-01T00:00:01+00:00",
+            "duration_seconds": 1.0,
+            "workdir": "/tmp/work",
+            "prompt": "fix it",
+            "opencode_command": "[]",
+            "opencode_exit_code": 0,
+            "baseline_pass": 0,
+            "public_pass": 1,
+            "hidden_pass": 0,
+            "baseline_output": "fail",
+            "opencode_stdout": "{}",
+            "opencode_stderr": "",
+            "public_output": "public ok",
+            "hidden_output": "fail",
+            "patch": "diff --git",
+            "artifact_dir": "/tmp/artifacts",
+            "prompt_path": "/tmp/artifacts/prompt.txt",
+            "patch_path": "/tmp/artifacts/patch.diff",
+            "public_output_path": "/tmp/artifacts/public.txt",
+            "hidden_output_path": "/tmp/artifacts/hidden.txt",
+            "opencode_stdout_path": "/tmp/artifacts/stdout.jsonl",
+            "opencode_stderr_path": "/tmp/artifacts/stderr.txt",
+        }
+        base.update(overrides)
+        return base
+
+    def test_leaderboard_includes_evaluator_coverage_and_review_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "matrix.json"
+            config_data = self.matrix_config(root)
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            config = MatrixConfig.model_validate(config_data)
+            cell = expand_cells(config)[0]
+
+            matrix_row = {
+                "scenario": "docs_cli_sync",
+                "scenario_title": "Docs CLI Sync",
+                "challenge_pack": "maintenance_value",
+                "category": "docs",
+                "difficulty": "easy",
+            }
+            insert_run(cell.db_path, self.run_row(run_id="false-green", hidden_pass=0, **matrix_row))
+            insert_run(cell.db_path, self.run_row(run_id="passing", hidden_pass=1, hidden_output="hidden ok", **matrix_row))
+
+            upsert_evaluator_review(
+                cell.db_path,
+                {
+                    "target_run_id": "false-green",
+                    "target_model": "test/model",
+                    "scenario": "docs_cli_sync",
+                    "evaluator_model": "deepseek/deepseek-v4-pro",
+                    "review_dir": str(root / "reviews" / "false-green"),
+                    "schema_version": "ci-vibe-evaluator/v1",
+                    "validation_status": "valid",
+                    "verdict": "public_green_hidden_red",
+                    "root_cause_category": "missed_hidden_contract",
+                    "root_cause": "The patch missed the sync contract.",
+                    "missed_contract": "CLI sync must handle missing docs dir.",
+                    "patch_quality": 3,
+                    "debug_discipline": 2,
+                    "severity": "medium",
+                    "confidence": 0.9,
+                    "evidence_json": "[]",
+                    "recommendation": "Search for all sync calls.",
+                    "review_limits": "Single review.",
+                    "evaluation_json_path": str(root / "reviews" / "false-green" / "evaluation.json"),
+                    "created_at": "2026-06-20T00:00:00+00:00",
+                },
+            )
+
+            report = make_leaderboard_report(
+                matrix_path=config_path,
+                db_paths=[],
+                include_artifact_index=True,
+            )
+            self.assertIn("## Evaluator Review Coverage", report)
+            self.assertIn("Reviewed false-green rows: 1", report)
+            self.assertIn("public_green_hidden_red", report)
+            self.assertIn("missed_hidden_contract", report)
+            self.assertIn("Evaluator Review", report)
+            self.assertIn("Evaluator-reviewed false-greens: 1/1", report)
+
+    def test_leaderboard_shows_zero_coverage_without_reviews(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            config_path = root / "matrix.json"
+            config_data = self.matrix_config(root)
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            config = MatrixConfig.model_validate(config_data)
+            cell = expand_cells(config)[0]
+
+            insert_run(
+                cell.db_path,
+                self.run_row(
+                    run_id="fg-only",
+                    scenario="docs_cli_sync",
+                    scenario_title="Docs CLI Sync",
+                    challenge_pack="maintenance_value",
+                    category="docs",
+                    difficulty="easy",
+                ),
+            )
+
+            report = make_leaderboard_report(
+                matrix_path=config_path,
+                db_paths=[],
+                include_artifact_index=False,
+            )
+            self.assertIn("Reviewed false-green rows: 0", report)
+            self.assertIn("not_indexed_yet", report)
+            self.assertIn("not_reviewed", report)
 
 
 if __name__ == "__main__":

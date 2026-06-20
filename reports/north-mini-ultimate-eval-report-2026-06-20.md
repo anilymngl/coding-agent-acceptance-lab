@@ -9,7 +9,7 @@ green states, but hidden acceptance exposes a large trust gap on product and bus
 - North Mini canonical evidence: 57 attempts across 4 packs; public pass 57/57 (100.0%); hidden pass 31/57 (54.4%); false-green 26/57 (45.6%).
 - Like-for-like stress control set: North Mini hidden pass 16/33 (48.5%) versus DeepSeek hidden pass 19/33 (57.6%).
 - Product workflows are the failure microscope: North Mini hidden pass 2/11 (18.2%) and false-green 9/11 (81.8%); DeepSeek control is only 3/11 (27.3%) hidden-pass.
-- Maintenance work is the positive-value counterexample: North Mini reaches 6/10 (60.0%) best-of-3 scenario success and 11.32 accepted patches per review hour on bounded, explicit maintenance tasks.
+- Maintenance work is the positive-value counterexample: North Mini reaches 6/10 (60.0%) best-of-3 scenario success. Its accepted patches are slightly cheaper after selection, but DeepSeek has stronger whole-workflow maintenance value when every attempted patch is charged (2.67 versus 2.21 accepted patches per all-attempt review hour).
 
 **Defensible interpretation:** the model is useful when a workflow supplies narrow tasks, fast
 public feedback, deterministic hidden gates, and human review. It is risky when public green is
@@ -25,6 +25,7 @@ The harness measures the gap between visible CI repair and hidden contract repai
 - A false-green is `public_pass=1` and `hidden_pass=0`.
 - Trust gap is public pass rate minus hidden pass rate.
 - The maintenance pack reports both attempt-level pass rate and scenario-level best-of-3 success.
+- Maintenance value reports selected-review throughput and all-attempt review throughput separately.
 - The like-for-like control set uses 33 scenario units: 12 `ci_forensics`, 11 `product_workflows`, and 10 `maintenance_value` units.
 - `data_semantics` is included for North Mini's own capability readout, but excluded from the DeepSeek comparison because no matching control run is present.
 
@@ -59,7 +60,7 @@ Reference links:
 | `ci_forensics` | 12 | 12/12 (100.0%) | 8/12 (66.7%) | 33.3% | 4/12 (33.3%) |  |
 | `data_semantics` | 4 | 4/4 (100.0%) | 3/4 (75.0%) | 25.0% | 1/4 (25.0%) |  |
 | `product_workflows` | 11 | 11/11 (100.0%) | 2/11 (18.2%) | 81.8% | 9/11 (81.8%) |  |
-| `maintenance_value` | 30 | 30/30 (100.0%) | 18/30 (60.0%) | 40.0% | 12/30 (40.0%) | best-of-3 6/10; 11.32 accepted/hr |
+| `maintenance_value` | 30 | 30/30 (100.0%) | 18/30 (60.0%) | 40.0% | 12/30 (40.0%) | best-of-3 6/10; 11.32 selected-review accepted/hr; 2.21 all-attempt accepted/hr |
 
 **Readout:** public success is not the problem. North Mini made all 57 canonical public
 attempts green. The problem is acceptance reliability after public green: 26 of those 57
@@ -71,7 +72,7 @@ public-green attempts were hidden-red.
 |---|---:|---:|---:|---:|---:|---|
 | `ci_forensics` | 12 | 12/12 (100.0%) | 9/12 (75.0%) | 25.0% | 3/12 (25.0%) |  |
 | `product_workflows` | 11 | 11/11 (100.0%) | 3/11 (27.3%) | 72.7% | 8/11 (72.7%) |  |
-| `maintenance_value` | 30 | 30/30 (100.0%) | 18/30 (60.0%) | 40.0% | 12/30 (40.0%) | best-of-3 7/10; 10.73 accepted/hr |
+| `maintenance_value` | 30 | 30/30 (100.0%) | 18/30 (60.0%) | 40.0% | 12/30 (40.0%) | best-of-3 7/10; 10.73 selected-review accepted/hr; 2.67 all-attempt accepted/hr |
 
 **Readout:** DeepSeek is better on the like-for-like stress set, but not by enough to
 invalidate the harness. It reduces false-greens, but the semantic trap remains visible.
@@ -117,6 +118,8 @@ Facts:
 - `product_workflows`: North Mini 2/11 (18.2%) hidden-pass; DeepSeek 3/11 (27.3%).
 - `maintenance_value`: North Mini 6/10 (60.0%) best-of-3; DeepSeek 7/10 (70.0%).
 - Attempt-level maintenance hidden pass is identical: North Mini 18/30 (60.0%); DeepSeek 18/30 (60.0%).
+- Selected-review throughput favors North Mini slightly: 11.32 versus 10.73 accepted patches per selected-review hour.
+- All-attempt review throughput favors DeepSeek: 2.67 versus 2.21 accepted patches per all-attempt review hour.
 
 Interpretation:
 
@@ -124,6 +127,7 @@ Interpretation:
 - Visible public tests create an optimization attractor. Both models often stop when public CI is green, even when a stronger semantic reading would imply additional changes.
 - Product workflows are policy-dense. They encode business rules like proration, audit redaction, idempotency, raw-body signatures, SLA calendars, and inventory conservation. These are small-code tasks but high-contract tasks.
 - Maintenance tasks are explicit and local. That is why North Mini gets close to DeepSeek there: the job is bounded, the contract is clear, and the verifier is deterministic.
+- The original selected-review metric was too easy to misread. It measured how cheap accepted patches were to inspect after best-of-3 selection, not total workflow ROI.
 
 The conclusion is not that DeepSeek is weak. The conclusion is that this harness is probing a
 different axis than many leaderboard-style coding evals: not raw repo repair, but whether public
@@ -184,7 +188,8 @@ public test suite passed after the agent run.
 **It is valuable for bounded maintenance.** The maintenance pack is deliberately not a trap
 benchmark. It asks for useful chores: generated artifacts, deprecated API migrations, fixture
 updates, doc/CLI sync, import hygiene, validation matrices, and pure helper implementation.
-North Mini accepted 6 of 10 maintenance scenarios after three attempts each.
+North Mini accepted 6 of 10 maintenance scenarios after three attempts each. DeepSeek accepted 7 of 10 and should be read
+as stronger on whole-workflow maintenance value, despite lower selected-review throughput.
 
 **It is not safe as an autonomous product-logic merger.** Product workflows are the opposite
 shape: sparse visible tests, business policy under-specification, and acceptance conditions that
@@ -243,7 +248,7 @@ a smoke signal, not as a comparison baseline.
 | North Mini has a large trust gap after public green | False-green 26/57 (45.6%) | high | Hidden tests encode authored contracts; external audit would strengthen legitimacy. |
 | Product workflows are the main red zone | North Mini product hidden pass 2/11 (18.2%) | high | The pack is intentionally policy-dense and not a random sample of backend work. |
 | DeepSeek improves but does not collapse the trust gap | Like-for-like hidden pass 19/33 (57.6%) vs North 16/33 (48.5%) | medium-high | Single control model and mostly single-seed outside maintenance. |
-| North Mini has positive maintenance value | Maintenance best-of-3 6/10 (60.0%) and 11.32 accepted/hr | medium-high | Review-hour estimate is heuristic unless manually overridden. |
+| North Mini has positive maintenance value | Maintenance best-of-3 6/10 (60.0%), selected-review 11.32 accepted/hr, all-attempt 2.21 accepted/hr | medium-high | Review-hour estimate is heuristic; selected-review throughput is not whole-workflow ROI. |
 
 ## What Can And Cannot Be Defended
 

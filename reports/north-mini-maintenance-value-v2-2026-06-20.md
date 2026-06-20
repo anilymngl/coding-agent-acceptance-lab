@@ -24,7 +24,10 @@ The headline value metric is accepted maintenance patches per engineer-review ho
 | Hidden pass | 18/30 (60.0%) |
 | False-green rate | 12/30 (40.0%) |
 | Best-of-3 scenario success | 6/10 (60.0%) |
-| Accepted patches / review hour | 11.32 |
+| Accepted patches / selected-review hour | 11.32 |
+| Accepted patches / all-attempt review hour | 2.21 |
+| Selected accepted review minutes | 31.8 |
+| All-attempt review minutes | 163.05 |
 | Median review minutes | 5.1 |
 | Median changed lines | 3.5 |
 
@@ -80,10 +83,12 @@ The headline value metric is accepted maintenance patches per engineer-review ho
 
 ## Interpretation
 
-Use this report as an operating-mode readout, not a leaderboard. A strong result means
-the model is useful for cheap bounded attempts protected by deterministic acceptance gates.
-A weak result means even green-zone maintenance work needs either better prompts, better
-acceptance tests, or escalation to a stronger model.
+Use this report as an operating-mode readout, not a leaderboard. The selected-review
+throughput says how cheap the accepted patches are to inspect after best-of-3 selection.
+The all-attempt review throughput is the more conservative workflow metric because it
+charges review effort for every attempted patch. A weak result means even green-zone
+maintenance work needs either better prompts, better acceptance tests, or escalation to
+a stronger model.
 
 ## Artifact Index
 

@@ -44,7 +44,9 @@ class ValueMetrics:
     attempts: int
     accepted_patches: int
     accepted_patches_per_review_hour: float
+    accepted_patches_per_attempt_review_hour: float
     total_review_minutes: float
+    all_attempt_review_minutes: float
     median_review_minutes: float
     median_changed_lines: float
     best_of_three_scenarios: int
@@ -186,6 +188,7 @@ def compute_value_metrics(rows: Iterable[object]) -> ValueMetrics:
     }
     review_minutes = [effective_review_minutes(row) for row in selected]
     total_review_minutes = sum(review_minutes)
+    all_attempt_review_minutes = sum(effective_review_minutes(row) for row in materialized)
     accepted = len(selected)
     return ValueMetrics(
         attempts=len(materialized),
@@ -193,7 +196,11 @@ def compute_value_metrics(rows: Iterable[object]) -> ValueMetrics:
         accepted_patches_per_review_hour=(
             accepted / (total_review_minutes / 60.0) if total_review_minutes else 0.0
         ),
+        accepted_patches_per_attempt_review_hour=(
+            accepted / (all_attempt_review_minutes / 60.0) if all_attempt_review_minutes else 0.0
+        ),
         total_review_minutes=total_review_minutes,
+        all_attempt_review_minutes=all_attempt_review_minutes,
         median_review_minutes=median(review_minutes),
         median_changed_lines=median([as_float(row_get(row, "patch_changed_lines")) for row in selected]),
         best_of_three_scenarios=len(grouped_keys),

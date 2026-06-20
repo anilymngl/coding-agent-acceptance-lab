@@ -489,7 +489,8 @@ class DatabaseTests(unittest.TestCase):
             )
 
             self.assertIn("# Maintenance Value Report", report)
-            self.assertIn("Accepted patches / review hour", report)
+            self.assertIn("Accepted patches / selected-review hour", report)
+            self.assertIn("Accepted patches / all-attempt review hour", report)
             self.assertIn("Best-of-3 scenario success", report)
             self.assertIn("## Reviewability Table", report)
             self.assertIn("## Artifact Index", report)

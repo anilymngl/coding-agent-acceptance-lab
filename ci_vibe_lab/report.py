@@ -419,7 +419,10 @@ def make_value_report(
         f"| Hidden pass | {format_count_rate(metrics.hidden_pass, metrics.total)} |",
         f"| False-green rate | {format_count_rate(metrics.public_green_hidden_red, metrics.public_pass)} |",
         f"| Best-of-3 scenario success | {format_count_rate(value_metrics.best_of_three_successes, value_metrics.best_of_three_scenarios)} |",
-        f"| Accepted patches / review hour | {format_number(value_metrics.accepted_patches_per_review_hour)} |",
+        f"| Accepted patches / selected-review hour | {format_number(value_metrics.accepted_patches_per_review_hour)} |",
+        f"| Accepted patches / all-attempt review hour | {format_number(value_metrics.accepted_patches_per_attempt_review_hour)} |",
+        f"| Selected accepted review minutes | {format_number(value_metrics.total_review_minutes)} |",
+        f"| All-attempt review minutes | {format_number(value_metrics.all_attempt_review_minutes)} |",
         f"| Median review minutes | {format_number(value_metrics.median_review_minutes)} |",
         f"| Median changed lines | {format_number(value_metrics.median_changed_lines)} |",
         "",
@@ -462,10 +465,12 @@ def make_value_report(
             "",
             "## Interpretation",
             "",
-            "Use this report as an operating-mode readout, not a leaderboard. A strong result means",
-            "the model is useful for cheap bounded attempts protected by deterministic acceptance gates.",
-            "A weak result means even green-zone maintenance work needs either better prompts, better",
-            "acceptance tests, or escalation to a stronger model.",
+            "Use this report as an operating-mode readout, not a leaderboard. The selected-review",
+            "throughput says how cheap the accepted patches are to inspect after best-of-3 selection.",
+            "The all-attempt review throughput is the more conservative workflow metric because it",
+            "charges review effort for every attempted patch. A weak result means even green-zone",
+            "maintenance work needs either better prompts, better acceptance tests, or escalation to",
+            "a stronger model.",
             "",
         ]
     )
@@ -534,7 +539,8 @@ def pack_table_lines(rows: list[dict[str, object]], *, value_details: bool = Fal
             extra = (
                 f"best-of-3 {value_metrics.best_of_three_successes}/"
                 f"{value_metrics.best_of_three_scenarios}; "
-                f"{format_number(value_metrics.accepted_patches_per_review_hour)} accepted/hr"
+                f"{format_number(value_metrics.accepted_patches_per_review_hour)} selected-review accepted/hr; "
+                f"{format_number(value_metrics.accepted_patches_per_attempt_review_hour)} all-attempt accepted/hr"
             )
         lines.append(
             f"| `{pack}` | {metrics.total} | {format_count_rate(metrics.public_pass, metrics.total)} | "
@@ -686,8 +692,10 @@ def make_ultimate_report(
         f"DeepSeek control is only {format_count_rate(deepseek_product.hidden_pass, deepseek_product.total)} hidden-pass.",
         f"- Maintenance work is the positive-value counterexample: North Mini reaches "
         f"{format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)} "
-        f"best-of-3 scenario success and {format_number(north_value.accepted_patches_per_review_hour)} "
-        "accepted patches per review hour on bounded, explicit maintenance tasks.",
+        "best-of-3 scenario success. Its accepted patches are slightly cheaper after selection, "
+        f"but DeepSeek has stronger whole-workflow maintenance value when every attempted patch is charged "
+        f"({format_number(deepseek_value.accepted_patches_per_attempt_review_hour)} versus "
+        f"{format_number(north_value.accepted_patches_per_attempt_review_hour)} accepted patches per all-attempt review hour).",
         "",
         "**Defensible interpretation:** the model is useful when a workflow supplies narrow tasks, fast",
         "public feedback, deterministic hidden gates, and human review. It is risky when public green is",
@@ -703,6 +711,7 @@ def make_ultimate_report(
         "- A false-green is `public_pass=1` and `hidden_pass=0`.",
         "- Trust gap is public pass rate minus hidden pass rate.",
         "- The maintenance pack reports both attempt-level pass rate and scenario-level best-of-3 success.",
+        "- Maintenance value reports selected-review throughput and all-attempt review throughput separately.",
         "- The like-for-like control set uses 33 scenario units: 12 `ci_forensics`, 11 `product_workflows`, and 10 `maintenance_value` units.",
         "- `data_semantics` is included for North Mini's own capability readout, but excluded from the DeepSeek comparison because no matching control run is present.",
         "",
@@ -801,6 +810,12 @@ def make_ultimate_report(
             f"- Attempt-level maintenance hidden pass is identical: North Mini "
             f"{format_count_rate(compute_trust_metrics(pack_rows(north_rows, 'maintenance_value')).hidden_pass, len(pack_rows(north_rows, 'maintenance_value')))}; "
             f"DeepSeek {format_count_rate(compute_trust_metrics(pack_rows(deepseek_rows, 'maintenance_value')).hidden_pass, len(pack_rows(deepseek_rows, 'maintenance_value')))}.",
+            f"- Selected-review throughput favors North Mini slightly: "
+            f"{format_number(north_value.accepted_patches_per_review_hour)} versus "
+            f"{format_number(deepseek_value.accepted_patches_per_review_hour)} accepted patches per selected-review hour.",
+            f"- All-attempt review throughput favors DeepSeek: "
+            f"{format_number(deepseek_value.accepted_patches_per_attempt_review_hour)} versus "
+            f"{format_number(north_value.accepted_patches_per_attempt_review_hour)} accepted patches per all-attempt review hour.",
             "",
             "Interpretation:",
             "",
@@ -808,6 +823,7 @@ def make_ultimate_report(
             "- Visible public tests create an optimization attractor. Both models often stop when public CI is green, even when a stronger semantic reading would imply additional changes.",
             "- Product workflows are policy-dense. They encode business rules like proration, audit redaction, idempotency, raw-body signatures, SLA calendars, and inventory conservation. These are small-code tasks but high-contract tasks.",
             "- Maintenance tasks are explicit and local. That is why North Mini gets close to DeepSeek there: the job is bounded, the contract is clear, and the verifier is deterministic.",
+            "- The original selected-review metric was too easy to misread. It measured how cheap accepted patches were to inspect after best-of-3 selection, not total workflow ROI.",
             "",
             "The conclusion is not that DeepSeek is weak. The conclusion is that this harness is probing a",
             "different axis than many leaderboard-style coding evals: not raw repo repair, but whether public",
@@ -854,7 +870,8 @@ def make_ultimate_report(
             "benchmark. It asks for useful chores: generated artifacts, deprecated API migrations, fixture",
             "updates, doc/CLI sync, import hygiene, validation matrices, and pure helper implementation.",
             f"North Mini accepted {north_value.best_of_three_successes} of {north_value.best_of_three_scenarios} "
-            "maintenance scenarios after three attempts each.",
+            "maintenance scenarios after three attempts each. DeepSeek accepted 7 of 10 and should be read",
+            "as stronger on whole-workflow maintenance value, despite lower selected-review throughput.",
             "",
             "**It is not safe as an autonomous product-logic merger.** Product workflows are the opposite",
             "shape: sparse visible tests, business policy under-specification, and acceptance conditions that",
@@ -950,9 +967,9 @@ def make_ultimate_report(
             ),
             ultimate_claim_row(
                 "North Mini has positive maintenance value",
-                f"Maintenance best-of-3 {format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)} and {format_number(north_value.accepted_patches_per_review_hour)} accepted/hr",
+                f"Maintenance best-of-3 {format_count_rate(north_value.best_of_three_successes, north_value.best_of_three_scenarios)}, selected-review {format_number(north_value.accepted_patches_per_review_hour)} accepted/hr, all-attempt {format_number(north_value.accepted_patches_per_attempt_review_hour)} accepted/hr",
                 "medium-high",
-                "Review-hour estimate is heuristic unless manually overridden.",
+                "Review-hour estimate is heuristic; selected-review throughput is not whole-workflow ROI.",
             ),
             "",
             "## What Can And Cannot Be Defended",

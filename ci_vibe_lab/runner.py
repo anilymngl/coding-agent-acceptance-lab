@@ -390,6 +390,9 @@ def _completed_attempts(
 
 
 def run_scenarios(args: argparse.Namespace) -> None:
+    def progress(message: str) -> None:
+        print(message, flush=True)
+
     if not args.scenario:
         raise SystemExit("run requires --challenge or --scenario")
     db_path = Path(args.db)
@@ -401,13 +404,13 @@ def run_scenarios(args: argparse.Namespace) -> None:
     pack_slug = args.pack or "custom"
     if getattr(args, "experiment_id", None):
         experiment_id = args.experiment_id
-        print(f"Experiment: {experiment_id} (reattached)")
+        progress(f"Experiment: {experiment_id} (reattached)")
     else:
         experiment_id = (
             f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
             f"-{pack_slug}-{uuid.uuid4().hex[:8]}"
         )
-        print(f"Experiment: {experiment_id}")
+        progress(f"Experiment: {experiment_id}")
 
     completed: set[tuple[str, int]] = set()
     if args.resume:
@@ -419,7 +422,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
             scenario_ids_=selected,
         )
         if completed:
-            print(f"Resume: skipping {len(completed)} already-completed attempt(s).")
+            progress(f"Resume: skipping {len(completed)} already-completed attempt(s).")
 
     skipped_timeout: set[str] = set()
     if getattr(args, "skip_timeouts", False) and db_path.exists():
@@ -439,7 +442,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
             conn.close()
             skipped_timeout = {r[0] for r in rows}
             if skipped_timeout:
-                print(f"Skip-timeouts: skipping {len(skipped_timeout)} scenario(s) that previously timed out.")
+                progress(f"Skip-timeouts: skipping {len(skipped_timeout)} scenario(s) that previously timed out.")
         except Exception:
             pass
 
@@ -448,14 +451,14 @@ def run_scenarios(args: argparse.Namespace) -> None:
     for index in range(args.runs):
         for scenario_id in selected:
             if scenario_id in skipped_timeout:
-                print(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — previous timeout.")
+                progress(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — previous timeout.")
                 skipped += 1
                 continue
             if (scenario_id, index) in completed:
-                print(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — already complete.")
+                progress(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — already complete.")
                 skipped += 1
                 continue
-            print(f"Running {scenario_id} ({index + 1}/{args.runs})...")
+            progress(f"Running {scenario_id} ({index + 1}/{args.runs})...")
             run_id = run_one(
                 scenario_id=scenario_id,
                 experiment_id=experiment_id,
@@ -471,10 +474,10 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 prompt_mode=args.prompt_mode,
             )
             run_ids.append(run_id)
-            print(f"  stored run_id={run_id}")
+            progress(f"  stored run_id={run_id}")
     if skipped:
-        print(f"Skipped {skipped} attempt(s).")
-    print(f"Saved {len(run_ids)} run(s) to {db_path.resolve()}")
+        progress(f"Skipped {skipped} attempt(s).")
+    progress(f"Saved {len(run_ids)} run(s) to {db_path.resolve()}")
 
 
 def load_inspection_row(

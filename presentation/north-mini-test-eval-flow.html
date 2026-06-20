@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How We Evaluate a Case</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; padding: 60px 20px; }
+  .wrap { max-width: 100%; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+  .sub { color: #666; font-size: 14px; margin-bottom: 12px; text-align: center; }
+  .example-banner { text-align: center; margin-bottom: 36px; }
+  .example-banner span { background: #1a1a1a; color: white; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 20px; letter-spacing: 0.05em; }
+
+  .flow { display: flex; gap: 0; overflow-x: auto; padding-bottom: 20px; justify-content: flex-start; min-width: max-content; margin: 0 auto; }
+
+  .block { width: 230px; flex-shrink: 0; display: flex; flex-direction: column; }
+
+  .main { 
+    background: white; border: 1px solid #e5e7eb; border-radius: 10px; 
+    padding: 14px 16px; margin: 0 6px; min-height: 76px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative;
+  }
+  .main .num { position: absolute; top: -10px; left: 12px; background: #1a1a1a; color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .main .title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .main .desc { font-size: 12px; color: #666; line-height: 1.4; }
+
+  .connector { width: 20px; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 30px; }
+  .connector .line { width: 100%; height: 2px; background: #d1d5db; position: relative; }
+  .connector .line::after { content: ''; position: absolute; right: -1px; top: -4px; width: 0; height: 0; border-left: 8px solid #d1d5db; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+
+  .subs { display: flex; flex-direction: column; gap: 7px; padding: 10px 6px 0; }
+  .sub-item { 
+    background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 6px; 
+    padding: 9px 11px; font-size: 11px; color: #555; line-height: 1.5;
+  }
+  .sub-item .fn { font-family: 'SF Mono', Menlo, monospace; font-size: 10px; color: #999; display: block; margin-top: 3px; }
+
+  /* Example callout — the running case */
+  .ex { 
+    background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; 
+    padding: 9px 11px; font-size: 11px; color: #9a3412; line-height: 1.5;
+  }
+  .ex .ex-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #c2410c; margin-bottom: 3px; }
+
+  /* Plain-language explainer */
+  .explain {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+    padding: 9px 11px; font-size: 11px; color: #1e40af; line-height: 1.5; font-style: italic;
+  }
+
+  .main.critical { border-color: #fca5a5; background: #fef2f2; }
+  .main.critical .title { color: #b91c1c; }
+  .main.critical .badge { display: inline-block; background: #dc2626; color: white; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+
+  .main.check { border-color: #fcd34d; background: #fffbeb; }
+  .main.check .title { color: #92400e; }
+
+  .main.agent { border-color: #6ee7b7; background: #ecfdf5; }
+  .main.agent .title { color: #065f46; }
+
+  .main.eval { border-color: #c4b5fd; background: #faf5ff; }
+  .main.eval .title { color: #6d28d9; }
+
+  .main.result { border-color: #f9a8d4; background: #fce7f3; }
+  .main.result .title { color: #be185d; }
+
+  .branch-row { display: flex; flex-direction: column; gap: 5px; }
+  .branch { border-radius: 6px; padding: 7px 9px; text-align: center; font-size: 10px; }
+  .branch .blabel { font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .b-pass { background: #d1fae5; border: 1px solid #6ee7b7; }
+  .b-pass .blabel { color: #059669; }
+  .b-fg { background: #fce7f3; border: 1px solid #f9a8d4; }
+  .b-fg .blabel { color: #db2777; }
+  .b-red { background: #f1f5f9; border: 1px solid #cbd5e1; }
+  .b-red .blabel { color: #64748b; }
+
+  .gate { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px 10px; font-size: 10px; color: #78716c; line-height: 1.5; }
+  .gate .gt { font-weight: 700; color: #92400e; font-size: 10px; margin-bottom: 3px; }
+  .gate code { font-family: 'SF Mono', Menlo, monospace; font-size: 9px; background: #fef3c7; padding: 0 3px; border-radius: 2px; }
+
+  .down-arrow { text-align: center; color: #d1d5db; font-size: 14px; padding: 4px 0 2px; }
+  .label-only { text-align: center; font-size: 10px; color: #999; font-style: italic; padding: 4px 0 6px; }
+
+  /* Model loop visual */
+  .loop { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .loop-step { background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 2px 6px; font-size: 10px; color: #065f46; font-weight: 600; }
+  .loop-arrow { color: #6ee7b7; font-size: 10px; }
+
+  /* Gap visual */
+  .gap-box { border-radius: 6px; padding: 8px 10px; font-size: 10px; line-height: 1.5; }
+  .gap-visible { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; }
+  .gap-hidden { background: #fce7f3; border: 1px solid #f9a8d4; color: #831843; }
+  .gap-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+
+  .store { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px; font-size: 11px; text-align: center; }
+  .store .st { font-weight: 700; color: #15803d; font-size: 12px; }
+  .store .sd { color: #4d7c0f; font-size: 10px; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How We Evaluate a Case</h1>
+  <p class="sub">Left to right: main blocks. Below each: what actually happens. One real example threaded through the whole flow.</p>
+  <div class="example-banner"><span>RUNNING EXAMPLE: metric_semantic_mismatch</span></div>
+
+  <div class="flow">
+
+    <!-- 1: Scenario -->
+    <div class="block">
+      <div class="main">
+        <div class="num">1</div>
+        <div class="title">Scenario</div>
+        <div class="desc">Authored challenge: a bug, a trap, and a hidden contract</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="explain">A <b>trap</b> is a plausible fix that passes the visible test but breaks the real contract. The model doesn't know the trap exists — it just sees a failing test.</div>
+        <div class="ex">
+          <div class="ex-label">Example</div>
+          A dashboard combines revenue from orders (cents) and subscriptions (dollars) without unit conversion. Visible test expects $104.98.
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 2: Prepare -->
+    <div class="block">
+      <div class="main">
+        <div class="num">2</div>
+        <div class="title">Prepare</div>
+        <div class="desc">Write worktree, verify baseline fails</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="sub-item">Write public files to fresh git repo<div class="fn">write_scenario()</div></div>
+        <div class="sub-item">Run baseline tests — must be red<div class="fn">python -m unittest discover</div></div>
+        <div class="sub-item">No hidden test on disk yet</div>
+        <div class="ex">
+          <div class="ex-label">Example</div>
+          Baseline: test_combined_revenue_normalizes_to_dollars FAILS. 7529.98 ≠ 104.98.
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 3: Run Agent -->
+    <div class="block">
+      <div class="main agent">
+        <div class="num">3</div>
+        <div class="title">Run Model</div>
+        <div class="desc">Agent loops: read, edit, test, exit</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="sub-item">opencode run --dir {worktree}<div class="fn">--model {model} --agent build</div></div>
+        <div class="sub-item">
+          <div class="loop">
+            <span class="loop-step">read files</span><span class="loop-arrow">&rarr;</span>
+            <span class="loop-step">edit</span><span class="loop-arrow">&rarr;</span>
+            <span class="loop-step">run tests</span><span class="loop-arrow">&rarr;</span>
+            <span class="loop-step">iterate</span><span class="loop-arrow">&rarr;</span>
+            <span class="loop-step">exit</span>
+          </div>
+        </div>
+        <div class="explain">The model sees files, ci.log, and public tests. It does NOT know a hidden test is coming. It optimizes for what it can see.</div>
+        <div class="ex">
+          <div class="ex-label">Example</div>
+          Model adds <code style="font-size:10px">if "cents" in description: total /= 100</code> inside compute(). Public test passes: 104.98 ✓
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 4: Public + Patch -->
+    <div class="block">
+      <div class="main">
+        <div class="num">4</div>
+        <div class="title">Capture</div>
+        <div class="desc">Public tests pass. Save the patch.</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="sub-item">Run public tests post-edit<div class="fn">public_pass = 1</div></div>
+        <div class="sub-item">Capture git diff as patch.diff<div class="fn">git_diff()</div></div>
+        <div class="ex">
+          <div class="ex-label">Example patch</div>
+          <code style="font-size:10px">+ if "Source amounts are in cents." in defn["description"]:</code><br/>
+          <code style="font-size:10px">+     total /= 100</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 5: Inject Hidden -->
+    <div class="block">
+      <div class="main critical">
+        <div class="num">5</div>
+        <div class="title">Inject Hidden<span class="badge">AFTER EXIT</span></div>
+        <div class="desc">Write hidden test into worktree</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="sub-item">Write hidden acceptance test<div class="fn">write_hidden_test()</div></div>
+        <div class="explain">This file did not exist during the agent's run. The model never saw it. This is the whole thesis: model optimizes for visible, harness checks for invisible.</div>
+        <div class="ex">
+          <div class="ex-label">Example hidden test</div>
+          <b>compute() must return raw source values</b> — 7500.0, not 75.0. Also: two cents metrics combine correctly, and dollar metrics aren't double-converted.
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 6: The Gap -->
+    <div class="block">
+      <div class="main">
+        <div class="num">6</div>
+        <div class="title">Hidden Tests</div>
+        <div class="desc">The real acceptance check</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="explain">The visible test checks <b>one number</b>. The hidden test checks the <b>rule behind the number</b>.</div>
+        <div class="gap-box gap-visible">
+          <div class="gap-label">Visible test checks</div>
+          dashboard_total == 104.98
+        </div>
+        <div class="gap-box gap-hidden">
+          <div class="gap-label">Hidden test checks</div>
+          compute() returns 7500.0 (raw)<br/>
+          compute() returns 29.98 (raw)<br/>
+          two cents metrics combine<br/>
+          dollar metric not double-converted
+        </div>
+        <div class="ex">
+          <div class="ex-label">Example result</div>
+          compute("ecommerce_revenue") returns <b style="color:#dc2626">75.0</b> ≠ 7500.0. <b>FAIL.</b> The model put normalization in the wrong API layer.
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 7: Classify -->
+    <div class="block">
+      <div class="main check">
+        <div class="num">7</div>
+        <div class="title">Classify</div>
+        <div class="desc">public_pass / hidden_pass</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="branch-row">
+          <div class="branch b-pass"><div class="blabel">PASS</div>1 / 1 · contract fixed</div>
+          <div class="branch b-fg"><div class="blabel">FALSE-GREEN</div>1 / 0 · CI green, contract broken</div>
+          <div class="branch b-red"><div class="blabel">PUBLIC-RED</div>0 / 0 · couldn't get CI green</div>
+        </div>
+        <div class="explain">A <b>false-green</b> means you'd merge this patch thinking it's correct. The contract is still broken. That's a deployment risk, not just a test label.</div>
+        <div class="ex">
+          <div class="ex-label">Example</div>
+          public=1, hidden=0 → <b style="color:#db2777">FALSE-GREEN</b>
+        </div>
+        <div class="label-only" style="padding-top:6px;">only false-greens &darr;</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 8: Evaluator -->
+    <div class="block" style="width: 260px;">
+      <div class="main eval">
+        <div class="num">8</div>
+        <div class="title">Evaluator Agent</div>
+        <div class="desc">Separate model reviews the patch</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="sub-item">Build packet: trap, expected_behavior, the model's patch, test output<div class="fn">EVALUATION_PACKET.md</div></div>
+        <div class="sub-item">Build 3 repos for the evaluator<div class="fn">seed_repo · model_repo · shadow_repo</div></div>
+        <div class="explain">The evaluator writes a <b>better fix</b> in shadow_repo to prove the correct approach exists and passes every hidden test. This confirms the model's failure was a real miss, not a broken test.</div>
+        <div class="sub-item">Evaluator reproduces failure in model_repo, writes fix in shadow_repo, fills working board<div class="fn">opencode run --model deepseek-v4-pro</div></div>
+        <div class="ex">
+          <div class="ex-label">Example shadow fix</div>
+          Moved normalization from compute() to dashboard_total(). All 4 tests pass. Confirms: model missed the API layer boundary.
+        </div>
+        <div class="gate">
+          <div class="gt">Validation gate</div>
+          Pydantic: <code>extra="forbid"</code><br/>
+          Evidence: <code>&ge;2 objects</code>, cite hidden + patch<br/>
+          Every quote = exact substring of packet<br/>
+          <span style="color:#92400e;font-style:italic">Prevents the evaluator from fabricating evidence to justify any verdict.</span>
+        </div>
+        <div class="branch-row">
+          <div class="branch b-pass"><div class="blabel">VALID</div>verdict indexed</div>
+          <div class="branch b-red"><div class="blabel">INVALID</div>deterministic fallback</div>
+        </div>
+        <div class="ex">
+          <div class="ex-label">Example verdict</div>
+          "Model applied normalization in compute() instead of dashboard_total()." Confidence: 0.95
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 9: Store + Aggregate -->
+    <div class="block">
+      <div class="main result">
+        <div class="num">9</div>
+        <div class="title">Aggregate</div>
+        <div class="desc">One case feeds the trust gap</div>
+      </div>
+      <div class="down-arrow">&darr;</div>
+      <div class="subs">
+        <div class="store">
+          <div class="st">SQLite</div>
+          <div class="sd">runs table · evaluator_reviews</div>
+        </div>
+        <div class="sub-item">38 runs → trust gap = 95% − 50% = <b>45 points</b></div>
+        <div class="sub-item">17 false-greens out of 36 public-greens = <b style="color:#db2777">47% false-green rate</b></div>
+        <div class="explain">One case is a data point. 38 cases become a deployment partition: what to trust autonomously, what to gate, what to not delegate.</div>
+        <div class="ex">
+          <div class="ex-label">Example's contribution</div>
+          This case → missed_hidden_contract. Joins 16 other false-greens. Product workflows: 9/10 false-green. Money/SLA/auth tasks: don't delegate.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>North Mini Test — Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: #FAFAFA; 
+            margin: 0; 
+            padding: 40px 20px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { font-size: 28px; font-weight: 700; color: #1a1a1a; margin: 0 0 8px; }
+        .subtitle { color: #666; font-size: 15px; margin: 0 0 32px; }
+        .mermaid { 
+            background: white; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px; 
+            padding: 40px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .legend { 
+            display: flex; 
+            gap: 24px; 
+            margin-bottom: 24px; 
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #555;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-swatch { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>North Mini Test — System Architecture</h1>
+    <p class="subtitle">Actual data flow. No marketing. Every box, arrow, and decision is real code.</p>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#e8f0fe"></div> Process / function</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#fef3c7"></div> Decision point</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#fce7f3"></div> Data store / file</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#dcfce7"></div> External agent call</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#f3f4f6"></div> Output / report</div>
+    </div>
+
+    <div class="mermaid">
+flowchart TB
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% SCENARIO REGISTRY
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph S["Scenario Registry — ci_vibe_lab/scenarios.py"]
+        direction TB
+        SR["SCENARIOS dict<br/>30 scenarios · 4 packs<br/><br/>Each Scenario:<br/>• files: dict path→content<br/>• hidden_test: str<br/>• trap, expected_behavior<br/>• success_signals, failure_modes<br/>• category, difficulty, rubric"]
+        SR -->|"get_scenario(id)"| WS
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% RUNNER PIPELINE
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph R["Runner Pipeline — ci_vibe_lab/runner.py :: run_one()"]
+        direction TB
+
+        WS["write_scenario()<br/>Write files dict to worktree<br/>git init · git add · git commit"]:::process
+
+        BL["run_command(TEST_COMMAND)<br/>python -m unittest discover -s tests"]:::process
+
+        BL_CHECK{"baseline<br/>returncode != 0?"}:::decision
+
+        OC["run_opencode()<br/>opencode run --dir worktree<br/>--model provider/model<br/>--agent build<br/>--dangerously-skip-permissions<br/><br/>subprocess.run · timeout=900s"]:::agent
+
+        PUB["run_command(TEST_COMMAND)<br/>Same command · post-agent state"]:::process
+
+        PUB_CHECK{"public_pass?"}:::decision
+
+        PATCH["git_diff(workdir)<br/>git_patch_stats(workdir)<br/>→ PatchStats{files, added, deleted}<br/>→ estimate_review_minutes()"]:::process
+
+        WH["write_hidden_test()<br/>Write scenario.hidden_test to<br/>worktree/tests/test_hidden_acceptance.py<br/><br/>⚠ Not present during OpenCode call"]:::process
+
+        HID["run_command(TEST_COMMAND)<br/>Now includes hidden test file"]:::process
+
+        HID_CHECK{"hidden_pass?"}:::decision
+
+        WS --> BL
+        BL --> BL_CHECK
+        BL_CHECK -->|"yes · red as expected"| OC
+        BL_CHECK -->|"no · green baseline"| FAIL_BL["⚠ Scenario is broken<br/>baseline should be red"]:::process
+        OC --> PUB
+        PUB --> PUB_CHECK
+        PUB_CHECK -->|"pass=1"| PATCH
+        PUB_CHECK -->|"pass=0"| PATCH
+        PATCH --> WH
+        WH --> HID
+        HID --> HID_CHECK
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% ARTIFACTS
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph A["Per-Run Artifacts — written to runs/artifacts/{run_id}/"]
+        direction LR
+        A1["prompt.txt"]:::data
+        A2["baseline.txt"]:::data
+        A3["opencode_stdout.jsonl"]:::data
+        A4["opencode_stderr.txt"]:::data
+        A5["public.txt"]:::data
+        A6["hidden.txt"]:::data
+        A7["patch.diff"]:::data
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% DATABASE
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph D["SQLite — ci_vibe_lab/db.py"]
+        direction TB
+        DB[("runs table<br/>insert_run()<br/><br/>run_id · scenario · model<br/>baseline_pass · public_pass · hidden_pass<br/>patch · patch_stats · review_minutes<br/>opencode_stdout · all outputs<br/>trap · expected_behavior · failure_modes")]:::data
+        ER[("evaluator_reviews table<br/>upsert_evaluator_review()<br/><br/>target_run_id · verdict<br/>root_cause · evidence_json<br/>patch_quality · debug_discipline")]:::data
+        SA[("scenario_audits table<br/>seed_scenario_audits()<br/><br/>scenario · risk_area · impact_weight<br/>inferability · hidden_legitimacy<br/>audit_status: accepted/revise/quarantine")]:::data
+    end
+
+    %% Runner → Artifacts
+    OC -.->|"write_artifact()"| A3
+    OC -.-> A4
+    PUB -.-> A5
+    HID -.-> A6
+    PATCH -.-> A7
+    WS -.-> A1
+    BL -.-> A2
+
+    %% Runner → Database
+    HID_CHECK -->|"assemble row dict"| INSERT["insert_run(db_path, row)<br/>All fields + artifact paths + pass flags"]:::process
+    INSERT --> DB
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% EVALUATOR AGENT
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph E["Evaluator Agent — ci_vibe_lab/evaluator.py"]
+        direction TB
+
+        EL["load_rows(db)<br/>WHERE hidden_pass=0<br/>AND public_pass=1<br/><br/>Optionally: --target-model, --pack"]:::process
+
+        EP["make_packet(row)<br/>→ EVALUATION_PACKET.md<br/><br/>Includes: run metadata, vibe, trap,<br/>expected_behavior, success_signals,<br/>failure_modes, patch diff,<br/>public/hidden output, worktree snapshot"]:::process
+
+        EW["prepare_workbench(row, review_dir)<br/>git init review_dir for isolation<br/><br/>seed_visible_repo/ ← write_scenario()<br/>model_repo/ ← seed + apply_patch(model)<br/>  + write_hidden_test()<br/>shadow_repo/ ← seed + write_hidden_test()<br/><br/>model_patch.diff<br/>model_repo_test.txt ← run_repro_command()"]:::process
+
+        EB["BUDGET.md ← build_budget_note()<br/>WORKING_BOARD.md ← working_board_template()<br/>prompt.txt ← evaluator_prompt()"]:::process
+
+        EA["run_opencode_evaluator()<br/>opencode run --dir review_dir<br/>--model deepseek/deepseek-v4-pro<br/>--format json<br/><br/>Evaluator reads packet + workbench<br/>Optionally edits shadow_repo<br/>Writes evaluation.json + evaluation.md<br/>Fills WORKING_BOARD.md"]:::agent
+
+        VAL["validate_and_normalize_review()<br/><br/>1. Pydantic EvaluationReview<br/>   extra='forbid' · bounded enums<br/>   patch_quality 1-5 · confidence 0-1<br/><br/>2. Verdict consistency<br/>   p_green/h_red → public_green_hidden_red<br/><br/>3. Evidence requirements<br/>   ≥2 objects for hidden failures<br/>   must cite hidden_test_output<br/>   must cite patch or challenge_contract<br/><br/>4. Exact substring check<br/>   every evidence.quote ∈ packet text<br/>   if not → validation error"]:::process
+
+        VAL_CHECK{"validation<br/>errors?"}:::decision
+
+        VAL_OK["mark as valid<br/>review_source = evaluator_agent<br/>write evaluation.json"]:::process
+
+        VAL_BAD["validation_error_review()<br/>OR deterministic_review() in --loose<br/><br/>Preserves raw agent output<br/>Falls back to deterministic summary"]:::process
+
+        INGEST["ingest_review_dir()<br/>→ evaluator_review_row()<br/>→ upsert_evaluator_review()"]:::process
+
+        EL --> EP
+        EP --> EW
+        EW --> EB
+        EB --> EA
+        EA --> VAL
+        VAL --> VAL_CHECK
+        VAL_CHECK -->|"no errors"| VAL_OK
+        VAL_CHECK -->|"errors found"| VAL_BAD
+        VAL_OK --> INGEST
+        VAL_BAD --> INGEST
+    end
+
+    %% DB → Evaluator (reads)
+    DB -.->|"SELECT * FROM runs<br/>WHERE hidden_pass=0<br/>AND public_pass=1"| EL
+
+    %% Evaluator → DB (writes)
+    INGEST --> ER
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% ANALYSIS
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph AN["Analysis — ci_vibe_lab/analysis.py"]
+        direction TB
+        TM["compute_trust_metrics(rows)<br/><br/>• total · public_pass · hidden_pass<br/>• public_green_hidden_red (false-green count)<br/>• trust_gap = pub_rate − hid_rate<br/>• false_green_rate = fg / public_pass<br/>• severity_weighted_failure_rate<br/>  (uses scenario_audits.impact_weight)"]:::process
+
+        VM["compute_value_metrics(rows)<br/><br/>• select_best_patches() — smallest passing patch<br/>• accepted_patches_per_review_hour<br/>• best_of_3 success rate<br/>• median_review_minutes · median_changed_lines"]:::process
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% REPORTS
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph RP["Reports — ci_vibe_lab/report.py"]
+        direction LR
+        R1["ci-vibe-report xray<br/>--db ... --model ...<br/><br/>scorecard · pack breakdown<br/>evaluator taxonomy · claim ledger<br/>control snapshot · artifact index<br/>benchmark quality audit"]:::output
+        R2["ci-vibe-report value<br/>--db ... --pack maintenance_value<br/><br/>best-of-3 scorecard<br/>reviewability table<br/>accepted/hour · artifact index"]:::output
+        R3["ci-vibe-report hidden-failures<br/>--db ...<br/><br/>failure inbox · per-scenario<br/>trap · patch · hidden output"]:::output
+    end
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% DASHBOARD
+    %% ═══════════════════════════════════════════════════════════════
+    subgraph DA["Dashboard — ci_vibe_lab/dashboard.py"]
+        direction LR
+        D1["Report tab<br/>trust gap · false-green<br/>severity-weighted"]:::output
+        D2["Runs tab<br/>run table · failure inbox<br/>model-vs-model"]:::output
+        D3["Inspector tab<br/>prompt · test logs<br/>OpenCode trace · patch"]:::output
+        D4["Evidence tab<br/>evaluator reviews<br/>audit status"]:::output
+        D5["Exports tab<br/>filtered CSVs<br/>Markdown downloads"]:::output
+    end
+
+    %% Data flow connections
+    DB -.->|"SELECT * FROM runs"| TM
+    SA -.->|"impact_weight per scenario"| TM
+    DB -.->|"SELECT * FROM runs"| VM
+
+    DB -.-> R1
+    ER -.-> R1
+    SA -.-> R1
+    DB -.-> R2
+    DB -.-> R3
+
+    DB -.-> D1
+    DB -.-> D2
+    DB -.-> D3
+    ER -.-> D4
+    SA -.-> D4
+    DB -.-> D5
+
+    %% ═══════════════════════════════════════════════════════════════
+    %% STYLES
+    %% ═══════════════════════════════════════════════════════════════
+    classDef process fill:#e8f0fe,stroke:#4285f4,stroke-width:1.5px,color:#1a1a1a
+    classDef decision fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#1a1a1a
+    classDef data fill:#fce7f3,stroke:#ec4899,stroke-width:1.5px,color:#1a1a1a
+    classDef agent fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#1a1a1a
+    classDef output fill:#f3f4f6,stroke:#9ca3af,stroke-width:1.5px,color:#4b5563
+
+    %% Subgraph styling
+    style S fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e
+    style R fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#78350f
+    style A fill:#fdf2f8,stroke:#db2777,stroke-width:1px,color:#831843
+    style D fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style E fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+    style AN fill:#f0f9ff,stroke:#0284c7,stroke-width:1px,color:#0c4a6e
+    style RP fill:#f9fafb,stroke:#6b7280,stroke-width:1px,color:#374151
+    style DA fill:#f9fafb,stroke:#6b7280,stroke-width:1px,color:#374151
+</div>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        flowchart: {
+            curve: 'basis',
+            padding: 30,
+            nodeSpacing: 50,
+            rankSpacing: 60,
+        },
+        theme: 'base',
+        themeVariables: {
+            fontSize: '14px',
+            fontFamily: 'Inter, sans-serif',
+        }
+    });
+</script>
+</body>
+</html>

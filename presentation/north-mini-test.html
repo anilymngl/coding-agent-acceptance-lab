@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>North Mini Test — Coding Agent Eval Harness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; margin: 0; overflow: hidden; }
+        .slide { transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out; }
+        .slide.inactive { opacity: 0; pointer-events: none; transform: scale(0.98); position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .slide.active { opacity: 1; pointer-events: auto; transform: scale(1); position: relative; width: 100%; height: 100vh; z-index: 10; }
+        .mono { font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace; }
+        .ink { color: #0F172A; }
+        .ink-light { color: #475569; }
+        .ink-muted { color: #94A3B8; }
+        .blue-accent { color: #2563EB; }
+        .green-accent { color: #16A34A; }
+        .amber-accent { color: #D97706; }
+        .rose-accent { color: #E11D48; }
+    </style>
+</head>
+<body class="text-slate-800 selection:bg-blue-200">
+    <div id="deck" class="w-full h-screen relative flex flex-col">
+
+        <!-- Slide 1: Title -->
+        <div class="slide active flex flex-col justify-center items-center p-12 bg-white relative">
+            <h1 class="text-6xl font-black mb-4 tracking-tight ink text-center leading-tight max-w-5xl">
+                North Mini Test
+            </h1>
+            <p class="text-2xl ink-light mb-4 text-center max-w-3xl">
+                A coding-agent evaluation harness
+            </p>
+            <p class="text-xl ink-muted text-center max-w-2xl mb-12">
+                Does the model actually fix the problem, or does it just make CI green?
+            </p>
+            <div class="flex gap-6">
+                <div class="bg-slate-50 px-8 py-5 rounded-2xl border-t-4 border-slate-300 text-center">
+                    <div class="text-3xl font-black ink">38</div>
+                    <div class="text-sm ink-muted uppercase tracking-wider mt-1">Runs</div>
+                </div>
+                <div class="bg-blue-50 px-8 py-5 rounded-2xl border-t-4 border-blue-400 text-center">
+                    <div class="text-3xl font-black blue-accent">4</div>
+                    <div class="text-sm ink-muted uppercase tracking-wider mt-1">Packs</div>
+                </div>
+                <div class="bg-amber-50 px-8 py-5 rounded-2xl border-t-4 border-amber-400 text-center">
+                    <div class="text-3xl font-black amber-accent">47%</div>
+                    <div class="text-sm ink-muted uppercase tracking-wider mt-1">False-green</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: The One Question -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The One Question</h1>
+            <p class="text-lg ink-light mb-12 max-w-3xl">
+                Standard benchmarks score pass/fail. This harness scores how often you can trust a pass.
+            </p>
+            <div class="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+                <div class="bg-blue-50 p-8 rounded-2xl border-t-8 border-blue-400">
+                    <h3 class="text-xl font-black mb-3 ink">Public Tests</h3>
+                    <p class="text-slate-700 leading-relaxed">
+                        Visible to the model during its run — like normal CI. The model can read, run, and iterate against these.
+                    </p>
+                </div>
+                <div class="bg-amber-50 p-8 rounded-2xl border-t-8 border-amber-400">
+                    <h3 class="text-xl font-black mb-3 ink">Hidden Tests</h3>
+                    <p class="text-slate-700 leading-relaxed">
+                        Injected <strong>after</strong> the agent exits. Test the real contract: edge cases, generalization, policy completeness.
+                    </p>
+                </div>
+            </div>
+            <div class="mt-10 text-center">
+                <p class="mono text-lg ink-light">public_pass=1, hidden_pass=0 &rarr; <span class="rose-accent font-bold">false-green</span></p>
+                <p class="ink-muted mt-3">The headline metric is the <strong>trust gap</strong>: public pass rate minus hidden pass rate.</p>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Pipeline -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-slate-50 relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The Pipeline</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">
+                Eight deterministic steps. Hidden tests are never present during the model's run.
+            </p>
+            <div class="max-w-4xl mx-auto w-full space-y-3">
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">1</span>
+                    <p class="ink">Write visible scenario repo</p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">2</span>
+                    <p class="ink">Run baseline tests <span class="ink-muted">&rarr; must be red</span></p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">3</span>
+                    <p class="ink">Run OpenCode with the public prompt</p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">4</span>
+                    <p class="ink">Run public tests</p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">5</span>
+                    <p class="ink">Capture the git diff patch</p>
+                </div>
+                <div class="flex items-center gap-4 bg-blue-50 p-4 rounded-xl border border-blue-300">
+                    <span class="mono text-sm blue-accent w-6">6</span>
+                    <p class="ink"><strong>Inject hidden tests</strong> into the worktree</p>
+                </div>
+                <div class="flex items-center gap-4 bg-blue-50 p-4 rounded-xl border border-blue-300">
+                    <span class="mono text-sm blue-accent w-6">7</span>
+                    <p class="ink"><strong>Run hidden tests</strong></p>
+                </div>
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <span class="mono text-sm ink-muted w-6">8</span>
+                    <p class="ink">Persist all artifacts &amp; metrics to SQLite</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Divider - Findings -->
+        <div class="slide inactive flex flex-col justify-center items-center p-16 bg-slate-100 relative">
+            <h1 class="text-5xl font-black ink text-center mb-4">The Findings</h1>
+            <p class="text-xl ink-muted text-center">38 runs &middot; 4 challenge packs &middot; 1 model</p>
+        </div>
+
+        <!-- Slide 5: The Numbers -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The Numbers</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">95% public pass looks excellent. 50% hidden pass is the real number.</p>
+            <div class="max-w-5xl mx-auto w-full">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b-2 border-slate-200">
+                            <th class="py-3 px-4 text-xs uppercase tracking-wider ink-muted font-bold">Pack</th>
+                            <th class="py-3 px-4 text-xs uppercase tracking-wider ink-muted font-bold text-right">Runs</th>
+                            <th class="py-3 px-4 text-xs uppercase tracking-wider ink-muted font-bold text-right">Public</th>
+                            <th class="py-3 px-4 text-xs uppercase tracking-wider ink-muted font-bold text-right">Hidden</th>
+                            <th class="py-3 px-4 text-xs uppercase tracking-wider ink-muted font-bold text-right">False-green</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-base">
+                        <tr class="border-b border-slate-100">
+                            <td class="py-3 px-4 mono ink">ci_forensics</td>
+                            <td class="py-3 px-4 text-right mono">12</td>
+                            <td class="py-3 px-4 text-right mono green-accent font-bold">100%</td>
+                            <td class="py-3 px-4 text-right mono">67%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-bold">4</td>
+                        </tr>
+                        <tr class="border-b border-slate-100">
+                            <td class="py-3 px-4 mono ink">data_semantics</td>
+                            <td class="py-3 px-4 text-right mono">5</td>
+                            <td class="py-3 px-4 text-right mono green-accent font-bold">80%</td>
+                            <td class="py-3 px-4 text-right mono">60%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-bold">1</td>
+                        </tr>
+                        <tr class="border-b border-slate-100">
+                            <td class="py-3 px-4 mono ink">product_workflows</td>
+                            <td class="py-3 px-4 text-right mono">11</td>
+                            <td class="py-3 px-4 text-right mono green-accent font-bold">91%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-bold">9%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-bold">9</td>
+                        </tr>
+                        <tr class="border-b border-slate-100">
+                            <td class="py-3 px-4 mono ink">maintenance_value</td>
+                            <td class="py-3 px-4 text-right mono">10</td>
+                            <td class="py-3 px-4 text-right mono green-accent font-bold">100%</td>
+                            <td class="py-3 px-4 text-right mono">70%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-bold">3</td>
+                        </tr>
+                        <tr class="border-t-2 border-slate-300">
+                            <td class="py-3 px-4 font-black ink">Combined</td>
+                            <td class="py-3 px-4 text-right mono font-black">38</td>
+                            <td class="py-3 px-4 text-right mono green-accent font-black">95%</td>
+                            <td class="py-3 px-4 text-right mono amber-accent font-black">50%</td>
+                            <td class="py-3 px-4 text-right mono rose-accent font-black">17</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="ink-muted mt-8 text-center text-sm">The gap between public and hidden is the deployment-changing signal.</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: The Failure Shape -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The Failure Shape</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">
+                The model asks <strong class="rose-accent">"what makes this test pass?"</strong> instead of <strong class="blue-accent">"what else should be true here?"</strong>
+            </p>
+            <div class="grid grid-cols-2 gap-6 max-w-5xl mx-auto w-full">
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <p class="mono text-sm ink-muted mb-2">decimal_money_rounding</p>
+                    <p class="ink">Got the number right for the visible input.</p>
+                    <p class="rose-accent mt-2">Wrong rounding mode.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <p class="mono text-sm ink-muted mb-2">audit_log_redaction</p>
+                    <p class="ink">Redacted the visible secret.</p>
+                    <p class="rose-accent mt-2">Didn't recurse into nested dicts.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <p class="mono text-sm ink-muted mb-2">metric_semantic_mismatch</p>
+                    <p class="ink">Fixed the unit mismatch.</p>
+                    <p class="rose-accent mt-2">Put the fix in the wrong API layer.</p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <p class="mono text-sm ink-muted mb-2">env_bool_parser</p>
+                    <p class="ink">Handled common false strings.</p>
+                    <p class="rose-accent mt-2">Missed blank and whitespace.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Task-Type Split -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-slate-50 relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The Task-Type Split</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">The dividing line is semantic density — not model size, not task difficulty.</p>
+            <div class="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+                <div class="bg-green-50 p-8 rounded-2xl border-t-8 border-green-400">
+                    <h3 class="text-xl font-black mb-4 green-accent uppercase tracking-wide">Reliable &ge;70%</h3>
+                    <ul class="space-y-3 text-slate-700">
+                        <li>Mechanical migrations (logger.warn, utcnow)</li>
+                        <li>Stale artifact regeneration</li>
+                        <li>Import hygiene</li>
+                        <li>Missing regression tests</li>
+                        <li>Cursor pagination logic</li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 p-8 rounded-2xl border-t-8 border-amber-400">
+                    <h3 class="text-xl font-black mb-4 amber-accent uppercase tracking-wide">Unreliable &lt;30%</h3>
+                    <ul class="space-y-3 text-slate-700">
+                        <li>Money math with rounding policy</li>
+                        <li>Business calendars &amp; SLA rules</li>
+                        <li>Auth and audit completeness</li>
+                        <li>State mutation with invariants</li>
+                        <li>Discount and billing stacking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Divider - Harness -->
+        <div class="slide inactive flex flex-col justify-center items-center p-16 bg-slate-100 relative">
+            <h1 class="text-5xl font-black ink text-center mb-4">The Harness</h1>
+            <p class="text-xl ink-muted text-center">how it works &middot; why it's different</p>
+        </div>
+
+        <!-- Slide 9: Evaluator Agent -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">Evaluator Agent — Not a Classifier</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">
+                The evaluator gets a workbench and can test a better fix before judging.
+            </p>
+            <div class="grid grid-cols-2 gap-6 max-w-5xl mx-auto w-full">
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
+                    <p class="mono font-bold blue-accent mb-2">workbench/seed_visible_repo</p>
+                    <p class="text-slate-700 text-sm">Original repo before the model patch</p>
+                </div>
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
+                    <p class="mono font-bold blue-accent mb-2">workbench/model_repo</p>
+                    <p class="text-slate-700 text-sm">Repo + model's patch + hidden tests</p>
+                </div>
+                <div class="bg-rose-50 p-6 rounded-2xl border border-rose-200">
+                    <p class="mono font-bold rose-accent mb-2">workbench/shadow_repo</p>
+                    <p class="text-slate-700 text-sm">Scratch repo where evaluator writes a <strong>better fix</strong> to confirm its judgment</p>
+                </div>
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-200">
+                    <p class="mono font-bold blue-accent mb-2">EVALUATION_PACKET.md</p>
+                    <p class="text-slate-700 text-sm">Run metadata, trap, expected behavior, patch, test output</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Evidence Validation -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-slate-50 relative">
+            <h1 class="text-4xl font-bold mb-3 ink">Evidence Validation</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">
+                Every quote in an evaluator review must be an exact contiguous substring of the evaluation packet.
+            </p>
+            <div class="max-w-4xl mx-auto w-full bg-slate-900 p-8 rounded-2xl">
+                <p class="mono text-sm text-slate-400 mb-3"># Pydantic schema</p>
+                <p class="mono text-sm text-slate-300">model_config = ConfigDict(<span class="text-rose-400">extra="forbid"</span>)</p>
+                <p class="mono text-sm text-slate-300">verdict: Literal[<span class="text-green-400">"pass"</span>, <span class="text-rose-400">"public_green_hidden_red"</span>]</p>
+                <p class="mono text-sm text-slate-300">patch_quality: int = Field(ge=1, le=5)</p>
+                <p class="mono text-sm text-slate-400 mt-4 mb-3"># harness checks quotes against packet</p>
+                <p class="mono text-sm text-slate-300">if quote <span class="text-rose-400">not in</span> packet:</p>
+                <p class="mono text-sm text-slate-300">&nbsp;&nbsp;errors.append(<span class="text-rose-400">"not an exact packet substring"</span>)</p>
+            </div>
+            <p class="ink-muted mt-8 text-center text-sm max-w-3xl mx-auto">
+                Invent a quote &rarr; validation fails &rarr; falls back to deterministic summary. The evaluator cannot hallucinate its way to confidence.
+            </p>
+        </div>
+
+        <!-- Slide 11: Divider - Model -->
+        <div class="slide inactive flex flex-col justify-center items-center p-16 bg-slate-100 relative">
+            <h1 class="text-5xl font-black ink text-center mb-4">The Model</h1>
+            <p class="text-xl ink-muted text-center mono">opencode/north-mini-code-free</p>
+            <p class="text-base ink-muted text-center mt-2">30B total / 3B active MoE</p>
+        </div>
+
+        <!-- Slide 12: What It Is -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">What It Actually Is</h1>
+            <div class="max-w-4xl mx-auto w-full mt-6">
+                <div class="bg-blue-50 p-8 rounded-2xl border-l-8 border-blue-400 mb-10">
+                    <p class="text-2xl ink font-bold italic">
+                        A fast, disciplined agent that fixes the test, not the bug.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-8">
+                    <div class="bg-green-50 p-7 rounded-2xl border-t-8 border-green-400">
+                        <h3 class="text-lg font-black mb-4 green-accent uppercase tracking-wide">The Loop Is Good</h3>
+                        <ul class="space-y-2 text-slate-700 text-sm">
+                            <li>Read, edit, test, exit — in 9-24 seconds</li>
+                            <li>Minimal patches, no file sprawl</li>
+                            <li>No loops, no unrelated file churn</li>
+                            <li>Genuinely good at the mechanics</li>
+                        </ul>
+                    </div>
+                    <div class="bg-amber-50 p-7 rounded-2xl border-t-8 border-amber-400">
+                        <h3 class="text-lg font-black mb-4 amber-accent uppercase tracking-wide">Reasoning Stops Early</h3>
+                        <ul class="space-y-2 text-slate-700 text-sm">
+                            <li>Satisfies the specific assertion</li>
+                            <li>Doesn't infer the rule behind it</li>
+                            <li>Same failure direction every time</li>
+                            <li>Systematic, not random</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Maintenance Pack -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-slate-50 relative">
+            <h1 class="text-4xl font-bold mb-3 ink">Maintenance Pack — The Good News</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">7/10 hidden pass on deliberately boring, non-adversarial work.</p>
+            <div class="grid grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+                <div class="bg-green-50 p-8 rounded-2xl border-t-8 border-green-400">
+                    <h3 class="text-2xl font-black green-accent mb-4">7 Passed</h3>
+                    <ul class="space-y-2 text-slate-700 text-sm mono">
+                        <li>logger_warn_migration</li>
+                        <li>utcnow_timezone_migration</li>
+                        <li>generated_openapi_refresh</li>
+                        <li>fixture_schema_migration</li>
+                        <li>import_hygiene_fix</li>
+                        <li>docs_cli_sync</li>
+                        <li>regression_test_gap</li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 p-8 rounded-2xl border-t-8 border-amber-400">
+                    <h3 class="text-2xl font-black amber-accent mb-4">3 False-Greens</h3>
+                    <p class="text-slate-700 text-sm mb-4">All spec-completeness tasks — implement everything the spec says, including parts not tested visibly.</p>
+                    <div class="bg-white p-4 rounded-xl border border-amber-200 text-sm">
+                        <p class="mono ink-muted">adapter_field_rename</p>
+                        <p class="mt-2">Mapped new fields. Dropped old-field compat. Failed all 3 attempts with the same 4-line patch.</p>
+                        <p class="amber-accent mt-2 font-bold">Consistent, not random.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Divider - Deployment -->
+        <div class="slide inactive flex flex-col justify-center items-center p-16 bg-slate-100 relative">
+            <h1 class="text-5xl font-black ink text-center mb-4">Deployment Policy</h1>
+            <p class="text-xl ink-muted text-center">the output is a partition, not a leaderboard rank</p>
+        </div>
+
+        <!-- Slide 15: Three Zones -->
+        <div class="slide inactive flex flex-col justify-center p-16 bg-white relative">
+            <h1 class="text-4xl font-bold mb-3 ink">The Three Zones</h1>
+            <p class="text-lg ink-light mb-10 max-w-3xl">Where to trust it, where to gate it, where to not delegate.</p>
+            <div class="grid grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
+                <div class="bg-green-50 p-7 rounded-2xl border-t-8 border-green-400">
+                    <h3 class="text-lg font-black green-accent uppercase tracking-wide mb-2">Use Autonomously</h3>
+                    <p class="text-xs ink-muted uppercase tracking-wider mb-4">merge on public pass</p>
+                    <ul class="space-y-3 text-slate-700 text-sm">
+                        <li>Mechanical deprecation migrations</li>
+                        <li>Stale artifact regeneration</li>
+                        <li>Doc/README sync</li>
+                        <li>Missing regression tests</li>
+                    </ul>
+                </div>
+                <div class="bg-blue-50 p-7 rounded-2xl border-t-8 border-blue-400">
+                    <h3 class="text-lg font-black blue-accent uppercase tracking-wide mb-2">Gate Before Merge</h3>
+                    <p class="text-xs ink-muted uppercase tracking-wider mb-4">hidden acceptance gate</p>
+                    <ul class="space-y-3 text-slate-700 text-sm">
+                        <li>Adapter &amp; DTO normalization</li>
+                        <li>Validation completeness</li>
+                        <li>Pagination &amp; cursor logic</li>
+                        <li>Cache isolation &amp; idempotency</li>
+                    </ul>
+                </div>
+                <div class="bg-rose-50 p-7 rounded-2xl border-t-8 border-rose-400">
+                    <h3 class="text-lg font-black rose-accent uppercase tracking-wide mb-2">Strong Review</h3>
+                    <p class="text-xs ink-muted uppercase tracking-wider mb-4">do not delegate</p>
+                    <ul class="space-y-3 text-slate-700 text-sm">
+                        <li>Money math (any rounding)</li>
+                        <li>Business rules (SLAs, calendars)</li>
+                        <li>Auth and audit correctness</li>
+                        <li>State mutation with invariants</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Closing -->
+        <div class="slide inactive flex flex-col justify-center items-center p-16 bg-slate-900 relative">
+            <h1 class="text-5xl font-black text-white text-center mb-6 max-w-4xl leading-tight">
+                The number that matters most<br>isn't the pass rate.
+            </h1>
+            <p class="text-2xl text-slate-400 text-center mb-12">It's the <span class="text-amber-400 font-bold">false-green rate</span>.</p>
+            <div class="flex gap-8">
+                <div class="text-center">
+                    <div class="text-4xl font-black text-white">47%</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider mt-2">false-green rate</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-black text-white">45<span class="text-2xl text-slate-500">pts</span></div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider mt-2">trust gap</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-4xl font-black text-white">17<span class="text-2xl text-slate-500">/36</span></div>
+                    <div class="text-sm text-slate-500 uppercase tracking-wider mt-2">contract-broken patches</div>
+                </div>
+            </div>
+            <p class="mono text-sm text-slate-600 mt-16">github.com/anilyamngl/north-mini-test</p>
+        </div>
+
+        <!-- Navigation -->
+        <div class="absolute bottom-0 w-full h-16 flex items-center justify-between px-8 z-50 pointer-events-none">
+            <div class="flex space-x-2" id="dots"></div>
+            <div class="text-slate-400 mono text-sm pointer-events-auto flex items-center space-x-4 bg-white/80 px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                <button id="prevBtn" class="hover:text-slate-800 transition-colors px-2 py-1">&larr; Prev</button>
+                <span class="opacity-50">|</span>
+                <span class="text-xs tracking-widest uppercase">Arrow Keys</span>
+                <span class="opacity-50">|</span>
+                <button id="nextBtn" class="hover:text-slate-800 transition-colors px-2 py-1">Next &rarr;</button>
+            </div>
+        </div>
+        <div class="absolute top-8 right-8 z-50 ink-muted mono font-bold">
+            <span id="currentSlideNum">1</span> / <span id="totalSlidesNum">16</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slides = document.querySelectorAll('.slide');
+            const dotsContainer = document.getElementById('dots');
+            const currentSlideEl = document.getElementById('currentSlideNum');
+            const totalSlidesEl = document.getElementById('totalSlidesNum');
+            let currentIdx = 0;
+
+            totalSlidesEl.textContent = slides.length;
+
+            slides.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.className = `w-2 h-2 rounded-full transition-all duration-300 ${i === 0 ? 'bg-blue-500 w-6' : 'bg-slate-300'}`;
+                dotsContainer.appendChild(dot);
+            });
+
+            const dots = dotsContainer.querySelectorAll('div');
+
+            function showSlide(index) {
+                if (index < 0) index = 0;
+                if (index >= slides.length) index = slides.length - 1;
+
+                slides[currentIdx].classList.remove('active');
+                slides[currentIdx].classList.add('inactive');
+
+                slides[index].classList.remove('inactive');
+                slides[index].classList.add('active');
+
+                dots[currentIdx].classList.remove('bg-blue-500', 'w-6');
+                dots[currentIdx].classList.add('bg-slate-300', 'w-2');
+
+                dots[index].classList.remove('bg-slate-300', 'w-2');
+                dots[index].classList.add('bg-blue-500', 'w-6');
+
+                currentSlideEl.textContent = index + 1;
+                currentIdx = index;
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    e.preventDefault();
+                    showSlide(currentIdx + 1);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    showSlide(currentIdx - 1);
+                }
+            });
+
+            document.getElementById('prevBtn').addEventListener('click', () => showSlide(currentIdx - 1));
+            document.getElementById('nextBtn').addEventListener('click', () => showSlide(currentIdx + 1));
+        });
+    </script>
+</body>
+</html>

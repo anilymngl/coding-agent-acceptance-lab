@@ -129,6 +129,11 @@ def matrix_config_label(config_path: Path) -> str:
     return f"{config_path} · {hint}"
 
 
+def section_hint(text: str) -> None:
+    """Render a muted one-line explanation below a subheader."""
+    st.caption(text)
+
+
 def apply_base_styles() -> None:
     st.markdown(
         """
@@ -480,12 +485,12 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
     gap_tone = "bad" if metrics.trust_gap >= 0.25 else "warn" if metrics.trust_gap >= 0.1 else "good"
 
     cols = st.columns(6)
-    cols[0].metric("Runs", total_runs)
-    cols[1].metric("Public Pass Rate", percent(metrics.public_pass_rate))
-    cols[2].metric("Hidden Pass Rate", percent(metrics.hidden_pass_rate))
-    cols[3].metric("Trust Gap", percent(metrics.trust_gap))
-    cols[4].metric("False Green Rate", percent(metrics.false_green_rate))
-    cols[5].metric("Avg Duration", f"{avg_duration:.1f}s")
+    cols[0].metric("Runs", total_runs, help="Total number of model attempts loaded after sidebar filters.")
+    cols[1].metric("Public Pass Rate", percent(metrics.public_pass_rate), help="Share of runs where the visible CI test suite passed after the model patch. Visible to the model during the run.")
+    cols[2].metric("Hidden Pass Rate", percent(metrics.hidden_pass_rate), help="Share of runs where hidden acceptance tests passed. These tests were injected only AFTER the model exited, so they measure real acceptance, not visible CI green.")
+    cols[3].metric("Trust Gap", percent(metrics.trust_gap), help="Public pass rate minus hidden pass rate. A large gap means visible CI green does not imply real acceptance. This is the central signal of this eval.")
+    cols[4].metric("False Green Rate", percent(metrics.false_green_rate), help="Share of public-green runs that failed hidden acceptance. These are the rows where CI looked fixed but the real contract was missed.")
+    cols[5].metric("Avg Duration", f"{avg_duration:.1f}s", help="Mean wall-clock seconds for OpenCode to complete (or timeout). Does not include Ollama warmup time.")
     render_chip_strip(
         [
             ("reviewed", f"{reviewed}/{total_runs}", "good" if reviewed == total_runs else "warn"),
@@ -508,6 +513,7 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
     if not product_rows.empty:
         product_metrics = compute_trust_metrics(product_rows.to_dict("records"), audit_weights=weights)
         st.subheader("Product Workflow Stress Read")
+        section_hint("Product-workflow scenarios test semantic business contracts (billing, discounts, inventory). High false-green here means the model can pass surface tests but misses domain logic.")
         render_chip_strip(
             [
                 ("product runs", product_metrics.total, ""),
@@ -518,10 +524,12 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
         )
 
     st.subheader("What To Focus On")
+    section_hint("Priority-ranked triage: P0 = visible CI still red, P1 = hidden acceptance failed (false-green), P2 = passed but needs human quality review.")
     focus = focus_rows(rows)
     st.dataframe(focus, use_container_width=True, hide_index=True)
 
     st.subheader("Result Matrix")
+    section_hint("Cross-tab of challenge category vs outcome (pass / hidden fail / fail). Shows which categories concentrate the trust gap.")
     matrix = outcome_matrix(rows)
     if matrix.empty:
         st.info("No matrix data available.")
@@ -542,6 +550,7 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
     by_category["trust_gap"] = by_category["public_pass_rate"] - by_category["hidden_pass_rate"]
 
     st.subheader("Category Readout")
+    section_hint("Per-category public vs hidden pass rates and trust gap. Categories with high trust gap are where the model overfits to visible tests.")
     st.dataframe(by_category, use_container_width=True, hide_index=True)
     st.bar_chart(by_category.set_index("category")[["public_pass_rate", "hidden_pass_rate"]])
 
@@ -562,10 +571,12 @@ def render_report(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFram
     by_scenario["trust_gap"] = by_scenario["public_pass_rate"] - by_scenario["hidden_pass_rate"]
 
     st.subheader("Challenge Summary")
+    section_hint("Per-scenario pass rates and trust gap. Sort by trust gap descending to find the scenarios where the model makes CI green without real acceptance.")
     st.dataframe(by_scenario, use_container_width=True, hide_index=True)
 
     if not reviews.empty:
         st.subheader("Evaluator Review Summary")
+        section_hint("Counts of evaluator-agent verdicts and root-cause categories. The evaluator inspects false-greens and classifies why the model missed the hidden contract.")
         review_counts = reviews.groupby(["verdict", "root_cause_category"], as_index=False).agg(reviews=("id", "count"))
         st.dataframe(review_counts, use_container_width=True, hide_index=True)
     render_value_section(rows)
@@ -579,14 +590,16 @@ def render_value_section(rows: pd.DataFrame) -> None:
     records = value_rows.to_dict("records")
     value_metrics = compute_value_metrics(records)
     st.subheader("Maintenance Value Mode")
+    section_hint("Maintenance-value pack: 3 attempts per scenario, smallest hidden-passing patch selected. Measures useful, reviewable maintenance output — not just pass/fail.")
     cols = st.columns(4)
-    cols[0].metric("Accepted / Review Hour", f"{value_metrics.accepted_patches_per_review_hour:.2f}")
+    cols[0].metric("Accepted / Review Hour", f"{value_metrics.accepted_patches_per_review_hour:.2f}", help="Accepted patches (hidden-pass + smallest patch) per estimated engineer-review hour. Higher = more reviewable value per hour.")
     cols[1].metric(
         "Best-of-3 Success",
         f"{value_metrics.best_of_three_successes}/{value_metrics.best_of_three_scenarios}",
+        help="Scenarios where at least one of 3 attempts passed hidden acceptance. Measures pass@3 selection value.",
     )
-    cols[2].metric("Median Review Minutes", f"{value_metrics.median_review_minutes:.1f}")
-    cols[3].metric("Median Changed Lines", f"{value_metrics.median_changed_lines:.0f}")
+    cols[2].metric("Median Review Minutes", f"{value_metrics.median_review_minutes:.1f}", help="Median estimated review time across all accepted patches. Lower = cheaper to ship.")
+    cols[3].metric("Median Changed Lines", f"{value_metrics.median_changed_lines:.0f}", help="Median patch size (changed lines) across accepted patches. Smaller is better for review cost.")
 
     selected = select_best_patches(records)
     selected_rows = []
@@ -603,7 +616,7 @@ def render_value_section(rows: pd.DataFrame) -> None:
             }
         )
     if selected_rows:
-        st.caption("Selected survivor per model+scenario: hidden-passing attempt with the smallest patch.")
+        st.caption("Selected survivor per model+scenario: hidden-passing attempt with the smallest patch. This is the patch a reviewer would actually ship.")
         st.dataframe(pd.DataFrame(selected_rows), use_container_width=True, hide_index=True)
 
     scenario_rows = []
@@ -624,6 +637,7 @@ def render_value_section(rows: pd.DataFrame) -> None:
 def render_runs(rows: pd.DataFrame) -> None:
     run_table = build_run_table(rows)
     st.subheader("Runs")
+    section_hint("Every loaded attempt, newest first. baseline/public/hidden columns show pass/fail for the three test stages. Use this to scan for outliers in duration or review status.")
     st.dataframe(
         run_table,
         use_container_width=True,
@@ -640,6 +654,7 @@ def render_runs(rows: pd.DataFrame) -> None:
 
     failure_inbox = rows[(rows["public_pass"].astype(int) == 0) | (rows["hidden_pass"].astype(int) == 0)].copy()
     st.subheader("Failure Inbox")
+    section_hint("All runs that failed either visible or hidden tests. 'hidden fail' = false-green (public green, hidden red) — the trust-gap signal. 'fail' = public red.")
     if failure_inbox.empty:
         st.success("No failing runs in the current filter.")
     else:
@@ -666,6 +681,7 @@ def render_runs(rows: pd.DataFrame) -> None:
     model_values = _order_filter_values_by_latest(rows, "model")
     if len(model_values) >= 2:
         st.subheader("Model Compare")
+        section_hint("Side-by-side latest-run comparison per scenario. Delta = B's hidden_pass minus A's. Positive = B wins, negative = A wins. Use this to see where models disagree on contracts.")
         compare_cols = st.columns(2)
         model_a = compare_cols[0].selectbox("Model A", model_values, index=0)
         model_b = compare_cols[1].selectbox("Model B", model_values, index=1)
@@ -703,6 +719,7 @@ def render_runs(rows: pd.DataFrame) -> None:
 
 def render_challenge_card(run: pd.Series) -> None:
     st.subheader("Challenge Card")
+    section_hint("Scenario intent and acceptance design. Expected behavior, success signals, and failure modes describe what the hidden test checks — but the hidden test source is never shown to the model.")
     st.markdown(f"**{run['scenario_title']}**")
     st.write(run["vibe"] or run["scenario"])
     card_cols = st.columns(4)
@@ -736,12 +753,13 @@ def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
         row["run_id"]: f"{run_label(row['run_id'], row['started_at'])} - {row['scenario']} - {row['model']}"
         for _, row in sorted_rows.iterrows()
     }
-    selected_run_id = st.selectbox("Inspect run", options, format_func=lambda rid: labels.get(rid, rid))
+    selected_run_id = st.selectbox("Inspect run", options, format_func=lambda rid: labels.get(rid, rid), help="Newest run is selected by default. Pick any run to inspect its prompt, tests, OpenCode trace, and patch.")
     run = rows[rows["run_id"] == selected_run_id].iloc[0]
 
     render_challenge_card(run)
 
     st.subheader("Run Detail")
+    section_hint("Core metadata for this attempt. Outcome = pass / hidden fail / fail. Artifacts dir holds the raw files on disk.")
     detail_cols = st.columns(4)
     detail_cols[0].write(f"Outcome: `{pass_status(run['public_pass'], run['hidden_pass'])}`")
     detail_cols[1].write(f"Model: `{run['model']}`")
@@ -805,6 +823,7 @@ def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
 
     prompt_tab, tests_tab, trace_tab, patch_tab = st.tabs(["Prompt", "Tests", "OpenCode Trace", "Patch"])
     with prompt_tab:
+        section_hint("The exact prompt sent to the model. In sparse mode this is minimal; in contract_visible mode it includes acceptance criteria. Hidden test source is never included.")
         st.code(read_artifact(run["prompt_path"], run["prompt"]), language="text")
         try:
             command = json.loads(run["opencode_command"])
@@ -813,27 +832,31 @@ def render_inspector(rows: pd.DataFrame, default_db_path: Path) -> None:
         st.caption("OpenCode command")
         st.code(command if isinstance(command, str) else " ".join(command), language="bash")
     with tests_tab:
+        section_hint("Three test stages: Baseline (before patch, should fail), Public (visible to model, should pass after patch), Hidden (injected after model exits, measures real acceptance).")
         output_cols = st.columns(3)
         with output_cols[0]:
-            st.caption("Baseline")
+            st.caption("Baseline — before patch (should fail)")
             st.code(read_artifact(run["baseline_output_path"], run["baseline_output"]), language="text")
         with output_cols[1]:
-            st.caption("Public")
+            st.caption("Public — visible to model (should pass)")
             st.code(read_artifact(run["public_output_path"], run["public_output"]), language="text")
         with output_cols[2]:
-            st.caption("Hidden")
+            st.caption("Hidden — injected after exit (real acceptance)")
             st.code(read_artifact(run["hidden_output_path"], run["hidden_output"]), language="text")
     with trace_tab:
+        section_hint("Raw OpenCode stdout (JSON events) and stderr. Use this to diagnose agent loops, tool calls, provider errors, or no-output timeouts.")
         st.caption("stdout / JSON events")
         st.code(read_artifact(run["opencode_stdout_path"], run["opencode_stdout"]), language="json")
         st.caption("stderr")
         st.code(read_artifact(run["opencode_stderr_path"], run["opencode_stderr"]), language="text")
     with patch_tab:
+        section_hint("The exact diff the model produced. Compare against hidden output to see which contract was missed.")
         st.code(read_artifact(run["patch_path"], run["patch"] or "<empty patch>"), language="diff")
 
 
 def render_evidence(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFrame) -> None:
     st.subheader("Evaluator Reviews")
+    section_hint("Evaluator-agent diagnoses of false-green runs. Each review classifies why the model missed the hidden contract (root cause), rates patch quality and debug discipline, and recommends what the model should have done.")
     if reviews.empty:
         st.info("No evaluator reviews indexed yet. Run `ci-vibe-evaluate ingest` or evaluator batches with `--write-db`.")
     else:
@@ -864,6 +887,7 @@ def render_evidence(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFr
             )
 
     st.subheader("Benchmark Quality Audit")
+    section_hint("Per-scenario fairness metadata: audit_status (accepted/quarantine), contract visibility, inferability, and impact weight. Quarantined scenarios are excluded from headline metrics. This is how we keep the benchmark honest.")
     if audits.empty:
         st.warning("No scenario audit rows found.")
     else:
@@ -919,6 +943,7 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
                 review_by_run[run_id] = review_row.to_dict()
 
     st.subheader("Matrix Definition")
+    section_hint("The cells defined by this matrix config: model x pack x prompt-mode. Each cell has its own SQLite DB and runs directory. This is what was (or will be) executed.")
     st.write(f"**Matrix ID:** `{config.matrix_id}`")
     if config.description:
         st.caption(config.description)
@@ -936,6 +961,7 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
     st.dataframe(pd.DataFrame(cell_defs), use_container_width=True, hide_index=True)
 
     st.subheader("Evidence Health")
+    section_hint("Per-cell coverage: expected attempts vs rows stored vs completed vs runtime failures. 'complete' = all expected rows done with no runtime failures. 'missing' = DB not found. 'partial' = some scenarios still pending. 'mixed' = both completed and runtime failures.")
     health_rows = []
     for cell in cells:
         status = summarize_cell_status(cell)
@@ -956,6 +982,7 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
     st.dataframe(pd.DataFrame(health_rows), use_container_width=True, hide_index=True)
 
     st.subheader("Completed-Attempt Scorecard")
+    section_hint("Capability metrics for completed attempts only (excludes timeouts, provider errors, no-output stalls). Trust gap = public pass minus hidden pass. False-green rate = public-green runs that failed hidden / all public-green runs.")
     scorecard_rows = []
     for cell in cells:
         cell_rows = [
@@ -982,6 +1009,7 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
     st.dataframe(pd.DataFrame(scorecard_rows), use_container_width=True, hide_index=True)
 
     st.subheader("Operational Reliability")
+    section_hint("Runtime reliability per cell: how often the model/provider/runner path produced a usable attempt. agent_timeout = started but didn't finish. no_output_timeout = no stdout at all. provider_config_error = model not found, auth, tools unsupported. These are NOT semantic model failures.")
     reliability_rows = []
     for cell in cells:
         cell_rows = [
@@ -1013,6 +1041,7 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
     st.dataframe(pd.DataFrame(reliability_rows), use_container_width=True, hide_index=True)
 
     st.subheader("False-Green Inbox")
+    section_hint("Every public-green/hidden-red row: CI looked fixed but the real contract was missed. audit_status shows fairness classification. evaluator_verdict shows whether an evaluator-agent review exists. These are the trust-gap signals to investigate first.")
     false_green_rows = []
     for row in run_records:
         if classify_row(row) != "false_green":
@@ -1038,16 +1067,18 @@ def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_p
         st.success("No false-green rows in the current data.")
 
     st.subheader("Evaluator Review Coverage")
+    section_hint("How many false-greens have been reviewed by the evaluator agent. Low coverage means the report's false-green claims are not yet independently diagnosed. Run ci-vibe-matrix evaluate to close the gap.")
     total_false_greens = len(false_green_rows)
     reviewed = sum(1 for item in false_green_rows if item["evaluator_verdict"] != "not_reviewed")
     cols = st.columns(3)
-    cols[0].metric("False-Greens", total_false_greens)
-    cols[1].metric("Reviewed", reviewed)
-    cols[2].metric("Coverage", f"{percent(reviewed / total_false_greens) if total_false_greens else '0.0%'}")
+    cols[0].metric("False-Greens", total_false_greens, help="Total public-green/hidden-red rows in the current data.")
+    cols[1].metric("Reviewed", reviewed, help="False-greens with an indexed evaluator-agent review.")
+    cols[2].metric("Coverage", f"{percent(reviewed / total_false_greens) if total_false_greens else '0.0%'}", help="Share of false-greens that have been evaluator-reviewed. Aim for 100% before publishing claims.")
 
 
 def render_exports(rows: pd.DataFrame, audits: pd.DataFrame) -> None:
     st.subheader("Exports")
+    section_hint("Download the filtered result set for offline analysis or sharing. Run table = clean CSV of key columns. Raw rows = everything including OpenCode stdout/stderr. Report = Markdown summary with trust-gap metrics.")
     st.write("Export the filtered result set for deeper review or sharing with another local agent.")
     run_csv = build_run_table(rows).to_csv(index=False)
     raw_csv = rows.to_csv(index=False)
@@ -1152,15 +1183,15 @@ def main() -> None:
         scenario_options = ["all", *_order_filter_values_by_latest(runs, "scenario")]
         model_options = ["all", *_order_filter_values_by_latest(runs, "model")]
         prompt_mode_options = ["all", *_order_filter_values_by_latest(runs, "prompt_mode")]
-        selected_pack = st.selectbox("Challenge pack", pack_options)
-        selected_category = st.selectbox("Category", category_options)
-        selected_difficulty = st.selectbox("Difficulty", difficulty_options)
-        selected_scenario = st.selectbox("Scenario", scenario_options)
-        selected_model = st.selectbox("Model", model_options)
-        selected_prompt_mode = st.selectbox("Prompt mode", prompt_mode_options)
-        latest_only = st.checkbox("Latest per model+scenario+prompt mode", value=False)
-        accepted_only = st.checkbox("Audited accepted scenarios only", value=False)
-        public_green_hidden_red_only = st.checkbox("Public-green / hidden-red only", value=False)
+        selected_pack = st.selectbox("Challenge pack", pack_options, help="Filter by challenge pack (ci_forensics, product_workflows, data_semantics, maintenance_value). 'all' = no filter.")
+        selected_category = st.selectbox("Category", category_options, help="Filter by challenge category (dependency-boundary, financial, security, etc.). 'all' = no filter.")
+        selected_difficulty = st.selectbox("Difficulty", difficulty_options, help="Filter by scenario difficulty rating. 'all' = no filter.")
+        selected_scenario = st.selectbox("Scenario", scenario_options, help="Filter to a single scenario. Ordered by latest run. 'all' = no filter.")
+        selected_model = st.selectbox("Model", model_options, help="Filter by model under test. Ordered by latest run. 'all' = no filter.")
+        selected_prompt_mode = st.selectbox("Prompt mode", prompt_mode_options, help="sparse = minimal prompt (behavior microscope). contract_visible = explicit acceptance criteria. audit_visible = full intent (debug only).")
+        latest_only = st.checkbox("Latest per model+scenario+prompt mode", value=False, help="Keep only the most recent run per (model, scenario, prompt_mode) combination. Useful for fair comparison without re-run noise.")
+        accepted_only = st.checkbox("Audited accepted scenarios only", value=False, help="Exclude quarantined or revise-status scenarios from headline metrics. Keeps the benchmark honest.")
+        public_green_hidden_red_only = st.checkbox("Public-green / hidden-red only", value=False, help="Show only false-green rows: public tests passed but hidden acceptance failed. This is the trust-gap signal.")
         show_weighted = st.checkbox("Show severity-weighted metric", value=True)
 
     filtered = runs.copy()

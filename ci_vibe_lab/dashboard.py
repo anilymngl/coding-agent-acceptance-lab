@@ -29,6 +29,39 @@ from ci_vibe_lab.matrix import (
 
 
 DEFAULT_DB = os.environ.get("CI_VIBE_DB", "data/results.sqlite")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MATRIX_CONFIG_GLOB = "configs/matrix/*.json"
+SQLITE_GLOB = "data/**/*.sqlite"
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def discover_matrix_configs() -> list[Path]:
+    root = REPO_ROOT
+    paths = sorted(root.glob(MATRIX_CONFIG_GLOB))
+    return [p.relative_to(root) for p in paths]
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def discover_sqlite_dbs() -> list[Path]:
+    root = REPO_ROOT
+    paths = sorted(root.glob(SQLITE_GLOB))
+    return [p.relative_to(root) for p in paths]
+
+
+def db_paths_from_matrix_config(config_path: Path) -> list[Path]:
+    try:
+        config = load_config(REPO_ROOT / config_path)
+        cells = expand_cells(config)
+        return [cell.db_path for cell in cells]
+    except Exception:
+        return []
+
+
+def db_path_label(path: Path) -> str:
+    label = str(path)
+    exists = (REPO_ROOT / path).exists()
+    marker = "" if exists else " (missing)"
+    return f"{label}{marker}"
 
 
 def apply_base_styles() -> None:
@@ -791,13 +824,17 @@ def render_evidence(rows: pd.DataFrame, audits: pd.DataFrame, reviews: pd.DataFr
 def render_matrix_tab(runs: pd.DataFrame, reviews: pd.DataFrame, matrix_config_path: str) -> None:
     if not matrix_config_path:
         st.info(
-            "Provide a matrix config path in the sidebar to load cell-aware views. "
-            "Example: `configs/matrix/local-gemma4-maintenance.json`"
+            "Select a matrix config in the sidebar (Data Source > Matrix config) "
+            "to load cell-aware views."
         )
         return
 
+    config_path = Path(matrix_config_path)
+    if not config_path.is_absolute():
+        config_path = REPO_ROOT / config_path
+
     try:
-        config = load_config(Path(matrix_config_path))
+        config = load_config(config_path)
         cells = expand_cells(config)
     except (SystemExit, Exception) as exc:
         st.error(f"Could not load matrix config: {exc}")
@@ -961,38 +998,103 @@ def main() -> None:
     st.title("CI Vibe Lab")
     st.caption("Local coding-agent challenge runs, patches, traces, and human review in one place.")
 
-    db_input = st.sidebar.text_input("SQLite database(s)", value=str(DEFAULT_DB))
-    db_paths = parse_db_paths(db_input)
+    with st.sidebar:
+        st.markdown("### Data Source")
+
+        matrix_configs = discover_matrix_configs()
+        sqlite_dbs = discover_sqlite_dbs()
+
+        env_db = os.environ.get("CI_VIBE_DB", "")
+        env_dbs = [Path(p.strip()) for p in env_db.split(",") if p.strip()] if env_db else []
+
+        source_mode = st.radio(
+            "How to load data",
+            options=["Matrix config", "Auto-discover DBs", "Manual"],
+            index=0 if matrix_configs else (1 if sqlite_dbs else 2),
+            horizontal=True,
+            help="Matrix config: pick a JSON config and DBs are auto-derived. "
+            "Auto-discover: pick from SQLite files found under data/. "
+            "Manual: type comma-separated paths.",
+        )
+
+        matrix_config_path = ""
+        if source_mode == "Matrix config":
+            if not matrix_configs:
+                st.warning("No matrix configs found in `configs/matrix/*.json`. Switch to another mode.")
+            else:
+                config_options = {p.name: p for p in matrix_configs}
+                selected_name = st.selectbox(
+                    "Matrix config",
+                    options=list(config_options.keys()),
+                    help="JSON configs discovered in configs/matrix/.",
+                )
+                matrix_config_path = str(config_options[selected_name])
+                derived_dbs = db_paths_from_matrix_config(config_options[selected_name])
+                if derived_dbs:
+                    existing = [p for p in derived_dbs if (REPO_ROOT / p).exists()]
+                    st.caption(f"Auto-derived {len(derived_dbs)} DB path(s) ({len(existing)} exist on disk).")
+                    for db in derived_dbs:
+                        label = db_path_label(db)
+                        if "(missing)" in label:
+                            st.caption(f"  - {label}")
+                    db_paths = derived_dbs
+                else:
+                    st.error("Could not derive DB paths from this config.")
+                    db_paths = []
+        elif source_mode == "Auto-discover DBs":
+            if not sqlite_dbs:
+                st.warning("No SQLite files found under `data/`. Run a matrix or single-model eval first.")
+                db_paths = []
+            else:
+                existing = [p for p in sqlite_dbs if (REPO_ROOT / p).exists()]
+                st.caption(f"Found {len(sqlite_dbs)} SQLite file(s) under `data/`.")
+                db_options = {db_path_label(p): p for p in sqlite_dbs}
+                selected_labels = st.multiselect(
+                    "Select databases",
+                    options=list(db_options.keys()),
+                    default=[db_path_label(p) for p in existing[:3]] if existing else [],
+                )
+                db_paths = [db_options[label] for label in selected_labels]
+        else:
+            manual_default = env_db if env_db else str(DEFAULT_DB)
+            db_input = st.text_input("SQLite database(s)", value=manual_default, help="Comma-separated paths.")
+            db_paths = parse_db_paths(db_input)
+
+        if not db_paths:
+            db_paths = [Path(DEFAULT_DB)]
+
+        db_paths = [p if p.is_absolute() else (REPO_ROOT / p) for p in db_paths]
+
     runs = load_runs(db_paths)
     audits = load_audits(db_paths)
     reviews = load_reviews(db_paths)
 
     if runs.empty:
-        st.info("No runs found.")
+        st.info("No runs found in the selected database(s).")
         st.code(
-            "uv run python -m ci_vibe_lab.runner run --scenario all "
-            "--model provider/model --agent build --auto-approve",
+            "uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json",
             language="bash",
         )
         return
 
-    pack_options = ["all", *sorted(runs["challenge_pack"].dropna().unique())]
-    category_options = ["all", *sorted(runs["category"].dropna().unique())]
-    difficulty_options = ["all", *sorted(runs["difficulty"].dropna().unique())]
-    scenario_options = ["all", *sorted(runs["scenario"].dropna().unique())]
-    model_options = ["all", *sorted(runs["model"].dropna().unique())]
-    prompt_mode_options = ["all", *sorted(runs.get("prompt_mode", pd.Series(dtype=str)).dropna().unique())]
-    selected_pack = st.sidebar.selectbox("Challenge pack", pack_options)
-    selected_category = st.sidebar.selectbox("Category", category_options)
-    selected_difficulty = st.sidebar.selectbox("Difficulty", difficulty_options)
-    selected_scenario = st.sidebar.selectbox("Scenario", scenario_options)
-    selected_model = st.sidebar.selectbox("Model", model_options)
-    selected_prompt_mode = st.sidebar.selectbox("Prompt mode", prompt_mode_options)
-    latest_only = st.sidebar.checkbox("Latest per model+scenario+prompt mode", value=False)
-    accepted_only = st.sidebar.checkbox("Audited accepted scenarios only", value=False)
-    public_green_hidden_red_only = st.sidebar.checkbox("Public-green / hidden-red only", value=False)
-    show_weighted = st.sidebar.checkbox("Show severity-weighted metric", value=True)
-    matrix_config_path = st.sidebar.text_input("Matrix config (optional)", value="", help="Path to a JSON matrix config for the Matrix tab.")
+    with st.sidebar:
+        st.markdown("### Filters")
+        pack_options = ["all", *sorted(runs["challenge_pack"].dropna().unique())]
+        category_options = ["all", *sorted(runs["category"].dropna().unique())]
+        difficulty_options = ["all", *sorted(runs["difficulty"].dropna().unique())]
+        scenario_options = ["all", *sorted(runs["scenario"].dropna().unique())]
+        model_options = ["all", *sorted(runs["model"].dropna().unique())]
+        prompt_mode_options = ["all", *sorted(runs.get("prompt_mode", pd.Series(dtype=str)).dropna().unique())]
+        selected_pack = st.selectbox("Challenge pack", pack_options)
+        selected_category = st.selectbox("Category", category_options)
+        selected_difficulty = st.selectbox("Difficulty", difficulty_options)
+        selected_scenario = st.selectbox("Scenario", scenario_options)
+        selected_model = st.selectbox("Model", model_options)
+        selected_prompt_mode = st.selectbox("Prompt mode", prompt_mode_options)
+        latest_only = st.checkbox("Latest per model+scenario+prompt mode", value=False)
+        accepted_only = st.checkbox("Audited accepted scenarios only", value=False)
+        public_green_hidden_red_only = st.checkbox("Public-green / hidden-red only", value=False)
+        show_weighted = st.checkbox("Show severity-weighted metric", value=True)
 
     filtered = runs.copy()
     if selected_pack != "all":

@@ -182,11 +182,13 @@ def latest_by_model_and_scenario(rows: pd.DataFrame, model: str) -> pd.DataFrame
     if model_rows.empty:
         return model_rows
     model_rows = model_rows.sort_values("started_at", ascending=False)
-    return model_rows.drop_duplicates(subset=["scenario"], keep="first")
+    subset = ["scenario", "prompt_mode"] if "prompt_mode" in model_rows.columns else ["scenario"]
+    return model_rows.drop_duplicates(subset=subset, keep="first")
 
 
 def latest_per_model_scenario_frame(rows: pd.DataFrame) -> pd.DataFrame:
-    return rows.sort_values("started_at", ascending=False).drop_duplicates(subset=["model", "scenario"], keep="first")
+    subset = ["model", "scenario", "prompt_mode"] if "prompt_mode" in rows.columns else ["model", "scenario"]
+    return rows.sort_values("started_at", ascending=False).drop_duplicates(subset=subset, keep="first")
 
 
 def audit_weight_map(audits: pd.DataFrame) -> dict[str, int]:
@@ -815,12 +817,14 @@ def main() -> None:
     difficulty_options = ["all", *sorted(runs["difficulty"].dropna().unique())]
     scenario_options = ["all", *sorted(runs["scenario"].dropna().unique())]
     model_options = ["all", *sorted(runs["model"].dropna().unique())]
+    prompt_mode_options = ["all", *sorted(runs.get("prompt_mode", pd.Series(dtype=str)).dropna().unique())]
     selected_pack = st.sidebar.selectbox("Challenge pack", pack_options)
     selected_category = st.sidebar.selectbox("Category", category_options)
     selected_difficulty = st.sidebar.selectbox("Difficulty", difficulty_options)
     selected_scenario = st.sidebar.selectbox("Scenario", scenario_options)
     selected_model = st.sidebar.selectbox("Model", model_options)
-    latest_only = st.sidebar.checkbox("Latest per model+scenario", value=False)
+    selected_prompt_mode = st.sidebar.selectbox("Prompt mode", prompt_mode_options)
+    latest_only = st.sidebar.checkbox("Latest per model+scenario+prompt mode", value=False)
     accepted_only = st.sidebar.checkbox("Audited accepted scenarios only", value=False)
     public_green_hidden_red_only = st.sidebar.checkbox("Public-green / hidden-red only", value=False)
     show_weighted = st.sidebar.checkbox("Show severity-weighted metric", value=True)
@@ -836,6 +840,8 @@ def main() -> None:
         filtered = filtered[filtered["scenario"] == selected_scenario]
     if selected_model != "all":
         filtered = filtered[filtered["model"] == selected_model]
+    if selected_prompt_mode != "all" and "prompt_mode" in filtered.columns:
+        filtered = filtered[filtered["prompt_mode"] == selected_prompt_mode]
     if accepted_only and not audits.empty:
         accepted_scenarios = set(
             audits[audits["audit_status"].map(is_headline_accepted_audit_status)]["scenario"].astype(str)

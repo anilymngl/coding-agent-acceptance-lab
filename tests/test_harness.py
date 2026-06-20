@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
 from ci_vibe_lab.db import connect, insert_run, upsert_evaluator_review
 from ci_vibe_lab.analysis import (
     compute_false_green_breakdown,
@@ -18,7 +20,7 @@ from ci_vibe_lab.analysis import (
     is_headline_accepted_audit_status,
     select_best_patches,
 )
-from ci_vibe_lab.dashboard import load_runs as load_dashboard_runs
+from ci_vibe_lab.dashboard import latest_per_model_scenario_frame, load_runs as load_dashboard_runs
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
     extract_scenario_from_packet,
@@ -376,6 +378,27 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(set(rows["run_id"]), {"run-a", "run-b"})
             self.assertIn("source_db", rows.columns)
             self.assertEqual(set(rows["source_db"]), {str(db_a), str(db_b)})
+
+    def test_latest_dashboard_rows_keep_prompt_modes_separate(self) -> None:
+        rows = [
+            {
+                "model": "model/a",
+                "scenario": "same",
+                "prompt_mode": "sparse",
+                "started_at": "2026-01-01T00:00:00+00:00",
+            },
+            {
+                "model": "model/a",
+                "scenario": "same",
+                "prompt_mode": "contract_visible",
+                "started_at": "2026-01-01T00:00:01+00:00",
+            },
+        ]
+
+        latest = latest_per_model_scenario_frame(pd.DataFrame(rows))
+
+        self.assertEqual(len(latest), 2)
+        self.assertEqual(set(latest["prompt_mode"]), {"sparse", "contract_visible"})
 
     def test_xray_report_excludes_quarantined_rows_from_headline_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

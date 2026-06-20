@@ -1029,6 +1029,83 @@ def make_ultimate_report(
     return "\n".join(lines) + "\n"
 
 
+def make_scenario_audit_report(*, db_paths: list[Path]) -> str:
+    audits = load_audits_from_dbs(db_paths)
+    audit_rows = [audits[scenario] for scenario in sorted(audits)]
+    status_counts = Counter(str(row.get("audit_status", "")) for row in audit_rows)
+    lane_counts = Counter(str(row.get("recommended_lane", "")) for row in audit_rows)
+    visibility_counts = Counter(str(row.get("contract_visibility", "")) for row in audit_rows)
+    fairness_counts = Counter(str(row.get("fairness_classification", "")) for row in audit_rows)
+    headline_count = sum(
+        1 for row in audit_rows if is_headline_accepted_audit_status(row.get("audit_status", "accepted"))
+    )
+
+    lines = [
+        "# Scenario Audit Report",
+        "",
+        "## Summary",
+        "",
+        "This report lists scenario-level audit metadata used to decide which rows can appear in",
+        "headline sparse-lane metrics and which scenarios need contract-visible or quarantine handling.",
+        "",
+        f"- Scenario audit rows: {len(audit_rows)}",
+        f"- Headline accepted sparse-compatible rows: {headline_count}",
+        f"- Source DBs: {', '.join(str(path) for path in db_paths)}",
+        "",
+        "## Status Counts",
+        "",
+        "| Audit Status | Scenarios |",
+        "|---|---:|",
+    ]
+    for status, count in sorted(status_counts.items()):
+        lines.append(f"| `{status or 'blank'}` | {count} |")
+
+    lines.extend(["", "## Recommended Lane Counts", "", "| Lane | Scenarios |", "|---|---:|"])
+    for lane, count in sorted(lane_counts.items()):
+        lines.append(f"| `{lane or 'blank'}` | {count} |")
+
+    lines.extend(["", "## Contract Visibility Counts", "", "| Contract Visibility | Scenarios |", "|---|---:|"])
+    for visibility, count in sorted(visibility_counts.items()):
+        lines.append(f"| `{visibility or 'blank'}` | {count} |")
+
+    lines.extend(["", "## Fairness Classification Counts", "", "| Fairness Classification | Scenarios |", "|---|---:|"])
+    for classification, count in sorted(fairness_counts.items()):
+        lines.append(f"| `{classification or 'blank'}` | {count} |")
+
+    lines.extend(
+        [
+            "",
+            "## Scenario Audit Table",
+            "",
+            "| Scenario | Status | Lane | Visibility | Fairness | Impact | Inferability | Prompt Sufficiency | Hidden Legitimacy | Needs Prompt | Needs Hidden | Notes |",
+            "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---|",
+        ]
+    )
+    for row in audit_rows:
+        lines.append(
+            f"| `{row.get('scenario', '')}` | `{row.get('audit_status', '')}` | "
+            f"`{row.get('recommended_lane', '')}` | `{row.get('contract_visibility', '')}` | "
+            f"`{row.get('fairness_classification', '')}` | {row.get('impact_weight', '')} | "
+            f"{row.get('inferability_score', '')} | {row.get('public_prompt_sufficiency_score', '')} | "
+            f"{row.get('hidden_legitimacy_score', '')} | {row.get('requires_prompt_revision', '')} | "
+            f"{row.get('requires_hidden_revision', '')} | {str(row.get('audit_notes', '')).replace('|', '/')} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Reading Rules",
+            "",
+            "- `accepted` is legacy-compatible and currently treated as sparse-headline accepted.",
+            "- `accepted_contract_visible` is diagnostic and must not be merged into sparse headline metrics.",
+            "- `quarantine` rows must be excluded from headline metrics.",
+            "- `edge_inference_miss` and `underexposed_contract` should be reported separately from fair false-greens.",
+            "",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def make_xray_report(
     *,
     db_paths: list[Path],
@@ -1301,6 +1378,10 @@ def build_parser() -> argparse.ArgumentParser:
     ultimate.add_argument("--partial-db", action="append", help="Partial-control DB, such as GLM smoke runs.")
     ultimate.add_argument("--out", required=True, help="Markdown output path.")
 
+    scenario_audit = subparsers.add_parser("scenario-audit", help="Generate a scenario audit metadata report.")
+    scenario_audit.add_argument("--db", action="append", required=True, help="SQLite result database. Can be provided more than once.")
+    scenario_audit.add_argument("--out", required=True, help="Markdown output path.")
+
     return parser
 
 
@@ -1354,6 +1435,14 @@ def main(argv: list[str] | None = None) -> int:
             partial_db_paths=partial_db_paths,
             out_path=out_path,
         )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+        print(f"Wrote {out_path.resolve()}")
+        return 0
+    if args.command == "scenario-audit":
+        db_paths = [Path(path) for path in args.db]
+        report = make_scenario_audit_report(db_paths=db_paths)
+        out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(report, encoding="utf-8")
         print(f"Wrote {out_path.resolve()}")

@@ -31,7 +31,7 @@ from ci_vibe_lab.evaluator import (
     validate_working_board,
     working_board_template,
 )
-from ci_vibe_lab.report import make_ultimate_report, make_value_report, make_xray_report
+from ci_vibe_lab.report import make_scenario_audit_report, make_ultimate_report, make_value_report, make_xray_report
 from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command, run_one
 from ci_vibe_lab.scenarios import (
     TEST_COMMAND,
@@ -693,6 +693,21 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("## Reproduce This Report", report)
             self.assertIn("`billing_proration`", report)
             self.assertIn(str(north_db), report)
+
+    def test_scenario_audit_report_renders_taxonomy_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "results.sqlite"
+            with connect(db_path):
+                pass
+
+            report = make_scenario_audit_report(db_paths=[db_path])
+
+            self.assertIn("# Scenario Audit Report", report)
+            self.assertIn("Contract Visibility Counts", report)
+            self.assertIn("Fairness Classification Counts", report)
+            self.assertIn("`batch_splitter_utility`", report)
+            self.assertIn("`explicit`", report)
+            self.assertIn("Reading Rules", report)
 
 
 class EvaluatorTests(unittest.TestCase):

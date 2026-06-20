@@ -24,6 +24,7 @@ from ci_vibe_lab.scenarios import PROMPT_MODES, pack_ids, scenario_ids
 
 DEFAULT_MATRIX_OUTPUT_ROOT = Path("data/matrix")
 DEFAULT_MATRIX_RUNS_ROOT = Path("runs/matrix")
+DEFAULT_EVALUATOR_MODEL = "opencode-go/glm-5.2"
 SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROVIDER_ERROR_MARKERS = (
     "providermodelnotfounderror",
@@ -879,7 +880,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run evaluator-agent reviews over false-green rows in matrix cell DBs.",
     )
     evaluate.add_argument("config")
-    evaluate.add_argument("--model", required=True, help="Evaluator OpenCode model (e.g. deepseek/deepseek-v4-pro).")
+    evaluate.add_argument(
+        "--model",
+        default=DEFAULT_EVALUATOR_MODEL,
+        help=f"Evaluator OpenCode model. Defaults to {DEFAULT_EVALUATOR_MODEL} (SOTA).",
+    )
     evaluate.add_argument("--agent", help="Optional OpenCode agent name for the evaluator.")
     evaluate.add_argument("--timeout", type=int, default=900, help="Hard process timeout per evaluator cell.")
     evaluate.add_argument("--max-rows", type=int, help="Evaluate at most this many false-green rows per cell.")

@@ -73,8 +73,7 @@ uv run ci-vibe-matrix plan configs/matrix/local-gemma4-maintenance.json
 uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json
 
 # Run evaluator reviews over false-greens
-uv run ci-vibe-matrix evaluate configs/matrix/local-gemma4-maintenance.json \
-  --model deepseek/deepseek-v4-pro --loose
+uv run ci-vibe-matrix evaluate configs/matrix/local-gemma4-maintenance.json --loose
 
 # Generate the comparison report with evals
 uv run ci-vibe-report leaderboard \

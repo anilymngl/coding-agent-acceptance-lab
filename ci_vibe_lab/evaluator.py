@@ -1242,7 +1242,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Only evaluate runs where public tests passed. Useful for expensive public-green/hidden-red review.",
     )
-    run.add_argument("--model", help="Optional OpenCode model for evaluator-agent review.")
+    run.add_argument("--model", default="opencode-go/glm-5.2", help="OpenCode model for evaluator-agent review. Defaults to opencode-go/glm-5.2 (SOTA).")
     run.add_argument("--agent", help="Optional OpenCode agent name for evaluator-agent review.")
     run.add_argument("--opencode-bin", default="opencode")
     run.add_argument("--timeout", type=int, default=900)

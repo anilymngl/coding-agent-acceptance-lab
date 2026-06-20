@@ -20,6 +20,7 @@ Fresh DBs:
 
 - `data/fresh-2026-06-20-north-mini-sparse.sqlite`
 - `data/fresh-2026-06-20-north-mini-contract.sqlite`
+- `data/fresh-2026-06-20-opencode-smoke.sqlite`
 
 Fresh artifact roots:
 
@@ -166,6 +167,28 @@ Verdict:
 - It is currently an environment/provider availability sample, not a North Mini capability sample.
 - The lane should be rerun only after a smoke prompt confirms OpenCode emits a stream normally again.
 
+## OpenCode Smoke Check
+
+Smoke experiment:
+
+- `20260620T052527Z-custom-e8f05727`
+
+Smoke row:
+
+- `20260620T052527Z-docs_cli_sync-093e391d`
+
+Result:
+
+- `opencode_exit_code=124`
+- `duration_seconds=30.2`
+- `opencode_stdout` length: `0`
+- `opencode_stderr`: `OpenCode produced no stdout/stderr within 30 seconds.`
+
+Verdict:
+
+- The model invocation path was still unhealthy after the contract-visible lane was stopped.
+- Do not continue full contract/control lanes until a smoke run emits a normal OpenCode event stream.
+
 ## Harness Verdict
 
 Facts:
@@ -186,7 +209,7 @@ Recommendations:
 
 Use these conditions before continuing the full evidence pack:
 
-1. Run a single OpenCode smoke on a tiny task with `--first-output-timeout 120`.
+1. Run a single OpenCode smoke on a tiny task with `--first-output-timeout 30` or `120`.
 2. If it emits normally, run contract-visible `maintenance_value` with `--runs 1`, `--delay-seconds 60`, and `--first-output-timeout 120`.
 3. If contract-visible is healthy, run the DeepSeek control lane under the same pacing and first-output policy.
 4. Generate the final report only after all compared lanes have healthy non-stall coverage.

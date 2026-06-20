@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import selectors
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -172,26 +174,103 @@ def build_opencode_command(
     return command
 
 
-def run_opencode(command: list[str], workdir: Path, *, timeout: int) -> tuple[int, str, str]:
+def terminate_process_group(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
     try:
-        completed = subprocess.run(
-            command,
-            cwd=workdir,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-        return completed.returncode, completed.stdout, completed.stderr
-    except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout or ""
-        stderr = exc.stderr or ""
-        if not isinstance(stdout, str):
-            stdout = stdout.decode("utf-8", "replace")
-        if not isinstance(stderr, str):
-            stderr = stderr.decode("utf-8", "replace")
-        stderr += f"\nOpenCode timed out after {timeout} seconds."
-        return 124, stdout, stderr
+        os.killpg(process.pid, signal.SIGTERM)
+    except Exception:
+        process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except Exception:
+            process.kill()
+        process.wait(timeout=5)
+
+
+def run_opencode(
+    command: list[str],
+    workdir: Path,
+    *,
+    timeout: int,
+    first_output_timeout: float | None = None,
+) -> tuple[int, str, str]:
+    process = subprocess.Popen(
+        command,
+        cwd=workdir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
+    selector = selectors.DefaultSelector()
+    stdout_chunks: list[bytes] = []
+    stderr_chunks: list[bytes] = []
+    if process.stdout is not None:
+        selector.register(process.stdout, selectors.EVENT_READ, "stdout")
+    if process.stderr is not None:
+        selector.register(process.stderr, selectors.EVENT_READ, "stderr")
+
+    start = time.monotonic()
+    hard_deadline = start + timeout
+    first_output_deadline = (
+        start + first_output_timeout
+        if first_output_timeout is not None and first_output_timeout > 0
+        else None
+    )
+    saw_output = False
+    timeout_message = ""
+
+    try:
+        while selector.get_map():
+            now = time.monotonic()
+            if now >= hard_deadline:
+                timeout_message = f"\nOpenCode timed out after {timeout} seconds."
+                terminate_process_group(process)
+                break
+            if first_output_deadline is not None and not saw_output and now >= first_output_deadline:
+                timeout_message = (
+                    f"\nOpenCode produced no stdout/stderr within {first_output_timeout:g} seconds."
+                )
+                terminate_process_group(process)
+                break
+
+            wait_until = hard_deadline
+            if first_output_deadline is not None and not saw_output:
+                wait_until = min(wait_until, first_output_deadline)
+            events = selector.select(max(0.0, wait_until - now))
+            if not events:
+                continue
+            for key, _ in events:
+                stream = key.fileobj
+                chunk = os.read(stream.fileno(), 65536)
+                if not chunk:
+                    selector.unregister(stream)
+                    stream.close()
+                    continue
+                saw_output = True
+                if key.data == "stdout":
+                    stdout_chunks.append(chunk)
+                else:
+                    stderr_chunks.append(chunk)
+    finally:
+        selector.close()
+        for stream in (process.stdout, process.stderr):
+            if stream is not None and not stream.closed:
+                stream.close()
+
+    if not timeout_message:
+        return_code = process.wait()
+    else:
+        return_code = 124
+
+    stdout = b"".join(stdout_chunks).decode("utf-8", "replace")
+    stderr = b"".join(stderr_chunks).decode("utf-8", "replace")
+    if timeout_message:
+        stderr += timeout_message
+    return return_code, stdout, stderr
 
 
 def load_scenario_audit(db_path: Path, scenario_id: str) -> dict[str, object]:
@@ -213,6 +292,7 @@ def run_one(
     runs_dir: Path,
     opencode_bin: str,
     timeout: int,
+    first_output_timeout: float | None,
     auto_approve: bool,
     no_opencode: bool,
     json_format: bool,
@@ -249,6 +329,7 @@ def run_one(
             opencode_command,
             workdir,
             timeout=timeout,
+            first_output_timeout=first_output_timeout,
         )
 
     public = run_command(TEST_COMMAND, workdir, timeout=timeout)
@@ -472,6 +553,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 runs_dir=runs_dir,
                 opencode_bin=args.opencode_bin,
                 timeout=args.timeout,
+                first_output_timeout=args.first_output_timeout,
                 auto_approve=args.auto_approve,
                 no_opencode=args.no_opencode,
                 json_format=not args.default_format,
@@ -598,6 +680,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--runs-dir", default=str(DEFAULT_RUNS_DIR))
     run.add_argument("--opencode-bin", default=os.environ.get("OPENCODE_BIN", "opencode"))
     run.add_argument("--timeout", type=int, default=900)
+    run.add_argument(
+        "--first-output-timeout",
+        type=float,
+        default=None,
+        help="Fail an OpenCode attempt if it produces no stdout/stderr within this many seconds.",
+    )
     run.add_argument("--runs", type=int, default=1)
     run.add_argument(
         "--delay-seconds",

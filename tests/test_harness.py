@@ -5,6 +5,7 @@ import io
 import json
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,7 +33,15 @@ from ci_vibe_lab.evaluator import (
     working_board_template,
 )
 from ci_vibe_lab.report import make_scenario_audit_report, make_ultimate_report, make_value_report, make_xray_report
-from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command, run_one
+from ci_vibe_lab.runner import (
+    PatchStats,
+    estimate_review_minutes,
+    git_patch_stats,
+    inspect_run,
+    run_command,
+    run_one,
+    run_opencode,
+)
 from ci_vibe_lab.scenarios import (
     TEST_COMMAND,
     challenge_manifest,
@@ -317,6 +326,7 @@ class DatabaseTests(unittest.TestCase):
                 runs_dir=root / "runs",
                 opencode_bin="opencode",
                 timeout=30,
+                first_output_timeout=None,
                 auto_approve=False,
                 no_opencode=True,
                 json_format=True,
@@ -332,6 +342,19 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(row["scenario_audit_status"], "accepted")
             self.assertIn("Acceptance contract:", row["prompt"])
             self.assertNotIn("HiddenBatchSplitterTests", row["prompt"])
+
+    def test_run_opencode_first_output_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            return_code, stdout, stderr = run_opencode(
+                [sys.executable, "-c", "import time; time.sleep(5)"],
+                Path(temp_dir),
+                timeout=30,
+                first_output_timeout=0.2,
+            )
+
+        self.assertEqual(return_code, 124)
+        self.assertEqual(stdout, "")
+        self.assertIn("produced no stdout/stderr within 0.2 seconds", stderr)
 
     def test_trust_gap_metrics_handle_zero_public_pass(self) -> None:
         metrics = compute_trust_metrics(

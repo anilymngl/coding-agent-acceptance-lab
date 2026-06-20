@@ -1,0 +1,40 @@
+{
+  "matrix_id": "local-gemma4-e4b-qwen36-fallback-2026-06-20",
+  "description": "Fallback local Ollama comparison if Gemma 4 12B is not viable: Gemma 4 e4b vs Qwen3.6 27B on maintenance_value sparse and contract-visible lanes.",
+  "output_root": "data/matrix/local-gemma4-e4b-qwen36-fallback-2026-06-20",
+  "runs_root": "runs/matrix/local-gemma4-e4b-qwen36-fallback-2026-06-20",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "delay_seconds": 10,
+    "runs": 1,
+    "prompt_modes": ["sparse", "contract_visible"],
+    "packs": ["maintenance_value"],
+    "warmup": true,
+    "warmup_timeout": 900,
+    "warmup_keep_alive": "30m"
+  },
+  "models": [
+    {
+      "alias": "gemma4-e4b",
+      "id": "ollama/gemma4:e4b",
+      "runtime": "ollama",
+      "first_output_timeout": 120,
+      "notes": "Smallest configured Gemma 4 model. Baseline local iteration row."
+    },
+    {
+      "alias": "qwen36-27b",
+      "id": "ollama/qwen3.6:27b",
+      "runtime": "ollama",
+      "first_output_timeout": 300,
+      "notes": "Fallback if gemma4:12b is not viable. Ollama lists qwen3.6:27b as the smallest Qwen3.6 tag; this is a role-equivalent fallback, not a size-equivalent replacement for Gemma 4 12B."
+    }
+  ],
+  "packs": {
+    "maintenance_value": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

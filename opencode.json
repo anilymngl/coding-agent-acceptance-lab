@@ -36,6 +36,13 @@
             "context": 256000,
             "output": 8192
           }
+        },
+        "qwen3.6:27b": {
+          "name": "Qwen3.6 27B (Ollama fallback)",
+          "limit": {
+            "context": 256000,
+            "output": 8192
+          }
         }
       }
     }

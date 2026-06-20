@@ -24,17 +24,24 @@ The repository includes `opencode.json` with an Ollama provider:
 
 Recommended first opponents:
 
-1. `ollama/gemma4:31b`
-   - Installed Gemma 4 candidate on this machine.
-   - Use this as the immediate local opponent because the lane is Gemma 4 only.
-2. `ollama/gemma4:12b`
-   - Optional smaller Gemma 4 pull if 31B has slow first-token latency.
-3. `ollama/gemma4:e4b`
-   - Optional light Gemma 4 pull if the goal is quick iteration.
+1. `ollama/gemma4:e4b`
+   - Installed and validated as the fast local iteration model.
+   - Completed the sparse maintenance matrix at 5/10 hidden.
+2. `ollama/gemma4:31b`
+   - Installed and validated as the stronger local opponent.
+   - Completed the sparse maintenance matrix at 7/10 hidden.
+3. `ollama/gemma4:12b`
+   - Installed after upgrading Ollama to `0.30.10`.
+   - First sparse `docs_cli_sync` smoke produced no patch, but a direct rerun
+     passed public and hidden acceptance.
+   - Sparse smallest-two matrix completed with one `agent_timeout`, so report
+     12B as mixed local-runtime evidence.
 
-Do not mix Gemma 3, Qwen, DeepSeek, or other local models into this lane. If
-those rows exist from scratch testing, treat them as non-canonical and exclude
-them from Gemma 4 reports.
+Do not mix Gemma 3, Qwen, DeepSeek, or other local models into the Gemma-only
+lane. If 12B is not viable, use a separate fallback lane. The configured Qwen
+fallback is `ollama/qwen3.6:27b`, because Ollama currently lists `qwen3.6:27b`
+as the smallest Qwen3.6 tag. This is a role-equivalent coding-agent opponent,
+not a size-equivalent replacement for Gemma 4 12B.
 
 ## Local State Observed On 2026-06-20
 
@@ -54,6 +61,14 @@ Current machine checks:
   - public pass: `1`
   - hidden pass: `1`
   - patch: one-file README flag update
+- The matrix runner was then updated to prewarm Ollama before each model cell,
+  so model-load time is logged in `matrix-run.log` and not counted in SQLite
+  row `duration_seconds`.
+- The completed two-model sparse maintenance matrix used
+  `configs/matrix/local-gemma4-two-model.json`:
+  - `ollama/gemma4:e4b`: 8/10 public, 5/10 hidden, 3 false-greens, ~62s avg
+  - `ollama/gemma4:31b`: 10/10 public, 7/10 hidden, 3 false-greens, ~300s avg
+  - integrity: 120/120 artifacts present, all 6 false-greens evaluator-reviewed
 
 This means `ollama/gemma4:31b` is viable for the local Gemma 4 lane, but it has
 high first-token latency. Use `--first-output-timeout 300` for 31B unless a
@@ -65,12 +80,37 @@ Installed on this machine:
 
 - `gemma4:31b`
 - `gemma4:e4b`
+- `gemma4:12b`
+
+Observed on 2026-06-20:
+
+- `gemma4:12b` initially failed to pull under Ollama `0.21.0`.
+- Ollama was upgraded to `0.30.10`.
+- `ollama pull gemma4:12b` then succeeded.
+- `opencode models` lists `ollama/gemma4:12b`.
+- The first configured 12B smoke completed but produced no patch, so public and
+  hidden both failed. This is a no-edit smoke failure, not a false-green.
+- A direct 12B rerun passed public and hidden:
+  - DB: `data/local-ollama-gemma4-12b-smoke-rerun.sqlite`
+  - run id: `20260620T160915Z-docs_cli_sync-51838e9d`
+  - duration: 113.7s
+  - public pass: `1`
+  - hidden pass: `1`
+- The sparse smallest-two matrix then completed e4b and produced a mixed 12B
+  row set because `explicit_validation_matrix` hit the 900s agent timeout.
 
 Optional smaller Gemma 4 candidates to pull if 31B is too slow:
 
 ```bash
-ollama pull gemma4:e4b
 ollama pull gemma4:12b
+```
+
+Optional Qwen fallback if 12B is not viable:
+
+```bash
+ollama pull qwen3.6:27b
+uv run ci-vibe-matrix validate configs/matrix/local-gemma4-e4b-qwen36-fallback.json
+uv run ci-vibe-matrix plan configs/matrix/local-gemma4-e4b-qwen36-fallback.json
 ```
 
 Avoid pulling `gemma4:26b` unless the machine has enough unified memory and you
@@ -127,6 +167,96 @@ Observed on 2026-06-20:
 - public pass: `1`
 - hidden pass: `1`
 
+Use the 12B smoke before the local smallest-two matrix:
+
+```bash
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-12b-smoke.json --stop-on-failure
+```
+
+Observed on 2026-06-20:
+
+- model: `ollama/gemma4:12b`
+- config: `configs/matrix/local-gemma4-12b-smoke.json`
+- run id: `20260620T160329Z-docs_cli_sync-2d774a99`
+- warmup: 4.3s before timed `ci-vibe-run`
+- run duration: 55.1s in SQLite
+- OpenCode exit: `0`
+- public pass: `0`
+- hidden pass: `0`
+- patch: empty
+- classification: no-edit smoke failure; do not count as semantic success or
+  false-green
+
+A direct rerun against a separate diagnostic DB passed:
+
+- DB: `data/local-ollama-gemma4-12b-smoke-rerun.sqlite`
+- run id: `20260620T160915Z-docs_cli_sync-51838e9d`
+- duration: 113.7s
+- OpenCode exit: `0`
+- public pass: `1`
+- hidden pass: `1`
+- patch: one-file README flag update
+
+The full local-small comparison config is:
+
+```bash
+uv run ci-vibe-matrix validate configs/matrix/local-gemma4-smallest-two.json
+uv run ci-vibe-matrix plan configs/matrix/local-gemma4-smallest-two.json
+```
+
+Run it after both e4b and 12B invocation smokes are classified:
+
+```bash
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-smallest-two.json --resume
+```
+
+Observed sparse lane on 2026-06-20:
+
+- config: `configs/matrix/local-gemma4-smallest-two.json`
+- e4b sparse: complete, 10/10 rows, 3/10 public, 2/10 hidden,
+  1 false-green
+- 12B sparse: mixed, 10 rows stored, 9 completed attempts,
+  1 `agent_timeout`, 5/9 public, 3/9 hidden, 2 false-greens
+- runtime failure: `explicit_validation_matrix`,
+  `20260620T162844Z-explicit_validation_matrix-8a003bc4`, 900.3s
+- integrity: `reports/integrity-local-gemma4-smallest-two.md`, PASS,
+  120/120 artifacts present
+
+If the goal is to replace 12B rather than report it as mixed local-runtime
+evidence, use the separate fallback config:
+
+```bash
+uv run ci-vibe-matrix run configs/matrix/local-gemma4-e4b-qwen36-fallback.json --resume
+```
+
+## Completed Sparse Maintenance Matrix
+
+The first full local Gemma 4 comparison is complete. Do not rerun it unless
+refreshing evidence intentionally.
+
+```bash
+uv run ci-vibe-matrix status configs/matrix/local-gemma4-two-model.json
+uv run ci-vibe-report leaderboard \
+  --matrix configs/matrix/local-gemma4-two-model.json \
+  --out reports/leaderboard-local-gemma4-two-model.md \
+  --include-artifact-index
+uv run ci-vibe-report integrity \
+  --matrix configs/matrix/local-gemma4-two-model.json \
+  --out reports/integrity-local-gemma4-two-model.md
+```
+
+Observed on 2026-06-20:
+
+- `gemma4:e4b`: public 8/10, hidden 5/10, 3 false-greens
+- `gemma4:31b`: public 10/10, hidden 7/10, 3 false-greens
+- North Mini reference on the same scenarios: public 10/10, hidden 7/10,
+  3 false-greens
+- shared trust gap: 30%
+- reports:
+  - `reports/gemma4-matrix-analysis-2026-06-20.md`
+  - `reports/leaderboard-local-gemma4-two-model.md`
+  - `reports/integrity-local-gemma4-two-model.md`
+
 ## First Direct Harness Smoke
 
 Run one small scenario before a full pack:
@@ -161,46 +291,17 @@ Do not proceed if the smoke row has:
 - provider connection errors
 - no patch when the public test is still red
 
-## First Leaderboard Cell
+## Next Leaderboard Cells
 
-Start with `maintenance_value`, sparse lane, one attempt per scenario:
+Use the matrix runner for new evidence cells. The highest-value next local lane
+is `contract_visible` on `maintenance_value`, because the sparse run showed a
+stable 30% trust gap across Gemma 4 e4b, Gemma 4 31B, and North Mini.
 
-```bash
-uv run ci-vibe-run run \
-  --challenge all \
-  --pack maintenance_value \
-  --model ollama/gemma4:31b \
-  --agent build \
-  --auto-approve \
-  --timeout 900 \
-  --first-output-timeout 300 \
-  --runs 1 \
-  --prompt-mode sparse \
-  --db data/local-ollama-gemma4-31b-sparse.sqlite \
-  --runs-dir runs/local-ollama/gemma4-31b/sparse \
-  --delay-seconds 30
-```
+After contract-visible maintenance, expand to broader packs:
 
-Then run the contract-visible lane:
-
-```bash
-uv run ci-vibe-run run \
-  --challenge all \
-  --pack maintenance_value \
-  --model ollama/gemma4:31b \
-  --agent build \
-  --auto-approve \
-  --timeout 900 \
-  --first-output-timeout 300 \
-  --runs 1 \
-  --prompt-mode contract_visible \
-  --db data/local-ollama-gemma4-31b-contract.sqlite \
-  --runs-dir runs/local-ollama/gemma4-31b/contract-visible \
-  --delay-seconds 30
-```
-
-If `gemma4:12b` or `gemma4:e4b` are pulled later, repeat the same pattern with
-model-specific DB and runs-dir names.
+- `ci_forensics`
+- `product_workflows`
+- repeated attempts / pass@3 consistency
 
 ## Leaderboard Rules
 

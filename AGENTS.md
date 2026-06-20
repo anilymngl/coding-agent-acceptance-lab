@@ -16,20 +16,24 @@ quality and caveats when comparing models.
 
 ## Current State
 
-- The North Mini evidence pack and reports exist, but the current product
-  direction is broader: a reusable, config-driven **multi-model comparison
-  pipeline**.
-- The implementation plan for that next phase is
+- The North Mini evidence pack and reports exist, and the broader reusable,
+  config-driven **multi-model comparison pipeline** is now implemented.
+- The implementation plan is preserved as historical design context:
   `docs/model-comparison-eval-pipeline-plan-2026-06-20.md`.
 - Local Ollama/Gemma 4 support is configured through repo-root `opencode.json`.
-- `ollama/gemma4:31b` has one valid local smoke:
-  `data/local-ollama-gemma4-31b-smoke.sqlite`,
-  run `20260620T113108Z-docs_cli_sync-b3b1c215`,
-  public pass and hidden pass in 224.8s.
 - **Gemma 4 two-model matrix completed** (`configs/matrix/local-gemma4-two-model.json`):
   e4b 5/10 hidden, 31b 7/10 hidden on `maintenance_value` sparse.
-  Same 30% trust gap as North Mini. Analysis in
-  `reports/gemma4-matrix-analysis-2026-06-20.md`.
+  Same 30% trust gap as North Mini. Integrity passed with 120/120 artifacts.
+  Analysis: `reports/gemma4-matrix-analysis-2026-06-20.md`.
+- **Gemma 4 smallest-two sparse lane ran** (`configs/matrix/local-gemma4-smallest-two.json`):
+  e4b sparse is complete; 12B sparse is mixed because
+  `explicit_validation_matrix` hit a 900s `agent_timeout`. Integrity passed
+  with 120/120 artifacts. Reports:
+  `reports/leaderboard-local-gemma4-smallest-two.md` and
+  `reports/integrity-local-gemma4-smallest-two.md`.
+- `ollama/qwen3.6:27b` is configured only as a separate fallback lane
+  (`configs/matrix/local-gemma4-e4b-qwen36-fallback.json`) if 12B is rejected
+  as non-viable. Do not merge Qwen rows into Gemma-only claims.
 - The harness now passes repo-root OpenCode config to generated worktrees via
   `OPENCODE_CONFIG`; keep that behavior.
 
@@ -62,38 +66,32 @@ quality and caveats when comparing models.
 - Keep raw artifacts as source evidence; SQLite is the query/index layer.
 - Prefer adding pointers to docs over duplicating long explanations here.
 
-## Current Next Task
+## Current Detailed Goals
 
-The matrix pipeline, leaderboard report with evaluator coverage, integrity
-verification, matrix evaluator integration, and dashboard Matrix tab are done.
-The next substantial work is running the full Gemma 4 maintenance matrix and
-generating the final multi-model comparison report from real evidence.
+Goal 1: reusable comparison machinery
+done for the current scope. `ci-vibe-matrix`, matrix config validation/planning,
+run orchestration, status/DB listing, evaluator batch review, generic leaderboard
+reporting, integrity verification, and the dashboard Matrix tab all exist.
 
-Runtime workflow:
+Goal 2: first real multi-model evidence
+done for sparse `maintenance_value` pass@1. Gemma 4 e4b and 31b both completed
+the 10-scenario sparse lane, reports are generated, and integrity is verified.
+Do not rerun this full sparse matrix unless intentionally refreshing evidence.
 
-```bash
-# Preview and run a matrix
-uv run ci-vibe-matrix plan configs/matrix/local-gemma4-maintenance.json
-uv run ci-vibe-matrix run configs/matrix/local-gemma4-maintenance.json
+Next evidence work:
 
-# Run evaluator reviews over false-greens
-uv run ci-vibe-matrix evaluate configs/matrix/local-gemma4-maintenance.json --loose
+- run `contract_visible` maintenance lanes to measure how much explicit
+  acceptance criteria reduce sparse trust gaps
+- evaluator-review the 3 false-greens in
+  `reports/leaderboard-local-gemma4-smallest-two.md` before using them in a
+  public-facing research report
+- expand matrix coverage to `ci_forensics` and `product_workflows`
+- run pass@3 / repeated-attempt consistency analysis
 
-# Generate the comparison report with evals
-uv run ci-vibe-report leaderboard \
-  --matrix configs/matrix/local-gemma4-maintenance.json \
-  --out reports/leaderboard-local-gemma4-maintenance.md \
-  --include-artifact-index
-
-# Verify artifact integrity
-uv run ci-vibe-report integrity \
-  --matrix configs/matrix/local-gemma4-maintenance.json \
-  --out reports/integrity-local-gemma4-maintenance.md
-
-# Inspect in the dashboard
-CI_VIBE_DB="$(uv run ci-vibe-matrix dbs configs/matrix/local-gemma4-maintenance.json)" \
-  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
-```
+Runtime command recipes live in `docs/README.md`. Use
+`configs/matrix/local-gemma4-two-model.json` when inspecting the completed
+e4b/31B sparse matrix, and `configs/matrix/local-gemma4-smallest-two.json` for
+the newer e4b/12B sparse evidence.
 
 ## Build, Test, Verify
 

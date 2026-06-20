@@ -2,6 +2,27 @@
 
 Date: 2026-06-20
 
+## Status Update
+
+This plan has been implemented for the first product slice. The repo now has
+`ci-vibe-matrix`, JSON matrix configs, deterministic DB/run-dir expansion,
+generic leaderboard reporting, evaluator review coverage, artifact integrity
+verification, and a dashboard Matrix tab.
+
+The first real matrix evidence is complete:
+
+- config: `configs/matrix/local-gemma4-two-model.json`
+- pack/lane: `maintenance_value`, sparse, pass@1
+- result: Gemma 4 e4b 5/10 hidden, Gemma 4 31B 7/10 hidden
+- reports:
+  - `reports/gemma4-matrix-analysis-2026-06-20.md`
+  - `reports/leaderboard-local-gemma4-two-model.md`
+  - `reports/integrity-local-gemma4-two-model.md`
+
+Use the rest of this file as design history and backlog. The remaining major
+evidence goals are `contract_visible` lanes, broader packs, and pass@3
+consistency analysis.
+
 ## Purpose
 
 The current harness can already run one OpenCode model against one challenge

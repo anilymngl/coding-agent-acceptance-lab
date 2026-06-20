@@ -40,6 +40,33 @@ reliability, and scenario-level comparison tables.
 Artifact integrity verification for the Gemma 4 matrix. All 120 artifacts
 present, 0 issues, 6/6 false-greens evaluator-reviewed.
 
+### [leaderboard-local-gemma4-smallest-two.md](leaderboard-local-gemma4-smallest-two.md)
+Auto-generated evidence for the smallest configured Gemma 4 pair,
+`gemma4:e4b` and `gemma4:12b`, across sparse and `contract_visible` lanes.
+Sparse: e4b completed 10/10 rows; 12B stored 10 rows but one was a 900s
+`agent_timeout`, so treat 12B sparse as mixed local-runtime evidence. The
+`contract_visible` lane ran but stalled: all 20 rows were
+`no_output_timeout` on local Ollama, so they are operational reliability
+evidence, not semantic failures. Lanes are kept separate in every scorecard.
+
+### [integrity-local-gemma4-smallest-two.md](integrity-local-gemma4-smallest-two.md)
+Artifact integrity verification for the smallest-two matrix. 240/240 artifacts
+present, 120 SHA256 hashes, 0 missing. The 3 sparse false-greens are
+evaluator-reviewed (3/3 coverage via `opencode/deepseek-v4-pro`).
+
+### [benchmark-quality-research-report-2026-06-20.md](benchmark-quality-research-report-2026-06-20.md)
+Tier 1 (internal behavior microscope) research report. Presents the trust-gap
+pattern across North Mini, DeepSeek, and the local Gemma 4 matrices, with a
+claim ledger and explicit "what cannot be defended" section. Notes the open
+`contract_visible` question and pass@1 variance (e4b went 5/10 -> 2/10 hidden
+across two runs). Not a public benchmark leaderboard.
+
+### [post.md](post.md)
+LinkedIn-postable summary, Tier 1 caveated. States the trust gap in plain
+language, includes the local runtime caveat ("not a public benchmark
+leaderboard"), and points back to the research report. No model ranking and no
+public-leaderboard claim.
+
 ---
 
 ## Preserved Conditional Reports

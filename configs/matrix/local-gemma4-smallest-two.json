@@ -1,0 +1,40 @@
+{
+  "matrix_id": "local-gemma4-smallest-two-2026-06-20",
+  "description": "Local Ollama smallest-two Gemma 4 comparison: e4b vs 12b on maintenance_value sparse and contract-visible lanes.",
+  "output_root": "data/matrix/local-gemma4-smallest-two-2026-06-20",
+  "runs_root": "runs/matrix/local-gemma4-smallest-two-2026-06-20",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "delay_seconds": 10,
+    "runs": 1,
+    "prompt_modes": ["sparse", "contract_visible"],
+    "packs": ["maintenance_value"],
+    "warmup": true,
+    "warmup_timeout": 600,
+    "warmup_keep_alive": "30m"
+  },
+  "models": [
+    {
+      "alias": "gemma4-e4b",
+      "id": "ollama/gemma4:e4b",
+      "runtime": "ollama",
+      "first_output_timeout": 120,
+      "notes": "Smallest configured Gemma 4 model. Proven docs_cli_sync smoke in 62.8s."
+    },
+    {
+      "alias": "gemma4-12b",
+      "id": "ollama/gemma4:12b",
+      "runtime": "ollama",
+      "first_output_timeout": 240,
+      "notes": "Second-smallest configured Gemma 4 model. On 2026-06-20, Ollama 0.30.10 installed and pulled the model; first sparse docs_cli_sync smoke produced no patch, so keep the full matrix gated until the no-edit behavior is classified or a rerun passes smoke."
+    }
+  ],
+  "packs": {
+    "maintenance_value": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

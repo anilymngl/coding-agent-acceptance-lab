@@ -46,9 +46,42 @@ for the current full-run analysis, DeepSeek control comparison, GLM caveat,
 claim ledger, and deployment policy. Start with
 [reports/REPORTS.md](reports/REPORTS.md) for report surfacing conditions.
 
-## Current Development Direction
+## First Matrix Finding
 
-The next phase is a general, config-driven model comparison pipeline:
+The first local multi-model matrix is complete for `maintenance_value`, sparse
+prompting, pass@1:
+
+| Model | Public | Hidden | Trust Gap | False-green | Avg Time |
+|---|---:|---:|---:|---:|---:|
+| `gemma4:e4b` | 8/10 | 5/10 | 30% | 3 | ~62s |
+| `gemma4:31b` | 10/10 | 7/10 | 30% | 3 | ~300s |
+| North Mini reference | 10/10 | 7/10 | 30% | 3 | n/a |
+
+The same spec-completeness scenarios fail hidden across model families. That is
+the strongest current evidence that the harness is measuring a real trust-gap
+pattern, not one model's quirk. See
+[reports/gemma4-matrix-analysis-2026-06-20.md](reports/gemma4-matrix-analysis-2026-06-20.md).
+
+The follow-up smallest-two local lane has sparse evidence for
+`gemma4:e4b` and `gemma4:12b`. e4b completed all 10 rows; 12B stored all 10
+rows but one was a 900s `agent_timeout`, so that lane is mixed local-runtime
+evidence rather than a fully completed semantic comparison.
+
+| Matrix | Model | Public | Hidden | Runtime | False-green |
+|---|---|---:|---:|---:|---:|
+| smallest-two sparse | `gemma4:e4b` | 3/10 | 2/10 | 10/10 complete | 1 |
+| smallest-two sparse | `gemma4:12b` | 5/9 | 3/9 | 9/10 complete | 2 |
+
+See
+[reports/leaderboard-local-gemma4-smallest-two.md](reports/leaderboard-local-gemma4-smallest-two.md)
+and
+[reports/integrity-local-gemma4-smallest-two.md](reports/integrity-local-gemma4-smallest-two.md).
+`ollama/qwen3.6:27b` is configured as a separate fallback lane if 12B is later
+rejected as non-viable; it should not be merged into Gemma-only claims.
+
+## Current Development Status
+
+The general, config-driven model comparison pipeline is implemented:
 
 - define models, packs, prompt lanes, and runtime limits in one config
 - run a full model matrix with one command
@@ -56,9 +89,15 @@ The next phase is a general, config-driven model comparison pipeline:
 - generate a generic leaderboard-style evidence report without overstating
   public benchmark claims
 
+Current remaining goals are evidence expansion, not core plumbing:
+
+- run `contract_visible` maintenance lanes
+- add broader packs such as `ci_forensics` and `product_workflows`
+- run pass@3 / repeated-attempt consistency analysis
+
 Start with [docs/README.md](docs/README.md), then read
 [docs/model-comparison-eval-pipeline-plan-2026-06-20.md](docs/model-comparison-eval-pipeline-plan-2026-06-20.md).
-The implementation prompt for the next agent is at the end of that plan.
+The implementation plan is now design history plus backlog.
 
 ---
 
@@ -242,6 +281,7 @@ Configured local model IDs:
 - `ollama/gemma4:12b`
 - `ollama/gemma4:26b`
 - `ollama/gemma4:31b`
+- `ollama/qwen3.6:27b` as a fallback lane only
 
 Start with a smoke before running a pack:
 

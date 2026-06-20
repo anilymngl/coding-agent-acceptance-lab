@@ -12,9 +12,11 @@ from textwrap import shorten
 from ci_vibe_lab.analysis import (
     TrustMetrics,
     accepted_patch,
+    compute_false_green_breakdown,
     compute_trust_metrics,
     compute_value_metrics,
     effective_review_minutes,
+    is_headline_accepted_audit_status,
     percent,
     select_best_patches,
 )
@@ -260,7 +262,9 @@ def accepted_rows(rows: list[dict[str, object]], audits: dict[str, dict[str, obj
     return [
         row
         for row in rows
-        if str(audits.get(str(row.get("scenario", "")), {}).get("audit_status", "accepted")) == "accepted"
+        if is_headline_accepted_audit_status(
+            audits.get(str(row.get("scenario", "")), {}).get("audit_status", "accepted")
+        )
     ]
 
 
@@ -1052,6 +1056,7 @@ def make_xray_report(
         if str(row.get("model", "")) != model and str(row.get("challenge_pack", "")) == "product_workflows"
     ]
     pghr_rows = [row for row in accepted if int(row.get("public_pass", 0)) == 1 and int(row.get("hidden_pass", 0)) == 0]
+    false_green_breakdown = compute_false_green_breakdown(accepted, audits)
     pghr_run_ids = {str(row.get("run_id", "")) for row in pghr_rows}
     diagnostic_reviews = [
         review for review in latest_reviews if str(review.get("target_run_id", "")) in pghr_run_ids
@@ -1098,6 +1103,10 @@ def make_xray_report(
             "",
             "The central diagnostic is the false-green rate: public tests passed but hidden acceptance failed.",
             f"Combined accepted rows: {metrics.public_green_hidden_red}/{metrics.public_pass} public-green runs were hidden-red.",
+            f"False-green taxonomy: fair={false_green_breakdown.fair_false_green}, "
+            f"weak/spec-exposure={false_green_breakdown.weak_false_green}, "
+            f"invalid={false_green_breakdown.invalid_false_green}, "
+            f"unclassified={false_green_breakdown.unclassified_false_green}.",
             "",
             "## Product Workflow Stress Read",
             "",

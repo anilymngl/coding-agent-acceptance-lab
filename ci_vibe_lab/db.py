@@ -8,6 +8,10 @@ from typing import Any
 
 EXTRA_COLUMNS = {
     "experiment_id": "TEXT DEFAULT ''",
+    "prompt_mode": "TEXT DEFAULT 'sparse'",
+    "contract_visibility": "TEXT DEFAULT ''",
+    "scenario_audit_status": "TEXT DEFAULT ''",
+    "scenario_audit_version": "TEXT DEFAULT ''",
     "challenge_pack": "TEXT DEFAULT ''",
     "category": "TEXT DEFAULT ''",
     "difficulty": "TEXT DEFAULT ''",
@@ -41,6 +45,10 @@ CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL UNIQUE,
   experiment_id TEXT DEFAULT '',
+  prompt_mode TEXT DEFAULT 'sparse',
+  contract_visibility TEXT DEFAULT '',
+  scenario_audit_status TEXT DEFAULT '',
+  scenario_audit_version TEXT DEFAULT '',
   scenario TEXT NOT NULL,
   scenario_title TEXT NOT NULL,
   challenge_pack TEXT DEFAULT '',
@@ -137,7 +145,14 @@ CREATE TABLE IF NOT EXISTS scenario_audits (
   scenario TEXT PRIMARY KEY,
   audit_version TEXT NOT NULL DEFAULT 'v1',
   audit_status TEXT NOT NULL DEFAULT 'accepted'
-    CHECK (audit_status IN ('accepted', 'revise_public_prompt', 'revise_hidden_test', 'quarantine')),
+    CHECK (audit_status IN (
+      'accepted',
+      'accepted_sparse',
+      'accepted_contract_visible',
+      'revise_public_prompt',
+      'revise_hidden_test',
+      'quarantine'
+    )),
   risk_area TEXT NOT NULL DEFAULT 'business_correctness'
     CHECK (risk_area IN (
       'compatibility',
@@ -149,9 +164,35 @@ CREATE TABLE IF NOT EXISTS scenario_audits (
       'semantic_architecture'
     )),
   impact_weight INTEGER NOT NULL DEFAULT 3 CHECK (impact_weight BETWEEN 1 AND 5),
+  contract_visibility TEXT NOT NULL DEFAULT 'repo_inferable'
+    CHECK (contract_visibility IN (
+      'explicit',
+      'repo_inferable',
+      'standard_practice',
+      'edge_inferable',
+      'underexposed',
+      'bug_or_invalid'
+    )),
+  fairness_classification TEXT NOT NULL DEFAULT 'semantic_contract_miss'
+    CHECK (fairness_classification IN (
+      'search_miss',
+      'standard_engineering_miss',
+      'semantic_contract_miss',
+      'edge_inference_miss',
+      'underexposed_contract',
+      'harness_or_test_bug'
+    )),
   inferability_score INTEGER NOT NULL DEFAULT 4 CHECK (inferability_score BETWEEN 1 AND 5),
   hidden_legitimacy_score INTEGER NOT NULL DEFAULT 4 CHECK (hidden_legitimacy_score BETWEEN 1 AND 5),
+  public_prompt_sufficiency_score INTEGER NOT NULL DEFAULT 4 CHECK (public_prompt_sufficiency_score BETWEEN 1 AND 5),
+  public_test_sufficiency_score INTEGER NOT NULL DEFAULT 3 CHECK (public_test_sufficiency_score BETWEEN 1 AND 5),
+  standard_practice_score INTEGER NOT NULL DEFAULT 4 CHECK (standard_practice_score BETWEEN 1 AND 5),
   implementation_flexibility_score INTEGER NOT NULL DEFAULT 4 CHECK (implementation_flexibility_score BETWEEN 1 AND 5),
+  recommended_lane TEXT NOT NULL DEFAULT 'sparse'
+    CHECK (recommended_lane IN ('sparse', 'contract_visible', 'audit_visible', 'quarantine')),
+  requires_prompt_revision INTEGER NOT NULL DEFAULT 0 CHECK (requires_prompt_revision IN (0, 1)),
+  requires_hidden_revision INTEGER NOT NULL DEFAULT 0 CHECK (requires_hidden_revision IN (0, 1)),
+  audited_by TEXT DEFAULT 'seed',
   audit_notes TEXT DEFAULT '',
   updated_at TEXT NOT NULL
 );
@@ -245,6 +286,66 @@ SCENARIO_AUDIT_DEFAULTS: dict[str, dict[str, object]] = {
         "impact_weight": 3,
         "audit_notes": "Slug generation must normalize punctuation and repeated collisions deterministically.",
     },
+    "logger_warn_migration": {
+        "risk_area": "compatibility",
+        "impact_weight": 3,
+        "contract_visibility": "standard_practice",
+        "fairness_classification": "search_miss",
+        "audit_notes": "Mechanical migration should search all runtime logging calls while preserving compatibility shim.",
+    },
+    "utcnow_timezone_migration": {
+        "risk_area": "compatibility",
+        "impact_weight": 3,
+        "contract_visibility": "standard_practice",
+        "fairness_classification": "search_miss",
+        "audit_notes": "Mechanical datetime migration should cover all utcnow calls in the target helper file.",
+    },
+    "batch_splitter_utility": {
+        "risk_area": "business_correctness",
+        "impact_weight": 2,
+        "contract_visibility": "edge_inferable",
+        "fairness_classification": "edge_inference_miss",
+        "recommended_lane": "contract_visible",
+        "requires_prompt_revision": 1,
+        "inferability_score": 2,
+        "public_prompt_sufficiency_score": 2,
+        "audit_notes": "Positive batch size is a reasonable utility edge contract, but sparse prompt does not expose it strongly enough for a headline fair-failure claim.",
+    },
+    "explicit_validation_matrix": {
+        "risk_area": "business_correctness",
+        "impact_weight": 3,
+        "contract_visibility": "underexposed",
+        "fairness_classification": "underexposed_contract",
+        "recommended_lane": "contract_visible",
+        "requires_prompt_revision": 1,
+        "inferability_score": 2,
+        "public_prompt_sufficiency_score": 2,
+        "audit_notes": "Prompt references documented finite rules; scenario should include visible contract text before sparse failures are treated as strong model evidence.",
+    },
+    "adapter_field_rename": {
+        "risk_area": "compatibility",
+        "impact_weight": 3,
+        "contract_visibility": "edge_inferable",
+        "fairness_classification": "edge_inference_miss",
+        "recommended_lane": "contract_visible",
+        "requires_prompt_revision": 1,
+        "inferability_score": 3,
+        "public_prompt_sufficiency_score": 2,
+        "audit_notes": "New-field mapping is visible; backward compatibility and optional-field preservation need stronger visible contract before headline sparse claims.",
+    },
+}
+
+
+SCENARIO_AUDIT_EXTRA_COLUMNS = {
+    "contract_visibility": "TEXT NOT NULL DEFAULT 'repo_inferable'",
+    "fairness_classification": "TEXT NOT NULL DEFAULT 'semantic_contract_miss'",
+    "public_prompt_sufficiency_score": "INTEGER NOT NULL DEFAULT 4",
+    "public_test_sufficiency_score": "INTEGER NOT NULL DEFAULT 3",
+    "standard_practice_score": "INTEGER NOT NULL DEFAULT 4",
+    "recommended_lane": "TEXT NOT NULL DEFAULT 'sparse'",
+    "requires_prompt_revision": "INTEGER NOT NULL DEFAULT 0",
+    "requires_hidden_revision": "INTEGER NOT NULL DEFAULT 0",
+    "audited_by": "TEXT DEFAULT 'seed'",
 }
 
 UNSET = object()
@@ -258,6 +359,17 @@ def migrate(connection: sqlite3.Connection) -> None:
     for column, definition in EXTRA_COLUMNS.items():
         if column not in existing:
             connection.execute(f"ALTER TABLE runs ADD COLUMN {column} {definition}")
+    connection.commit()
+
+
+def migrate_scenario_audits(connection: sqlite3.Connection) -> None:
+    existing = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(scenario_audits)").fetchall()
+    }
+    for column, definition in SCENARIO_AUDIT_EXTRA_COLUMNS.items():
+        if column not in existing:
+            connection.execute(f"ALTER TABLE scenario_audits ADD COLUMN {column} {definition}")
     connection.commit()
 
 
@@ -275,18 +387,34 @@ def seed_scenario_audits(connection: sqlite3.Connection) -> None:
               audit_status,
               risk_area,
               impact_weight,
+              contract_visibility,
+              fairness_classification,
               inferability_score,
               hidden_legitimacy_score,
+              public_prompt_sufficiency_score,
+              public_test_sufficiency_score,
+              standard_practice_score,
               implementation_flexibility_score,
+              recommended_lane,
+              requires_prompt_revision,
+              requires_hidden_revision,
+              audited_by,
               audit_notes,
               updated_at
             )
-            VALUES (?, 'v1', 'accepted', ?, ?, 4, 4, 4, ?, ?)
+            VALUES (?, 'v1', 'accepted', ?, ?, ?, ?, ?, 4, ?, 3, 4, 4, ?, ?, ?, 'seed', ?, ?)
             """,
             [
                 scenario,
                 defaults.get("risk_area", "business_correctness"),
                 defaults.get("impact_weight", 3),
+                defaults.get("contract_visibility", "repo_inferable"),
+                defaults.get("fairness_classification", "semantic_contract_miss"),
+                defaults.get("inferability_score", 4),
+                defaults.get("public_prompt_sufficiency_score", 4),
+                defaults.get("recommended_lane", "sparse"),
+                defaults.get("requires_prompt_revision", 0),
+                defaults.get("requires_hidden_revision", 0),
                 defaults.get("audit_notes", "Default accepted audit seed; review before public benchmark release."),
                 now,
             ],
@@ -301,6 +429,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
     connection.executescript(TABLE_SCHEMA)
     migrate(connection)
     connection.executescript(EVIDENCE_SCHEMA)
+    migrate_scenario_audits(connection)
     seed_scenario_audits(connection)
     connection.executescript(INDEX_SCHEMA)
     connection.commit()

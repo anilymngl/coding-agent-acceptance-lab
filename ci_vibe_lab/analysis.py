@@ -54,6 +54,77 @@ class ValueMetrics:
     best_of_three_success_rate: float
 
 
+@dataclass(frozen=True)
+class FalseGreenBreakdown:
+    raw_false_green: int
+    fair_false_green: int
+    weak_false_green: int
+    invalid_false_green: int
+    unclassified_false_green: int
+
+
+HEADLINE_ACCEPTED_AUDIT_STATUSES = {"accepted", "accepted_sparse"}
+FAIR_FALSE_GREEN_CLASSIFICATIONS = {
+    "search_miss",
+    "standard_engineering_miss",
+    "semantic_contract_miss",
+}
+WEAK_FALSE_GREEN_CLASSIFICATIONS = {
+    "edge_inference_miss",
+    "underexposed_contract",
+}
+INVALID_FALSE_GREEN_CLASSIFICATIONS = {"harness_or_test_bug"}
+
+
+def is_headline_accepted_audit_status(status: object) -> bool:
+    return str(status or "accepted") in HEADLINE_ACCEPTED_AUDIT_STATUSES
+
+
+def audit_for_row(row: object, audits: Mapping[str, Mapping[str, object]]) -> Mapping[str, object]:
+    scenario = str(row_get(row, "scenario", ""))
+    return audits.get(scenario, {})
+
+
+def fairness_classification_for_row(
+    row: object,
+    audits: Mapping[str, Mapping[str, object]],
+) -> str:
+    return str(audit_for_row(row, audits).get("fairness_classification", "semantic_contract_miss"))
+
+
+def compute_false_green_breakdown(
+    rows: Iterable[object],
+    audits: Mapping[str, Mapping[str, object]],
+) -> FalseGreenBreakdown:
+    raw = 0
+    fair = 0
+    weak = 0
+    invalid = 0
+    unclassified = 0
+    for row in rows:
+        public_ok = as_int(row_get(row, "public_pass")) == 1
+        hidden_ok = as_int(row_get(row, "hidden_pass")) == 1
+        if not public_ok or hidden_ok:
+            continue
+        raw += 1
+        classification = fairness_classification_for_row(row, audits)
+        if classification in FAIR_FALSE_GREEN_CLASSIFICATIONS:
+            fair += 1
+        elif classification in WEAK_FALSE_GREEN_CLASSIFICATIONS:
+            weak += 1
+        elif classification in INVALID_FALSE_GREEN_CLASSIFICATIONS:
+            invalid += 1
+        else:
+            unclassified += 1
+    return FalseGreenBreakdown(
+        raw_false_green=raw,
+        fair_false_green=fair,
+        weak_false_green=weak,
+        invalid_false_green=invalid,
+        unclassified_false_green=unclassified,
+    )
+
+
 def compute_trust_metrics(
     rows: Iterable[object],
     *,

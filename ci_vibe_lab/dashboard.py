@@ -12,6 +12,7 @@ from ci_vibe_lab.analysis import (
     compute_trust_metrics,
     compute_value_metrics,
     effective_review_minutes,
+    is_headline_accepted_audit_status,
     percent,
     select_best_patches,
 )
@@ -836,7 +837,9 @@ def main() -> None:
     if selected_model != "all":
         filtered = filtered[filtered["model"] == selected_model]
     if accepted_only and not audits.empty:
-        accepted_scenarios = set(audits[audits["audit_status"] == "accepted"]["scenario"].astype(str))
+        accepted_scenarios = set(
+            audits[audits["audit_status"].map(is_headline_accepted_audit_status)]["scenario"].astype(str)
+        )
         filtered = filtered[filtered["scenario"].astype(str).isin(accepted_scenarios)]
     if public_green_hidden_red_only:
         filtered = filtered[(filtered["public_pass"].astype(int) == 1) & (filtered["hidden_pass"].astype(int) == 0)]

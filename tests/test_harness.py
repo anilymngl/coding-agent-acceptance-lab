@@ -10,7 +10,14 @@ import unittest
 from pathlib import Path
 
 from ci_vibe_lab.db import connect, insert_run, upsert_evaluator_review
-from ci_vibe_lab.analysis import compute_trust_metrics, compute_value_metrics, effective_review_minutes, select_best_patches
+from ci_vibe_lab.analysis import (
+    compute_false_green_breakdown,
+    compute_trust_metrics,
+    compute_value_metrics,
+    effective_review_minutes,
+    is_headline_accepted_audit_status,
+    select_best_patches,
+)
 from ci_vibe_lab.dashboard import load_runs as load_dashboard_runs
 from ci_vibe_lab.evaluator import (
     build_opencode_evaluator_command,
@@ -23,8 +30,15 @@ from ci_vibe_lab.evaluator import (
     working_board_template,
 )
 from ci_vibe_lab.report import make_ultimate_report, make_value_report, make_xray_report
-from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command
-from ci_vibe_lab.scenarios import TEST_COMMAND, challenge_manifest, scenario_ids, write_hidden_test, write_scenario
+from ci_vibe_lab.runner import PatchStats, estimate_review_minutes, git_patch_stats, inspect_run, run_command, run_one
+from ci_vibe_lab.scenarios import (
+    TEST_COMMAND,
+    challenge_manifest,
+    get_scenario,
+    scenario_ids,
+    write_hidden_test,
+    write_scenario,
+)
 
 
 class ScenarioTests(unittest.TestCase):
@@ -87,6 +101,22 @@ class ScenarioTests(unittest.TestCase):
             self.assertEqual(challenge["pack"], "maintenance_value")
             self.assertTrue(challenge["vibe"], challenge["id"])
             self.assertGreaterEqual(len(challenge["expected_behavior"]), 3, challenge["id"])
+
+    def test_prompt_modes_expose_contract_without_hidden_test_source(self) -> None:
+        scenario = get_scenario("batch_splitter_utility")
+
+        sparse = scenario.render_prompt("sparse")
+        contract = scenario.render_prompt("contract_visible")
+        audit = scenario.render_prompt("audit_visible")
+
+        self.assertIn("Prompt mode: sparse", sparse)
+        self.assertNotIn("Acceptance contract:", sparse)
+        self.assertIn("Prompt mode: contract_visible", contract)
+        self.assertIn("Acceptance contract:", contract)
+        self.assertIn("Reject non-positive batch sizes.", contract)
+        self.assertNotIn("HiddenBatchSplitterTests", contract)
+        self.assertIn("Audit-only scenario intent:", audit)
+        self.assertIn("Trap:", audit)
 
 
 class DatabaseTests(unittest.TestCase):
@@ -272,6 +302,35 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("scenario_audits", tables)
             self.assertGreater(audit_count, 0)
 
+    def test_run_one_persists_prompt_mode_and_audit_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            db_path = root / "results.sqlite"
+            run_id = run_one(
+                scenario_id="batch_splitter_utility",
+                experiment_id="exp-prompt-mode",
+                model="test/model",
+                agent="build",
+                db_path=db_path,
+                runs_dir=root / "runs",
+                opencode_bin="opencode",
+                timeout=30,
+                auto_approve=False,
+                no_opencode=True,
+                json_format=True,
+                prompt_mode="contract_visible",
+            )
+
+            with connect(db_path) as connection:
+                row = connection.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+
+            self.assertIsNotNone(row)
+            self.assertEqual(row["prompt_mode"], "contract_visible")
+            self.assertEqual(row["contract_visibility"], "edge_inferable")
+            self.assertEqual(row["scenario_audit_status"], "accepted")
+            self.assertIn("Acceptance contract:", row["prompt"])
+            self.assertNotIn("HiddenBatchSplitterTests", row["prompt"])
+
     def test_trust_gap_metrics_handle_zero_public_pass(self) -> None:
         metrics = compute_trust_metrics(
             [
@@ -282,6 +341,28 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(metrics.public_pass, 0)
         self.assertEqual(metrics.false_green_rate, 0.0)
         self.assertEqual(metrics.public_red_rate, 1.0)
+
+    def test_false_green_breakdown_uses_audit_classification(self) -> None:
+        rows = [
+            {"scenario": "search", "public_pass": 1, "hidden_pass": 0},
+            {"scenario": "edge", "public_pass": 1, "hidden_pass": 0},
+            {"scenario": "invalid", "public_pass": 1, "hidden_pass": 0},
+            {"scenario": "pass", "public_pass": 1, "hidden_pass": 1},
+        ]
+        audits = {
+            "search": {"fairness_classification": "search_miss"},
+            "edge": {"fairness_classification": "edge_inference_miss"},
+            "invalid": {"fairness_classification": "harness_or_test_bug"},
+        }
+
+        breakdown = compute_false_green_breakdown(rows, audits)
+
+        self.assertEqual(breakdown.raw_false_green, 3)
+        self.assertEqual(breakdown.fair_false_green, 1)
+        self.assertEqual(breakdown.weak_false_green, 1)
+        self.assertEqual(breakdown.invalid_false_green, 1)
+        self.assertTrue(is_headline_accepted_audit_status("accepted_sparse"))
+        self.assertFalse(is_headline_accepted_audit_status("accepted_contract_visible"))
 
     def test_dashboard_loader_accepts_multiple_dbs_and_adds_source_db(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

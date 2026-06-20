@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ci_vibe_lab.db import insert_run
+from ci_vibe_lab.db import connect, insert_run
 from ci_vibe_lab.scenarios import (
+    PROMPT_MODES,
     TEST_COMMAND,
     get_scenario,
     pack_ids,
@@ -193,6 +194,15 @@ def run_opencode(command: list[str], workdir: Path, *, timeout: int) -> tuple[in
         return 124, stdout, stderr
 
 
+def load_scenario_audit(db_path: Path, scenario_id: str) -> dict[str, object]:
+    with connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT * FROM scenario_audits WHERE scenario = ?",
+            (scenario_id,),
+        ).fetchone()
+    return dict(row) if row else {}
+
+
 def run_one(
     *,
     scenario_id: str,
@@ -206,8 +216,11 @@ def run_one(
     auto_approve: bool,
     no_opencode: bool,
     json_format: bool,
+    prompt_mode: str,
 ) -> str:
     scenario = get_scenario(scenario_id)
+    prompt = scenario.render_prompt(prompt_mode)  # type: ignore[arg-type]
+    audit = load_scenario_audit(db_path, scenario_id)
     started_at = utc_now()
     start = time.monotonic()
     run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{scenario_id}-{uuid.uuid4().hex[:8]}"
@@ -226,7 +239,7 @@ def run_one(
         opencode_command = build_opencode_command(
             opencode_bin=opencode_bin,
             workdir=workdir,
-            prompt=scenario.prompt,
+            prompt=prompt,
             model=model,
             agent=agent,
             auto_approve=auto_approve,
@@ -245,7 +258,7 @@ def run_one(
     write_hidden_test(scenario_id, workdir)
     hidden = run_command(TEST_COMMAND, workdir, timeout=timeout)
 
-    prompt_path = write_artifact(artifact_dir / "prompt.txt", scenario.prompt + "\n")
+    prompt_path = write_artifact(artifact_dir / "prompt.txt", prompt + "\n")
     baseline_output_path = write_artifact(artifact_dir / "baseline.txt", baseline.output)
     opencode_stdout_path = write_artifact(artifact_dir / "opencode_stdout.jsonl", opencode_stdout)
     opencode_stderr_path = write_artifact(artifact_dir / "opencode_stderr.txt", opencode_stderr)
@@ -259,6 +272,10 @@ def run_one(
     row = {
         "run_id": run_id,
         "experiment_id": experiment_id,
+        "prompt_mode": prompt_mode,
+        "contract_visibility": str(audit.get("contract_visibility", "")),
+        "scenario_audit_status": str(audit.get("audit_status", "")),
+        "scenario_audit_version": str(audit.get("audit_version", "")),
         "scenario": scenario.id,
         "scenario_title": scenario.title,
         "challenge_pack": scenario.pack,
@@ -277,7 +294,7 @@ def run_one(
         "ended_at": ended_at,
         "duration_seconds": duration,
         "workdir": str(workdir),
-        "prompt": scenario.prompt,
+        "prompt": prompt,
         "opencode_command": json.dumps(opencode_command),
         "opencode_exit_code": opencode_exit_code,
         "baseline_pass": int(baseline.passed),
@@ -340,7 +357,7 @@ def prepare_scenario(args: argparse.Namespace) -> None:
 
 
 def _completed_attempts(
-    db_path: Path, *, model: str, experiment_id: str, scenario_ids_: list[str]
+    db_path: Path, *, model: str, experiment_id: str, prompt_mode: str, scenario_ids_: list[str]
 ) -> set[tuple[str, int]]:
     """Return a set of (scenario_id, attempt_index) pairs already stored for this experiment.
 
@@ -349,13 +366,20 @@ def _completed_attempts(
     if not db_path.exists():
         return set()
     try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn = connect(db_path)
         done: set[tuple[str, int]] = set()
         for sid in scenario_ids_:
             rows = conn.execute(
-                "SELECT opencode_exit_code FROM runs WHERE scenario = ? AND model = ? AND experiment_id = ? ORDER BY rowid",
-                (sid, model, experiment_id),
+                """
+                SELECT opencode_exit_code
+                FROM runs
+                WHERE scenario = ?
+                  AND model = ?
+                  AND experiment_id = ?
+                  AND prompt_mode = ?
+                ORDER BY rowid
+                """,
+                (sid, model, experiment_id, prompt_mode),
             ).fetchall()
             for attempt_index, _row in enumerate(rows):
                 done.add((sid, attempt_index))
@@ -388,7 +412,11 @@ def run_scenarios(args: argparse.Namespace) -> None:
     completed: set[tuple[str, int]] = set()
     if args.resume:
         completed = _completed_attempts(
-            db_path, model=model_key, experiment_id=experiment_id, scenario_ids_=selected
+            db_path,
+            model=model_key,
+            experiment_id=experiment_id,
+            prompt_mode=args.prompt_mode,
+            scenario_ids_=selected,
         )
         if completed:
             print(f"Resume: skipping {len(completed)} already-completed attempt(s).")
@@ -396,10 +424,17 @@ def run_scenarios(args: argparse.Namespace) -> None:
     skipped_timeout: set[str] = set()
     if getattr(args, "skip_timeouts", False) and db_path.exists():
         try:
-            conn = sqlite3.connect(db_path)
+            conn = connect(db_path)
             rows = conn.execute(
-                "SELECT DISTINCT scenario FROM runs WHERE model = ? AND experiment_id = ? AND opencode_exit_code = 124",
-                (model_key, experiment_id),
+                """
+                SELECT DISTINCT scenario
+                FROM runs
+                WHERE model = ?
+                  AND experiment_id = ?
+                  AND prompt_mode = ?
+                  AND opencode_exit_code = 124
+                """,
+                (model_key, experiment_id, args.prompt_mode),
             ).fetchall()
             conn.close()
             skipped_timeout = {r[0] for r in rows}
@@ -433,6 +468,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 auto_approve=args.auto_approve,
                 no_opencode=args.no_opencode,
                 json_format=not args.default_format,
+                prompt_mode=args.prompt_mode,
             )
             run_ids.append(run_id)
             print(f"  stored run_id={run_id}")
@@ -449,8 +485,7 @@ def load_inspection_row(
     scenario: str | None,
     model: str | None,
 ) -> sqlite3.Row:
-    connection = sqlite3.connect(db_path)
-    connection.row_factory = sqlite3.Row
+    connection = connect(db_path)
     clauses = []
     params: list[object] = []
     if run_id:
@@ -491,6 +526,9 @@ def inspect_run(args: argparse.Namespace) -> None:
     print(f"# Run Inspection: {row['run_id']}")
     print("")
     print(f"- Scenario: {row['scenario']} [{row['challenge_pack']}]")
+    print(f"- Prompt mode: {row['prompt_mode']}")
+    print(f"- Contract visibility: {row['contract_visibility']}")
+    print(f"- Scenario audit: {row['scenario_audit_status']} ({row['scenario_audit_version']})")
     print(f"- Model: {row['model']}")
     print(f"- Agent: {row['agent']}")
     print(f"- Workdir: {row['workdir']}")
@@ -553,6 +591,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--opencode-bin", default=os.environ.get("OPENCODE_BIN", "opencode"))
     run.add_argument("--timeout", type=int, default=900)
     run.add_argument("--runs", type=int, default=1)
+    run.add_argument(
+        "--prompt-mode",
+        choices=PROMPT_MODES,
+        default="sparse",
+        help="Prompt contract exposure lane: sparse, contract_visible, or audit_visible.",
+    )
     run.add_argument(
         "--auto-approve",
         action="store_true",

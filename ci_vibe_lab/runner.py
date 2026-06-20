@@ -448,6 +448,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
 
     run_ids = []
     skipped = 0
+    attempted = 0
     for index in range(args.runs):
         for scenario_id in selected:
             if scenario_id in skipped_timeout:
@@ -458,6 +459,9 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 progress(f"Skipping {scenario_id} ({index + 1}/{args.runs}) — already complete.")
                 skipped += 1
                 continue
+            if attempted and args.delay_seconds > 0:
+                progress(f"Waiting {args.delay_seconds:g}s before next OpenCode attempt...")
+                time.sleep(args.delay_seconds)
             progress(f"Running {scenario_id} ({index + 1}/{args.runs})...")
             run_id = run_one(
                 scenario_id=scenario_id,
@@ -473,6 +477,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 json_format=not args.default_format,
                 prompt_mode=args.prompt_mode,
             )
+            attempted += 1
             run_ids.append(run_id)
             progress(f"  stored run_id={run_id}")
     if skipped:
@@ -594,6 +599,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--opencode-bin", default=os.environ.get("OPENCODE_BIN", "opencode"))
     run.add_argument("--timeout", type=int, default=900)
     run.add_argument("--runs", type=int, default=1)
+    run.add_argument(
+        "--delay-seconds",
+        type=float,
+        default=0.0,
+        help="Sleep between OpenCode attempts to avoid provider/CLI burst stalls. Default: 0.",
+    )
     run.add_argument(
         "--prompt-mode",
         choices=PROMPT_MODES,

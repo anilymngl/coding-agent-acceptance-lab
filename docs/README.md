@@ -155,8 +155,9 @@ Done:
 
 Not done:
 
-- full Gemma 4 maintenance matrix run
-- final multi-model comparison report
+- contract-visible prompt lane matrix runs
+- broader pack coverage in matrix (ci_forensics, product_workflows)
+- pass@3 consistency analysis
 
 ## Operational Rules
 

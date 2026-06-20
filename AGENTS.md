@@ -26,6 +26,10 @@ quality and caveats when comparing models.
   `data/local-ollama-gemma4-31b-smoke.sqlite`,
   run `20260620T113108Z-docs_cli_sync-b3b1c215`,
   public pass and hidden pass in 224.8s.
+- **Gemma 4 two-model matrix completed** (`configs/matrix/local-gemma4-two-model.json`):
+  e4b 5/10 hidden, 31b 7/10 hidden on `maintenance_value` sparse.
+  Same 30% trust gap as North Mini. Analysis in
+  `reports/gemma4-matrix-analysis-2026-06-20.md`.
 - The harness now passes repo-root OpenCode config to generated worktrees via
   `OPENCODE_CONFIG`; keep that behavior.
 

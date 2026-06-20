@@ -9,28 +9,29 @@ seen). A model that satisfies the public tests without satisfying the hidden
 ones is logged as a false-green. The headline metric is the trust gap —
 public pass rate minus hidden pass rate.
 
-See [reports/REPORTS.md](reports/REPORTS.md) for the full analysis and
-per-report index. The [opinionated analysis](reports/north-mini-analysis.md)
-is the right starting point.
+Standard benchmarks score pass/fail. This harness scores *how often you can
+trust a pass*.
 
----
+> This is a behavior microscope, not a leaderboard benchmark. Treat results as
+> directional, not statistically stable.
 
 ## Findings (North Mini Code — `opencode/north-mini-code-free`)
 
-39 runs across four challenge packs:
+38 runs across four challenge packs:
 
 | Pack | Runs | Public | Hidden | False-green |
 |---|---:|---:|---:|---:|
 | `ci_forensics` | 12 | 100% | 67% | 4 |
-| `data_semantics` | 7 | 86% | 71% | 1 |
-| `product_workflows` | 10 | 90% | 10% | 8 |
+| `data_semantics` | 5 | 80% | 60% | 1 |
+| `product_workflows` | 11 | 91% | 9% | 9 |
 | `maintenance_value` | 10 | 100% | 70% | 3 |
-| **Combined** | **39** | **95%** | **54%** | **16** |
+| **Combined** | **38** | **95%** | **50%** | **17** |
 
 **The central finding:** the model is disciplined at the agent loop and
 reliable for mechanical maintenance work. It fails when the hidden contract
 is richer than what the visible test covers — which is most product and
-business-logic tasks.
+business-logic tasks. 17 of 36 public-green patches were still
+contract-broken — a 47% false-green rate.
 
 **Where it works autonomously:** mechanical migrations (`logger.warn`,
 `utcnow`, deprecated APIs), stale artifact regeneration, fixture/doc sync,
@@ -42,7 +43,8 @@ where the spec is richer than the visible assertion.
 
 See [reports/north-mini-analysis.md](reports/north-mini-analysis.md) for the
 full breakdown, evaluator-agent verdicts, DeepSeek control comparison, and
-a recommended deployment policy.
+a recommended deployment policy. Start with
+[reports/REPORTS.md](reports/REPORTS.md) for the per-report index.
 
 ---
 
@@ -52,8 +54,23 @@ The harness creates deterministic challenge repos, asks OpenCode to fix them,
 captures the resulting patch and test output, stores results in SQLite, writes
 per-run artifacts, and shows the runs in a Streamlit dashboard.
 
+The runner pipeline (`ci_vibe_lab/runner.py`) is:
+
+1. write visible scenario repo
+2. run baseline tests (must be red)
+3. run OpenCode with the public prompt
+4. run public tests
+5. capture the `git diff` patch
+6. inject hidden tests into the worktree
+7. run hidden tests
+8. persist all artifacts and metrics to SQLite
+
+Hidden tests are **never present during the OpenCode call**. The model cannot
+see them. A run where public tests pass and hidden tests fail is a
+**false-green** — the model made CI green without fixing the contract.
+
 See [docs/challenge-design.md](docs/challenge-design.md) for the eval
-philosophy and challenge anatomy.
+philosophy, pivots away from pass@1, and glimpses from the evidence.
 
 ## Challenge Packs
 
@@ -79,8 +96,10 @@ small, but each one stresses a real coding-agent failure mode:
 - `idempotency_key_regression`: keeps retry dedupe keys deterministic without
   cross-order collisions.
 - `csv_header_contract`: preserves documented export columns and order.
+- `config_deep_merge`: recursive config merge instead of shallow `dict.update`.
+- `mutable_default_leak`: fixes Python mutable default argument state leak.
 
-The second pack is `product_workflows`, a different set of small product/backend
+The `product_workflows` pack is a different set of small product/backend
 workflow regressions:
 
 - `bulk_invite_dedupe`: normalizes and deduplicates invite emails.
@@ -93,6 +112,16 @@ workflow regressions:
 - `billing_proration`: prorates plan upgrades with explicit cent rounding.
 - `webhook_signature_raw_body`: verifies HMAC signatures over raw payload bytes.
 - `support_sla_business_hours`: computes support deadlines inside business hours.
+- `silent_exception_swallower`: handles exceptions per-item instead of swallowing.
+
+The `data_semantics` pack tests reasoning about what data *means* across
+service boundaries:
+
+- `metric_semantic_mismatch`: normalizes units between cents and dollars across
+  API layers without breaking the raw metric API.
+- `join_fanout`: fixes SQL Cartesian product inflation without dividing by counts.
+- `api_pagination_boundary`: fetches all pages including the last partial page.
+- `scd_temporal_join`: joins on temporal bounds for slowly changing dimensions.
 
 The `maintenance_value` pack is the positive-value counterpart. These scenarios
 are deliberately low-risk and non-adversarial: explicit contract, local blast
@@ -109,6 +138,37 @@ radius, deterministic verification, and cheap review.
 - `explicit_validation_matrix`: implements a small finite validation matrix.
 - `batch_splitter_utility`: implements a pure batching helper.
 
+## The Evaluator Agent
+
+A separate agent reviews the model-under-test's patch. It is not a one-shot
+classifier — it gets a workbench and can test a better fix before judging.
+
+Each review directory contains:
+
+- `EVALUATION_PACKET.md`: run metadata, challenge intent, trap, expected
+  behavior, the model's patch, public/hidden test output, and a worktree
+  snapshot.
+- `BUDGET.md`: hard timeout plus soft working-time, token, tool-call, and
+  shadow-fix budgets.
+- `WORKING_BOARD.md`: visible notes for reproduction, contract hypothesis,
+  shadow fix, and verdict.
+- `workbench/seed_visible_repo`: original challenge repo before the model patch.
+- `workbench/model_repo`: visible repo plus the model patch plus hidden
+  acceptance tests.
+- `workbench/shadow_repo`: scratch repo where the evaluator can test a better
+  fix.
+- `workbench/model_patch.diff`: exact patch produced by the model under test.
+- `workbench/model_repo_test.txt`: reproduced public+hidden test result for
+  the patched repo.
+
+Final evaluator JSON is validated with Pydantic models in
+`ci_vibe_lab/evaluator.py`. The schema forbids extra keys, bounds numeric
+scores, constrains enum fields, and then checks evidence quotes against
+exact packet substrings. In `--loose` mode, the raw evaluator output, stream,
+and working board are preserved even if the summary JSON fails validation;
+the report falls back to deterministic summary data so a bad evaluator
+response does not hide the run.
+
 ## Setup
 
 ```bash
@@ -117,7 +177,8 @@ source .venv/bin/activate
 uv sync --extra app
 ```
 
-You also need the OpenCode CLI installed and configured with at least one model:
+You also need the OpenCode CLI installed and configured with at least one
+model:
 
 ```bash
 opencode providers
@@ -145,7 +206,7 @@ uv run python -m ci_vibe_lab.runner prepare \
 Run all scenarios against a configured OpenCode model:
 
 ```bash
-uv run python -m ci_vibe_lab.runner run \
+uv run ci-vibe-run run \
   --challenge all \
   --pack ci_forensics \
   --model "provider/model" \
@@ -153,18 +214,16 @@ uv run python -m ci_vibe_lab.runner run \
   --auto-approve
 ```
 
-The model string must match the provider/model name available in your OpenCode
-configuration. For North Mini Code, confirm the exact OpenCode/OpenRouter slug
-from `opencode models` before running. If you omit `--model`, OpenCode uses its
-configured default.
+The model string must match the provider/model name from `opencode models`.
+If you omit `--model`, OpenCode uses its configured default.
 
 For a no-model harness smoke test:
 
 ```bash
-uv run python -m ci_vibe_lab.runner run --challenge dependency_api_change --no-opencode
+uv run ci-vibe-run run --challenge dependency_api_change --no-opencode
 ```
 
-That command records the failing baseline and post-test state without invoking
+That records the failing baseline and post-test state without invoking
 OpenCode.
 
 Run the positive-value maintenance pack with three attempts per task:
@@ -181,6 +240,11 @@ uv run ci-vibe-run run \
   --db data/maintenance-value-north-mini.sqlite \
   --runs-dir runs/maintenance-value-north-mini
 ```
+
+Use `--resume` to skip (scenario, attempt) pairs already in the DB — safe to
+re-run after an interruption. Use `--skip-timeouts` to skip scenarios that
+previously timed out. Experiment IDs are printed at the start of every run;
+reattach with `--experiment-id`.
 
 ## Inspect A Run
 
@@ -219,19 +283,41 @@ uv run ci-vibe-run inspect \
   --full
 ```
 
-The hidden tests are not present during the OpenCode call. In `ci_vibe_lab/runner.py`,
-the sequence is: write visible scenario, run baseline, run OpenCode, run public tests,
-capture patch, inject hidden tests, run hidden tests, then persist artifacts.
+## Reports
 
-## Hidden Failure Reports
-
-Generate a deterministic report from the saved SQLite results:
+Generate a deterministic hidden-failure report:
 
 ```bash
 uv run ci-vibe-report hidden-failures \
   --db data/north-mini-code-eval.sqlite \
   --out reports/hidden-failures.md
 ```
+
+Generate the defensible evidence-pack report (combines multiple DBs, includes
+severity-weighted scoring and scenario audit status):
+
+```bash
+uv run ci-vibe-report xray \
+  --db data/north-mini-code-eval.sqlite \
+  --db data/results.sqlite \
+  --db data/control-results.sqlite \
+  --model opencode/north-mini-code-free \
+  --out reports/north-mini-code-evidence-pack-2026-06-20.md \
+  --include-artifact-index
+```
+
+Generate the positive maintenance-value report:
+
+```bash
+uv run ci-vibe-report value \
+  --db data/maintenance-value-north-mini.sqlite \
+  --model opencode/north-mini-code-free \
+  --pack maintenance_value \
+  --out reports/north-mini-maintenance-value-2026-06-20.md \
+  --include-artifact-index
+```
+
+## Evaluator Agent
 
 Run a constrained evaluator agent over hidden failures with DeepSeek V4 Pro:
 
@@ -246,28 +332,7 @@ uv run ci-vibe-evaluate run \
   --report reports/deepseek-v4-pro-hidden-evaluator.md
 ```
 
-Each review directory contains `EVALUATION_PACKET.md`, raw OpenCode stdout/stderr,
-a live-workbench directory, and either a validated `evaluation.json` from the
-evaluator agent or an explicit fallback validation record.
-
-The evaluator is an agent, not just a one-shot classifier. Before judging, it gets:
-
-- `BUDGET.md`: hard timeout plus soft working-time, token, tool-call, and shadow-fix budgets.
-- `WORKING_BOARD.md`: visible notes for reproduction, contract hypothesis, shadow fix, and verdict.
-- `workbench/seed_visible_repo`: original challenge repo before the model patch.
-- `workbench/model_repo`: visible repo plus the model patch plus hidden acceptance tests.
-- `workbench/shadow_repo`: scratch repo where the evaluator can test a better fix.
-- `workbench/model_patch.diff`: exact patch produced by the model under test.
-- `workbench/model_repo_test.txt`: reproduced public+hidden test result for the patched repo.
-
-Final evaluator JSON is validated with Pydantic models in `ci_vibe_lab/evaluator.py`.
-The schema forbids extra keys, bounds numeric scores, constrains enum fields, and
-then checks evidence quotes against exact packet substrings. In `--loose` mode,
-the raw evaluator output, stream, and working board are preserved even if the
-summary JSON fails validation; the report falls back to deterministic summary
-data so a bad evaluator response does not hide the run.
-
-To watch the evaluator stream live on one public-green/hidden-red North Mini run:
+Watch the evaluator stream live on one public-green/hidden-red run:
 
 ```bash
 uv run ci-vibe-evaluate run \
@@ -290,27 +355,7 @@ uv run ci-vibe-evaluate run \
   --shadow-fix-budget-minutes 2
 ```
 
-Inspect the full agent envelope after the run:
-
-```bash
-find runs/evaluator-agent/deepseek-v4-pro-live-smoke -maxdepth 2 -type f
-cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/WORKING_BOARD.md
-cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/evaluation.json
-cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/evaluator_stdout.jsonl
-```
-
-The model-under-test envelope is separate and can be inspected with:
-
-```bash
-uv run ci-vibe-run inspect \
-  --db data/results.sqlite \
-  --latest \
-  --scenario metric_semantic_mismatch \
-  --model opencode/north-mini-code-free \
-  --full
-```
-
-To index completed evaluator-agent review directories into SQLite:
+Index completed evaluator-agent review directories into SQLite:
 
 ```bash
 uv run ci-vibe-evaluate ingest \
@@ -318,27 +363,12 @@ uv run ci-vibe-evaluate ingest \
   --reviews runs/evaluator-agent/deepseek-v4-pro-north-mini-expanded-pghr
 ```
 
-To regenerate the defensible evidence-pack report:
+Inspect the full evaluator envelope after the run:
 
 ```bash
-uv run ci-vibe-report xray \
-  --db data/north-mini-code-eval.sqlite \
-  --db data/results.sqlite \
-  --db data/control-results.sqlite \
-  --model opencode/north-mini-code-free \
-  --out reports/north-mini-code-evidence-pack-2026-06-20.md \
-  --include-artifact-index
-```
-
-To generate the positive maintenance-value report:
-
-```bash
-uv run ci-vibe-report value \
-  --db data/maintenance-value-north-mini.sqlite \
-  --model opencode/north-mini-code-free \
-  --pack maintenance_value \
-  --out reports/north-mini-maintenance-value-2026-06-20.md \
-  --include-artifact-index
+find runs/evaluator-agent/deepseek-v4-pro-live-smoke -maxdepth 2 -type f
+cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/WORKING_BOARD.md
+cat runs/evaluator-agent/deepseek-v4-pro-live-smoke/*/evaluation.json
 ```
 
 ## Dashboard
@@ -347,43 +377,28 @@ uv run ci-vibe-report value \
 uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ```
 
-The dashboard has five tabs:
+Five tabs:
 
-- **Report**: trust gap, false-green rate, severity-weighted failure, product-workflow stress, maintenance value mode, and result matrices.
+- **Report**: trust gap, false-green rate, severity-weighted failure,
+  product-workflow stress, maintenance value mode, and result matrices.
 - **Runs**: run table, failure inbox, and model-vs-model comparison.
-- **Inspector**: challenge card, prompt, test logs, OpenCode trace, patch, human review scores, review decision, and manual review minutes.
+- **Inspector**: challenge card, prompt, test logs, OpenCode trace, patch,
+  human review scores, review decision, and manual review minutes.
 - **Evidence**: evaluator reviews, review artifacts, and scenario audit status.
 - **Exports**: filtered CSVs and Markdown report downloads.
 
-By default the dashboard reads:
-
-```text
-data/results.sqlite
-```
-
-You can override it:
+By default the dashboard reads `data/results.sqlite`. Override with
+`CI_VIBE_DB`:
 
 ```bash
+# Single DB
 CI_VIBE_DB=/path/to/results.sqlite uv run --extra app streamlit run ci_vibe_lab/dashboard.py
-```
 
-Or compare multiple databases in one view:
-
-```bash
-CI_VIBE_DB="data/north-mini-code-eval.sqlite,data/results.sqlite" \
-  uv run --extra app streamlit run ci_vibe_lab/dashboard.py
-```
-
-Include the strong-model control when it exists:
-
-```bash
+# Compare multiple DBs
 CI_VIBE_DB="data/north-mini-code-eval.sqlite,data/results.sqlite,data/control-results.sqlite" \
   uv run --extra app streamlit run ci_vibe_lab/dashboard.py
-```
 
-Include maintenance-value results when comparing positive value against stress packs:
-
-```bash
+# Include maintenance-value results
 CI_VIBE_DB="data/maintenance-value-north-mini.sqlite,data/north-mini-code-eval.sqlite,data/results.sqlite" \
   uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ```
@@ -392,15 +407,20 @@ CI_VIBE_DB="data/maintenance-value-north-mini.sqlite,data/north-mini-code-eval.s
 
 Runtime output is intentionally ignored by git:
 
-- `runs/worktrees/`: generated scenario worktrees
+- `runs/worktrees/`: generated scenario worktrees (each is a tiny git repo so
+  the runner can capture the patch with `git diff`)
 - `runs/artifacts/`: prompts, test logs, OpenCode output, and patches
-- `data/results.sqlite`: SQLite database
+- `runs/evaluator-agent/`: per-run evaluator review directories
+- `data/*.sqlite`: SQLite result databases
 
-Each scenario worktree is also a tiny git repo, so the runner can capture the
-agent patch with `git diff`.
+See `AGENTS.md` for repo-wide agent guidance, project rules, and deeper
+documentation pointers.
 
 ## Verify The Harness
 
 ```bash
 uv run python -m unittest discover -s tests -v
 ```
+
+This runs the harness self-tests — scenario validity, DB migration, evaluator
+schema validation, report generation — without spending model tokens.

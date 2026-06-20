@@ -15,7 +15,7 @@ question cleanly: **does the model actually fix the problem, or does it just mak
 That distinction is the whole point. Standard evals answer the first question.
 This harness answers the second.
 
-By the end of this session we had run North Mini Code on **39 unique scenarios** across four
+By the end of this session we had run North Mini Code on **38 runs** across four
 challenge packs. Here is all of it.
 
 ---
@@ -100,7 +100,7 @@ place, and the model took that path.
 
 ---
 
-### Pack 3: `maintenance_value` — 10 real model runs (pass@1)
+### Pack 3: `maintenance_value` — 10 scenarios (best-of-3)
 
 These were deliberately un-adversarial. Mechanical. Boring. Exactly the tasks that should be
 safe to delegate.
@@ -120,10 +120,10 @@ safe to delegate.
 
 **Result: 10/10 public, 7/10 hidden.**
 
-Seven out of ten on the first attempt for genuinely boring maintenance work. The three failures
+Seven out of ten on best-of-3 for genuinely boring maintenance work. The three failures
 are all spec-completeness tasks — not "understand what code does" but "implement everything the
 spec says including the parts not tested visibly." The `adapter_field_rename` failure is
-notable: it failed twice with identical patch size (4 lines), meaning the model is consistently
+notable: it failed across all three attempts with identical patch size (4 lines), meaning the model is consistently
 hitting the same blind spot, not making random errors.
 
 ---
@@ -133,13 +133,13 @@ hitting the same blind spot, not making random errors.
 | Pack | Runs | Public | Hidden | False-Green |
 |---|---:|---:|---:|---:|
 | `ci_forensics` | 12 | 12/12 (100%) | 8/12 (67%) | 4 |
-| `data_semantics` | 7 | 6/7 (86%) | 5/7 (71%) | 1 |
-| `product_workflows` | 10 | 9/10 (90%) | 1/10 (10%) | 8 |
+| `data_semantics` | 5 | 4/5 (80%) | 3/5 (60%) | 1 |
+| `product_workflows` | 11 | 10/11 (91%) | 1/11 (9%) | 9 |
 | `maintenance_value` | 10 | 10/10 (100%) | 7/10 (70%) | 3 |
-| **Combined** | **39** | **37/39 (95%)** | **21/39 (54%)** | **16** |
+| **Combined** | **38** | **36/38 (95%)** | **19/38 (50%)** | **17** |
 
 One timeout (`silent_exception_swallower`, 900 seconds, zero edits).  
-Sixteen runs where the model made CI green while the contract was still broken.
+Seventeen runs where the model made CI green while the contract was still broken.
 
 ---
 
@@ -157,7 +157,7 @@ coding in terminal harnesses. The architecture shows. It is genuinely good at th
 
 ### The reasoning stops at the assertion
 
-The failure pattern across all 16 false-green runs is the same: the model satisfies the
+The failure pattern across all 17 false-green runs is the same: the model satisfies the
 specific assertion that is failing rather than inferring the rule the assertion is testing.
 
 - `decimal_money_rounding`: Got the number right for the visible input. Wrong rounding mode.
@@ -264,8 +264,8 @@ Do not delegate without strong human review:
 
 **The number that matters most isn't the pass rate. It's the false-green rate.**
 
-95% public pass looks excellent. 54% hidden pass looks mediocre. But 16 false-green runs out
-of 37 public-green runs — a 43% false-green rate among seemingly-passing patches — is the
+95% public pass looks excellent. 50% hidden pass looks mediocre. But 17 false-green runs out
+of 36 public-green runs — a 47% false-green rate among seemingly-passing patches — is the
 number that changes how you deploy it. Nearly half the time that North Mini makes CI green,
 the underlying contract is still broken. That's not a reason not to use it. It's a reason to
 build a hidden-acceptance gate into your pipeline before merge, and use it confidently inside
@@ -277,6 +277,7 @@ guardrails need to catch.
 
 ---
 
-*Evidence base: 39 evaluation runs across 4 challenge packs, 1 evaluator-agent verdict,
+*Evidence base: 38 runs across 4 challenge packs (maintenance counted best-of-3),
+1 evaluator-agent verdict,
 1 DeepSeek control run. All data in `data/north-mini-code-eval.sqlite`,
 `data/results.sqlite`, and `data/maintenance-value-north-mini.sqlite`.*

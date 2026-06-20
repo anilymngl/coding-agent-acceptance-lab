@@ -217,6 +217,37 @@ uv run ci-vibe-run run \
 The model string must match the provider/model name from `opencode models`.
 If you omit `--model`, OpenCode uses its configured default.
 
+### Local Ollama Opponents
+
+This repo includes `opencode.json` with an Ollama provider for local models.
+Use this path when hosted model limits are exhausted.
+
+Configured local model IDs:
+
+- `ollama/gemma4:e4b`
+- `ollama/gemma4:12b`
+- `ollama/gemma4:26b`
+- `ollama/gemma4:31b`
+- `ollama/qwen3-coder:30b`
+
+Start with a smoke before running a pack:
+
+```bash
+uv run ci-vibe-run run \
+  --challenge docs_cli_sync \
+  --model ollama/gemma4:e4b \
+  --agent build \
+  --auto-approve \
+  --timeout 900 \
+  --first-output-timeout 120 \
+  --prompt-mode sparse \
+  --db data/local-ollama-smoke.sqlite \
+  --runs-dir runs/local-ollama/smoke
+```
+
+See [docs/local-ollama-opponents.md](docs/local-ollama-opponents.md) for the
+full Ollama health checks, pull commands, and leaderboard lane rules.
+
 For a no-model harness smoke test:
 
 ```bash

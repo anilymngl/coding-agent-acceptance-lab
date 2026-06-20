@@ -798,6 +798,16 @@ Optional control:
 
 - `opencode-go/glm-5.2`
 
+Local fallback/opponent lane when hosted limits are exhausted:
+
+- `ollama/gemma4:e4b`
+- `ollama/gemma4:12b`
+- `ollama/qwen3-coder:30b`
+
+The local lane is useful, but it must be labeled separately from hosted-model
+controls until it has comparable coverage and a healthy Ollama/OpenCode runtime.
+See `docs/local-ollama-opponents.md`.
+
 ### Minimum Pack Set
 
 Run after audit:

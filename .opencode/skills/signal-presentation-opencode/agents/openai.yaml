@@ -1,0 +1,4 @@
+interface:
+  display_name: "Signal Presentation"
+  short_description: "Evidence-first decks and posts"
+  default_prompt: "Use $signal-presentation-opencode to create an evidence-first readout deck."

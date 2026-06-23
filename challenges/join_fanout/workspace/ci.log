@@ -1,5 +1,0 @@
-FAILED tests/test_pipeline.py::PipelineTests::test_profile_metrics
-AssertionError: 10 != 5
-
-The test expects 5 total clicks, but the query returned 10.
-The user only clicked 5 times. Why is the pipeline doubling it?

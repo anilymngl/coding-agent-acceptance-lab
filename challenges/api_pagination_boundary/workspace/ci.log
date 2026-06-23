@@ -1,4 +1,0 @@
-FAILED tests/test_ingestion.py::IngestionTests::test_fetches_all_twenty_five_records
-AssertionError: 20 != 25
-
-The API contains 25 records, but the ingestion loop only returned 20.

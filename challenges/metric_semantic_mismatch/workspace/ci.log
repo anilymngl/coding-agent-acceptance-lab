@@ -1,5 +1,0 @@
-FAILED tests/test_analytics.py::AnalyticsTests::test_combined_revenue_normalizes_to_dollars
-AssertionError: 7529.98 != 104.98
-
-The self-serve dashboard combines revenue from the orders service (cents)
-and the subscriptions service (dollars) without unit conversion.

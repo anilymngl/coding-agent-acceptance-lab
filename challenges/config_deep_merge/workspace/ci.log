@@ -1,5 +1,0 @@
-FAILED tests/test_config.py::ConfigTests::test_nested_override_preserves_base_keys
-KeyError: 'host'
-
-The override dict for "database" replaced the entire nested dict instead
-of merging keys. CI started failing after the config loader was added.

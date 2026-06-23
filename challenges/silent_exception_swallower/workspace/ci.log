@@ -1,5 +1,0 @@
-FAILED tests/test_processor.py::ProcessorTests::test_batch_handles_malformed_items
-KeyError: 'name'
-
-The batch processor crashed when encountering a malformed item.
-It should handle malformed items gracefully without crashing.

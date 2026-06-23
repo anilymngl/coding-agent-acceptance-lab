@@ -15,9 +15,26 @@ trust a pass*.
 > This is a behavior microscope, not a leaderboard benchmark. Treat results as
 > directional, not statistically stable.
 
-## Findings (North Mini Code — `opencode/north-mini-code-free`)
+## Research Exhibit
 
-Current canonical North Mini evidence: 57 attempts across four challenge packs.
+The current research output lives in **[publishables/](publishables/)** — a
+self-contained HTML research suite, openable in any browser, no build step:
+
+| Page | What it is |
+|---|---|
+| `index.html` | Entry point. Thesis, findings, signposts to everything. |
+| `paper_v2.html` | Pass@3 head-to-head: Laguna XS.2 vs North Mini on 33 CI-repair scenarios. |
+| `paper.html` | Prior paper (v1). Pass@1 across 5 models, 4 families. |
+| `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all components. |
+| `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
+| `evidence-index.html` | 81-row data table. Every scenario × model × prompt mode. Filterable. |
+| `evaluator-findings.html` | Reviewed false-greens. Root causes, confidence scores, patch quality. |
+
+Start with [publishables/index.html](publishables/index.html).
+
+### Core Finding (Pass@1, North Mini Code)
+
+57 attempts across four challenge packs:
 
 | Pack | Runs | Public | Hidden | False-green |
 |---|---:|---:|---:|---:|
@@ -27,69 +44,46 @@ Current canonical North Mini evidence: 57 attempts across four challenge packs.
 | `maintenance_value` | 30 | 100% | 60% | 12 |
 | **Combined** | **57** | **100%** | **54%** | **26** |
 
-**The central finding:** the model is disciplined at the agent loop and useful
-for bounded maintenance work. It fails when the hidden contract is richer than
-what the visible test covers — especially product and business-logic tasks.
-26 of 57 public-green patches were still contract-broken — a 45.6%
-false-green rate.
+The model is disciplined for bounded maintenance work but fails when the hidden
+contract is richer than the visible test — especially product and business-logic
+tasks. 26 of 57 public-green patches were still contract-broken (45.6%
+false-green rate).
 
-**Where it works autonomously:** mechanical migrations (`logger.warn`,
-`utcnow`, deprecated APIs), stale artifact regeneration, fixture/doc sync,
-import hygiene, missing regression tests.
+### Cross-Model Evidence
 
-**Where it needs a hidden-acceptance gate before merge:** adapter contracts,
-validation completeness, money math, SLAs, auth/audit correctness, any task
-where the spec is richer than the visible assertion.
-
-See [reports/north-mini-ultimate-eval-report-2026-06-20.md](reports/north-mini-ultimate-eval-report-2026-06-20.md)
-for the current full-run analysis, DeepSeek control comparison, GLM caveat,
-claim ledger, and deployment policy. Start with
-[reports/REPORTS.md](reports/REPORTS.md) for report surfacing conditions.
-
-## First Matrix Finding
-
-The first local multi-model matrix is complete for `maintenance_value`, sparse
-prompting, pass@1:
-
-| Model | Public | Hidden | Trust Gap | False-green | Avg Time |
-|---|---:|---:|---:|---:|---:|
-| `gemma4:e4b` | 8/10 | 5/10 | 30% | 3 | ~62s |
-| `gemma4:31b` | 10/10 | 7/10 | 30% | 3 | ~300s |
-| North Mini reference | 10/10 | 7/10 | 30% | 3 | n/a |
-
-The same spec-completeness scenarios fail hidden across model families. That is
-the strongest current evidence that the harness is measuring a real trust-gap
-pattern, not one model's quirk. See
-[reports/gemma4-matrix-analysis-2026-06-20.md](reports/gemma4-matrix-analysis-2026-06-20.md).
-
-The follow-up smallest-two local lane has sparse evidence for
-`gemma4:e4b` and `gemma4:12b`. e4b completed all 10 rows; 12B stored all 10
-rows but one was a 900s `agent_timeout`, so that lane is mixed local-runtime
-evidence rather than a fully completed semantic comparison.
-
-| Matrix | Model | Public | Hidden | Runtime | False-green |
-|---|---|---:|---:|---:|---:|
-| smallest-two sparse | `gemma4:e4b` | 3/10 | 2/10 | 10/10 complete | 1 |
-| smallest-two sparse | `gemma4:12b` | 5/9 | 3/9 | 9/10 complete | 2 |
-
-See
-[reports/leaderboard-local-gemma4-smallest-two.md](reports/leaderboard-local-gemma4-smallest-two.md)
+The first two local Gemma 4 matrix runs on `maintenance_value` sparse show the
+same 30% trust gap across model families — the harness measures a real pattern,
+not one model's quirk. See
+[reports/gemma4-matrix-analysis-2026-06-20.md](reports/gemma4-matrix-analysis-2026-06-20.md)
 and
-[reports/integrity-local-gemma4-smallest-two.md](reports/integrity-local-gemma4-smallest-two.md).
-`ollama/qwen3.6:27b` is configured as a separate fallback lane if 12B is later
-rejected as non-viable; it should not be merged into Gemma-only claims.
+[reports/leaderboard-local-gemma4-smallest-two.md](reports/leaderboard-local-gemma4-smallest-two.md).
+
+The Laguna XS.2 vs North Mini pass@3 comparison has its own matrix config
+(`configs/matrix/laguna-xs2-vs-north-mini.json`) and evidence pack at
+[reports/laguna-xs2-vs-north-mini-first-comparison.md](reports/laguna-xs2-vs-north-mini-first-comparison.md).
+
+Historical North Mini analysis:
+[reports/north-mini-ultimate-eval-report-2026-06-20.md](reports/north-mini-ultimate-eval-report-2026-06-20.md).
+Start with [reports/REPORTS.md](reports/REPORTS.md) for the full report index.
 
 ## Current Development Status
 
-The general, config-driven model comparison pipeline is implemented:
+The config-driven multi-model comparison pipeline is implemented and has
+produced first cross-model evidence (Gemma 4 matrix, Laguna XS.2 vs North Mini).
+The research exhibit in `publishables/` is the polished front door.
 
-- define models, packs, prompt lanes, and runtime limits in one config
-- run a full model matrix with one command
-- compare completed-attempt capability separately from runtime reliability
-- generate a generic leaderboard-style evidence report without overstating
-  public benchmark claims
+Recent harness additions:
 
-Current remaining goals are evidence expansion, not core plumbing:
+- **Rate-limit backoff**: exponential backoff (`--backoff-multiplier`, `--backoff-ceiling`)
+  on consecutive rate-limit hits during matrix runs
+- **Model summary capture**: `model_summary` column in the DB, extracted from
+  OpenCode JSONL stdout; surfaced in evaluator workbench and review packets
+- **Health check**: `check-opencode.sh` — one-shot full-stack health (Ollama +
+  OpenCode + eval harness) with `--quiet`, `--watch`, `--deep`, `--integrity` modes
+- **Stale challenges archived**: the old `challenges/` directory (manual testing
+  concept, only 7 of 37 scenarios) moved to `.archive/challenges/` and gitignored
+
+Backlog (evidence expansion, not core plumbing):
 
 - run `contract_visible` maintenance lanes
 - add broader packs such as `ci_forensics` and `product_workflows`
@@ -325,10 +319,20 @@ uv run ci-vibe-run run \
   --runs-dir runs/maintenance-value-north-mini
 ```
 
-Use `--resume` to skip (scenario, attempt) pairs already in the DB — safe to
-re-run after an interruption. Use `--skip-timeouts` to skip scenarios that
-previously timed out. Experiment IDs are printed at the start of every run;
-reattach with `--experiment-id`.
+Use `--delay-seconds`, `--backoff-multiplier`, and `--backoff-ceiling` to
+pace runs against rate-limited providers. Use `--resume` to skip (scenario,
+attempt) pairs already in the DB — safe to re-run after an interruption. Use
+`--skip-timeouts` to skip scenarios that previously timed out. Experiment IDs
+are printed at the start of every run; reattach with `--experiment-id`.
+
+## Health Check
+
+```bash
+./check-opencode.sh              # snapshot
+./check-opencode.sh --watch      # live tracker, refreshes every 5s
+./check-opencode.sh --quiet      # problems only
+./check-opencode.sh --integrity  # add evidence-integrity gate (slow)
+```
 
 ## Inspect A Run
 
@@ -496,6 +500,7 @@ Runtime output is intentionally ignored by git:
 - `runs/artifacts/`: prompts, test logs, OpenCode output, and patches
 - `runs/evaluator-agent/`: per-run evaluator review directories
 - `data/*.sqlite`: SQLite result databases
+- `.archive/`: moved stale manual-test challenge directories (gitignored)
 
 See `AGENTS.md` for repo-wide agent guidance, project rules, and deeper
 documentation pointers.

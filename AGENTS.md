@@ -20,6 +20,14 @@ quality and caveats when comparing models.
   config-driven **multi-model comparison pipeline** is now implemented.
 - The implementation plan is preserved as historical design context:
   `docs/model-comparison-eval-pipeline-plan-2026-06-20.md`.
+- **Research exhibit published**: `publishables/` — self-contained HTML suite
+  (pass@3 paper, evidence index, evaluator findings, scenario catalog, harness
+  inventory). Open `publishables/index.html` in a browser.
+- **Laguna XS.2 vs North Mini comparison** completed (pass@3, 33 scenarios).
+  Config: `configs/matrix/laguna-xs2-vs-north-mini.json`. Reports:
+  `reports/laguna-xs2-vs-north-mini-first-comparison.md`,
+  `reports/laguna-xs2-vs-north-mini-leaderboard.md`,
+  `reports/laguna-xs2-vs-north-mini-integrity.md`.
 - Local Ollama/Gemma 4 support is configured through repo-root `opencode.json`.
 - **Gemma 4 two-model matrix completed** (`configs/matrix/local-gemma4-two-model.json`):
   e4b 5/10 hidden, 31b 7/10 hidden on `maintenance_value` sparse.
@@ -36,6 +44,15 @@ quality and caveats when comparing models.
   as non-viable. Do not merge Qwen rows into Gemma-only claims.
 - The harness now passes repo-root OpenCode config to generated worktrees via
   `OPENCODE_CONFIG`; keep that behavior.
+- **Rate-limit backoff**: `--backoff-multiplier` and `--backoff-ceiling` flags
+  control exponential backoff on consecutive rate-limit hits. Provider error
+  markers extended with rate-limit signals (429, too many requests, etc.).
+- **Model summary capture**: `model_summary` column (last text event from
+  OpenCode JSONL stdout) stored in DB and surfaced in evaluator workbench.
+- **Stale `challenges/` directory**: archived to `.archive/challenges/` and
+  gitignored. The harness uses inline scenario strings in `scenarios.py`, not
+  disk files. Only 7 of 37 scenarios existed there; it was an early manual-test
+  concept never fully populated.
 
 ## What Lives Here
 
@@ -50,6 +67,11 @@ quality and caveats when comparing models.
   verification for pre-report integrity gates.
 - `ci_vibe_lab/evaluator.py` — evaluator-agent workbench and Pydantic review schema.
 - `ci_vibe_lab/dashboard.py` — Streamlit dashboard with Matrix tab.
+- `ci_vibe_lab/matrix.py` — matrix config expansion, run orchestration,
+  rate-limit detection, inter-cell delay.
+- `ci_vibe_lab/generate_evaluator_report.py` — generates evaluator-findings
+  HTML from reviewed runs.
+- `ci_vibe_lab/generate_gallery.py` — generates evidence-index HTML from DB.
 - `check-opencode.sh` — one-shot health check for the full stack: Ollama runtime
   (processes, loaded/installed models, config-vs-disk coverage), OpenCode
   (web daemon, active agents, MCP servers, session/cost stats from
@@ -61,8 +83,16 @@ quality and caveats when comparing models.
   matrix status tables), `--integrity` (runs `ci-vibe-report integrity` per
   config), `--raw` (unfiltered log). Runs in <1s by default; only `--integrity`
   invokes Python.
+- `app/` — application modules (e.g. `dates.py` timezone-aware invoice dates).
+- `publishables/` — self-contained HTML research exhibit (index, paper_v2,
+  evidence-index, evaluator-findings, scenario-catalog, harness-built-target).
+- `presentation/` — slide decks and LinkedIn posts for research findings.
 - `docs/` — methodology and implementation plans. Start with `docs/README.md`.
 - `reports/` — generated reports. Start with `reports/REPORTS.md`.
+- `configs/matrix/` — model comparison matrix definitions.
+- `.opencode/skills/` — agent skills (signal, signal-presentation-opencode,
+  create-presentation).
+- `.archive/` — gitignored historical artifacts (stale challenges directory).
 - `data/` and `runs/` — gitignored runtime evidence. Do not commit them.
 
 ## Project Rules
@@ -77,6 +107,7 @@ quality and caveats when comparing models.
 - Keep raw artifacts as source evidence; SQLite is the query/index layer.
 - Prefer adding pointers to docs over duplicating long explanations here.
 - Each pass@k attempt is an independent fresh start (new worktree, no memory of prior attempts), not an iterative refinement on top of the previous attempt.
+- Stale `challenges/` directory is archived to `.archive/challenges/` (gitignored); do not restore it.
 
 ## Current Detailed Goals
 
@@ -89,6 +120,11 @@ Goal 2: first real multi-model evidence
 done for sparse `maintenance_value` pass@1. Gemma 4 e4b and 31b both completed
 the 10-scenario sparse lane, reports are generated, and integrity is verified.
 Do not rerun this full sparse matrix unless intentionally refreshing evidence.
+
+Goal 3: research exhibit (publishables/)
+done. Self-contained HTML suite with pass@3 paper (Laguna XS.2 vs North Mini),
+evidence index, evaluator findings, scenario catalog, harness inventory, and
+cross-linked navigation. Open `publishables/index.html`.
 
 Next evidence work:
 
@@ -158,9 +194,12 @@ uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 ## Progressive Disclosure
 
 - Current docs orientation: `docs/README.md`
+- Research exhibit: `publishables/README.md`
 - Challenge design: `docs/challenge-design.md`
 - Fresh-run harness audit: `reports/north-mini-fresh-run-harness-audit-2026-06-20.md`
 - Gemma 4 local lane: `docs/local-ollama-opponents.md`
 - Multi-model pipeline plan: `docs/model-comparison-eval-pipeline-plan-2026-06-20.md`
 - Historical report index: `reports/REPORTS.md`
+- Laguna XS.2 vs North Mini: `reports/laguna-xs2-vs-north-mini-first-comparison.md`
+- Handover notes: `docs/handover-session-2026-06-21.md`
 - Scenario source of truth: `ci_vibe_lab/scenarios.py`

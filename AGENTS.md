@@ -50,6 +50,17 @@ quality and caveats when comparing models.
   verification for pre-report integrity gates.
 - `ci_vibe_lab/evaluator.py` — evaluator-agent workbench and Pydantic review schema.
 - `ci_vibe_lab/dashboard.py` — Streamlit dashboard with Matrix tab.
+- `check-opencode.sh` — one-shot health check for the full stack: Ollama runtime
+  (processes, loaded/installed models, config-vs-disk coverage), OpenCode
+  (web daemon, active agents, MCP servers, session/cost stats from
+  `opencode.db`), and the eval harness (per-cell matrix progress bars,
+  per-scenario run outcomes, false-green/timeout/trust-gap scores, evaluator
+  coverage, disk usage, and log health). Flags stale runs, missing models, and
+  unreviewed false-greens. Modes: `--quiet` (problems only), `--watch`
+  (auto-refresh 5s), `--follow` (live log tail), `--deep` (per-model spend +
+  matrix status tables), `--integrity` (runs `ci-vibe-report integrity` per
+  config), `--raw` (unfiltered log). Runs in <1s by default; only `--integrity`
+  invokes Python.
 - `docs/` — methodology and implementation plans. Start with `docs/README.md`.
 - `reports/` — generated reports. Start with `reports/REPORTS.md`.
 - `data/` and `runs/` — gitignored runtime evidence. Do not commit them.
@@ -65,6 +76,7 @@ quality and caveats when comparing models.
 - Do not present partial matrix results as a public benchmark leaderboard.
 - Keep raw artifacts as source evidence; SQLite is the query/index layer.
 - Prefer adding pointers to docs over duplicating long explanations here.
+- Each pass@k attempt is an independent fresh start (new worktree, no memory of prior attempts), not an iterative refinement on top of the previous attempt.
 
 ## Current Detailed Goals
 
@@ -135,6 +147,12 @@ uv run ci-vibe-run run \
 
 # Dashboard
 uv run --extra app streamlit run ci_vibe_lab/dashboard.py
+
+# Health check (Ollama + OpenCode + eval harness in one screen)
+./check-opencode.sh              # snapshot
+./check-opencode.sh --watch      # live tracker, refreshes every 5s
+./check-opencode.sh --quiet      # problems only
+./check-opencode.sh --integrity  # add evidence-integrity gate (slow)
 ```
 
 ## Progressive Disclosure

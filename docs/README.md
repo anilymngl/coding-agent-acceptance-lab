@@ -240,6 +240,11 @@ Not done:
 - contract-visible prompt lane matrix runs
 - broader pack coverage in matrix (ci_forensics, product_workflows)
 - pass@3 consistency analysis
+- `ci-vibe-matrix retry` subcommand (see `docs/matrix-retry-runtime-failures-proposal-2026-06-21.md`)
+
+## Session Handovers
+
+- `docs/handover-session-2026-06-21.md` — Full North Mini vs Gemma 4 12b matrix run, `--live` flag, retry proposal, harness philosophy.
 
 ## Operational Rules
 

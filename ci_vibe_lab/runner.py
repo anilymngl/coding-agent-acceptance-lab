@@ -26,6 +26,38 @@ from ci_vibe_lab.scenarios import (
 )
 
 
+RATE_LIMIT_MARKERS = (
+    "rate limit",
+    "rate_limit",
+    "ratelimit",
+    "429",
+    "too many requests",
+    "free-models-per-min",
+    "retry-after",
+    "insufficient balance",
+    "quota exceeded",
+)
+
+
+def is_rate_limit_error(returncode: int, stdout: str, stderr: str) -> bool:
+    """Detect rate-limit signals from exit code, stdout, or stderr."""
+    combined = f"{stdout}\n{stderr}".lower()
+    return any(marker in combined for marker in RATE_LIMIT_MARKERS)
+
+
+def compute_backoff(
+    base_delay: float,
+    consecutive_rate_limits: int,
+    multiplier: float,
+    ceiling: float,
+) -> float:
+    """Exponential backoff: base * multiplier^consecutive, capped at ceiling."""
+    if consecutive_rate_limits <= 0:
+        return base_delay
+    delay = base_delay * (multiplier ** consecutive_rate_limits)
+    return min(delay, ceiling)
+
+
 DEFAULT_DB = Path("data/results.sqlite")
 DEFAULT_RUNS_DIR = Path("runs")
 PROJECT_OPENCODE_CONFIG = Path("opencode.json")
@@ -150,6 +182,26 @@ def artifact_line(label: str, path_value: object) -> str:
     if not path.exists():
         return f"- {label}: {path} (missing)"
     return f"- {label}: {path} ({path.stat().st_size} bytes)"
+
+
+def extract_model_summary(opencode_stdout: str) -> str:
+    """Extract the model's final explanation message from the JSONL stdout."""
+    if not opencode_stdout:
+        return ""
+    text_messages = []
+    for line in opencode_stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            evt = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if evt.get("type") == "text":
+            t = (evt.get("part") or {}).get("text", "").strip()
+            if t:
+                text_messages.append(t)
+    return text_messages[-1] if text_messages else ""
 
 
 def build_opencode_command(
@@ -350,6 +402,8 @@ def run_one(
     baseline_output_path = write_artifact(artifact_dir / "baseline.txt", baseline.output)
     opencode_stdout_path = write_artifact(artifact_dir / "opencode_stdout.jsonl", opencode_stdout)
     opencode_stderr_path = write_artifact(artifact_dir / "opencode_stderr.txt", opencode_stderr)
+    model_summary = extract_model_summary(opencode_stdout) if opencode_stdout else ""
+    model_summary_path = write_artifact(artifact_dir / "model_summary.txt", model_summary + "\n") if model_summary else ""
     public_output_path = write_artifact(artifact_dir / "public.txt", public.output)
     hidden_output_path = write_artifact(artifact_dir / "hidden.txt", hidden.output)
     patch_path = write_artifact(artifact_dir / "patch.diff", patch)
@@ -402,6 +456,8 @@ def run_one(
         "public_output_path": public_output_path,
         "hidden_output_path": hidden_output_path,
         "patch_path": patch_path,
+        "model_summary": model_summary,
+        "model_summary_path": model_summary_path,
         "patch_files_touched": patch_stats.files_touched,
         "patch_added_lines": patch_stats.added_lines,
         "patch_deleted_lines": patch_stats.deleted_lines,
@@ -537,6 +593,7 @@ def run_scenarios(args: argparse.Namespace) -> None:
     run_ids = []
     skipped = 0
     attempted = 0
+    consecutive_rate_limits = 0
     for index in range(args.runs):
         for scenario_id in selected:
             if scenario_id in skipped_timeout:
@@ -548,8 +605,17 @@ def run_scenarios(args: argparse.Namespace) -> None:
                 skipped += 1
                 continue
             if attempted and args.delay_seconds > 0:
-                progress(f"Waiting {args.delay_seconds:g}s before next OpenCode attempt...")
-                time.sleep(args.delay_seconds)
+                delay = compute_backoff(
+                    args.delay_seconds,
+                    consecutive_rate_limits,
+                    args.backoff_multiplier,
+                    args.backoff_ceiling,
+                )
+                if consecutive_rate_limits > 0:
+                    progress(f"Backoff {delay:.0f}s (rate-limited {consecutive_rate_limits}x)...")
+                else:
+                    progress(f"Waiting {delay:.0f}s before next attempt...")
+                time.sleep(delay)
             progress(f"Running {scenario_id} ({index + 1}/{args.runs})...")
             run_id = run_one(
                 scenario_id=scenario_id,
@@ -569,6 +635,27 @@ def run_scenarios(args: argparse.Namespace) -> None:
             attempted += 1
             run_ids.append(run_id)
             progress(f"  stored run_id={run_id}")
+
+            # Check if this run hit a rate limit
+            if not args.no_opencode and db_path.exists():
+                try:
+                    conn = connect(db_path)
+                    row = conn.execute(
+                        "SELECT opencode_exit_code, opencode_stdout, opencode_stderr FROM runs WHERE run_id = ?",
+                        (run_id,),
+                    ).fetchone()
+                    conn.close()
+                    if row and is_rate_limit_error(
+                        int(row["opencode_exit_code"] or 0),
+                        str(row["opencode_stdout"] or ""),
+                        str(row["opencode_stderr"] or ""),
+                    ):
+                        consecutive_rate_limits += 1
+                        progress(f"  ⚠ rate limit detected (consecutive: {consecutive_rate_limits})")
+                    else:
+                        consecutive_rate_limits = 0
+                except Exception:
+                    pass
     if skipped:
         progress(f"Skipped {skipped} attempt(s).")
     progress(f"Saved {len(run_ids)} run(s) to {db_path.resolve()}")
@@ -698,7 +785,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--delay-seconds",
         type=float,
         default=0.0,
-        help="Sleep between OpenCode attempts to avoid provider/CLI burst stalls. Default: 0.",
+        help="Base sleep between OpenCode attempts. Doubles on rate-limit hit. Default: 0.",
+    )
+    run.add_argument(
+        "--backoff-multiplier",
+        type=float,
+        default=2.0,
+        help="Multiply delay by this factor on each consecutive rate-limit hit. Default: 2.",
+    )
+    run.add_argument(
+        "--backoff-ceiling",
+        type=float,
+        default=300.0,
+        help="Maximum delay in seconds after exponential backoff. Default: 300.",
     )
     run.add_argument(
         "--prompt-mode",

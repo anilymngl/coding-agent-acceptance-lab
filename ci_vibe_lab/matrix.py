@@ -41,6 +41,15 @@ PROVIDER_ERROR_MARKERS = (
     "econnrefused",
     "failed to connect",
     "no such provider",
+    "rate limit",
+    "rate_limit",
+    "ratelimit",
+    "429",
+    "too many requests",
+    "free-models-per-min",
+    "retry-after",
+    "insufficient balance",
+    "quota exceeded",
     "provider",
 )
 
@@ -74,6 +83,9 @@ class DefaultsConfig(BaseModel):
     timeout: int = 900
     first_output_timeout: float | None = None
     delay_seconds: float = 0.0
+    backoff_multiplier: float = 2.0
+    backoff_ceiling: float = 300.0
+    inter_cell_delay: float = 10.0
     runs: int = 1
     prompt_modes: list[str] = Field(default_factory=lambda: ["sparse"])
     packs: list[str] = Field(default_factory=list)
@@ -125,6 +137,9 @@ class ModelConfig(BaseModel):
     timeout: int | None = None
     first_output_timeout: float | None = None
     delay_seconds: float | None = None
+    backoff_multiplier: float | None = None
+    backoff_ceiling: float | None = None
+    inter_cell_delay: float | None = None
     auto_approve: bool | None = None
     warmup: bool | None = None
     warmup_timeout: int | None = None
@@ -249,6 +264,9 @@ class MatrixCell:
     timeout: int
     first_output_timeout: float | None
     delay_seconds: float
+    backoff_multiplier: float
+    backoff_ceiling: float
+    inter_cell_delay: float
     db_path: Path
     runs_dir: Path
     experiment_id: str
@@ -333,6 +351,21 @@ def expand_cells(config: MatrixConfig) -> list[MatrixCell]:
                             if model.delay_seconds is not None
                             else config.defaults.delay_seconds
                         ),
+                        backoff_multiplier=(
+                            model.backoff_multiplier
+                            if model.backoff_multiplier is not None
+                            else config.defaults.backoff_multiplier
+                        ),
+                        backoff_ceiling=(
+                            model.backoff_ceiling
+                            if model.backoff_ceiling is not None
+                            else config.defaults.backoff_ceiling
+                        ),
+                        inter_cell_delay=(
+                            model.inter_cell_delay
+                            if model.inter_cell_delay is not None
+                            else config.defaults.inter_cell_delay
+                        ),
                         db_path=db_path,
                         runs_dir=runs_dir,
                         experiment_id=f"{config.matrix_id}-{model.alias}-{pack}-{prompt_mode}",
@@ -414,6 +447,10 @@ def cell_command(
         str(cell.runs),
         "--delay-seconds",
         str(cell.delay_seconds),
+        "--backoff-multiplier",
+        str(cell.backoff_multiplier),
+        "--backoff-ceiling",
+        str(cell.backoff_ceiling),
         "--prompt-mode",
         cell.prompt_mode,
         "--experiment-id",
@@ -655,6 +692,10 @@ def run_cells(
         return 0
     exit_code = 0
     for index, cell in enumerate(cells, start=1):
+        # Inter-cell delay (not before first cell)
+        if index > 1 and cell.inter_cell_delay > 0:
+            print(f"Inter-cell delay {cell.inter_cell_delay:.0f}s...", flush=True)
+            time.sleep(cell.inter_cell_delay)
         command = cell_command(cell, resume=resume, skip_timeouts=skip_timeouts)
         cell.runs_dir.mkdir(parents=True, exist_ok=True)
         cell.db_path.parent.mkdir(parents=True, exist_ok=True)

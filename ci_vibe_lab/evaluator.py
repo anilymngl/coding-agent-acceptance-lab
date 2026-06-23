@@ -279,6 +279,10 @@ def prepare_workbench(row: sqlite3.Row, review_dir: Path) -> None:
     write_text(workbench / "model_patch.diff", patch)
     write_text(workbench / "model_patch_apply.txt", apply_patch(model_repo, patch))
 
+    model_summary = str(row["model_summary"] or "")
+    if model_summary.strip():
+        write_text(workbench / "model_summary.txt", model_summary + "\n")
+
     hidden_dir.mkdir(parents=True, exist_ok=True)
     hidden_text = get_scenario(str(row["scenario"])).hidden_test
     write_text(hidden_dir / "test_hidden_acceptance.py", hidden_text)
@@ -301,6 +305,7 @@ def prepare_workbench(row: sqlite3.Row, review_dir: Path) -> None:
               directory to test a better fix.
             - `hidden_acceptance/test_hidden_acceptance.py`: hidden test source.
             - `model_patch.diff`: exact patch captured from the model-under-test run.
+            - `model_summary.txt`: the model's own explanation of what it changed and why (if produced).
             - `model_repo_test.txt`: harness reproduction of public+hidden tests in `model_repo`.
 
             Test command:
@@ -371,6 +376,10 @@ def make_packet(row: sqlite3.Row) -> str:
         - Public pass: `{row['public_pass']}`
         - Hidden pass: `{row['hidden_pass']}`
         - Duration seconds: `{float(row['duration_seconds']):.1f}`
+
+        ## Model's Own Explanation
+
+        {str(row['model_summary'] or '') or '(no summary produced)'}
 
         ## Challenge Intent
 

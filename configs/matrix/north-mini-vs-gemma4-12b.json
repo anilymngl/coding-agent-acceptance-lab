@@ -1,0 +1,50 @@
+{
+  "matrix_id": "north-mini-vs-gemma4-12b-2026-06-21",
+  "description": "Full comparison matrix: North Mini vs Gemma 4 12b on ci_forensics + maintenance_value + product_workflows, sparse and contract_visible, pass@1.",
+  "output_root": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21",
+  "runs_root": "runs/matrix/north-mini-vs-gemma4-12b-2026-06-21",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "delay_seconds": 15,
+    "runs": 1,
+    "prompt_modes": ["sparse", "contract_visible"],
+    "packs": ["ci_forensics", "maintenance_value", "product_workflows"],
+    "warmup": true,
+    "warmup_timeout": 600,
+    "warmup_keep_alive": "30m"
+  },
+  "models": [
+    {
+      "alias": "north-mini",
+      "id": "opencode/north-mini-code-free",
+      "runtime": "opencode",
+      "first_output_timeout": 600,
+      "timeout": 900,
+      "notes": "North Mini Code (free tier). API model, 900s timeout. Bumped first_output from 300→600 for product_workflows cv."
+    },
+    {
+      "alias": "gemma4-12b",
+      "id": "ollama/gemma4:12b",
+      "runtime": "ollama",
+      "first_output_timeout": 600,
+      "timeout": 1800,
+      "notes": "Local Gemma 4 12b. contract_visible needs 600s first-output and 1800s overall."
+    }
+  ],
+  "packs": {
+    "ci_forensics": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    },
+    "maintenance_value": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    },
+    "product_workflows": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

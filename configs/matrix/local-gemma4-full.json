@@ -1,0 +1,50 @@
+{
+  "matrix_id": "local-gemma4-full-2026-06-20",
+  "description": "Full-blown local Ollama Gemma 4 matrix: e4b, 12b, 31b on maintenance_value sparse + contract_visible, pass@1. Timeouts tuned so contract_visible does not stall on prompt prefill.",
+  "output_root": "data/matrix/local-gemma4-full-2026-06-20",
+  "runs_root": "runs/matrix/local-gemma4-full-2026-06-20",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 1800,
+    "delay_seconds": 15,
+    "runs": 1,
+    "prompt_modes": ["sparse", "contract_visible"],
+    "packs": ["maintenance_value"],
+    "warmup": true,
+    "warmup_timeout": 900,
+    "warmup_keep_alive": "30m"
+  },
+  "models": [
+    {
+      "alias": "gemma4-e4b",
+      "id": "ollama/gemma4:e4b",
+      "runtime": "ollama",
+      "first_output_timeout": 300,
+      "timeout": 1200,
+      "notes": "Smallest Gemma 4. Sparse smoke proven at 62.8s. first_output_timeout raised to 300s for contract_visible prefill."
+    },
+    {
+      "alias": "gemma4-12b",
+      "id": "ollama/gemma4:12b",
+      "runtime": "ollama",
+      "first_output_timeout": 600,
+      "timeout": 1800,
+      "notes": "Second-smallest Gemma 4. Sparse ~120s/scenario. first_output_timeout raised to 600s for contract_visible prefill (was 240s, all rows stalled)."
+    },
+    {
+      "alias": "gemma4-31b",
+      "id": "ollama/gemma4:31b",
+      "runtime": "ollama",
+      "first_output_timeout": 600,
+      "timeout": 2400,
+      "notes": "Largest installed Gemma 4. Sparse ~300s/scenario. first_output_timeout 600s, overall timeout 2400s for contract_visible."
+    }
+  ],
+  "packs": {
+    "maintenance_value": {
+      "runs": 1,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

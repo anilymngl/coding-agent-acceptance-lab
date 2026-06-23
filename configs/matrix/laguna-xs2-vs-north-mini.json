@@ -1,0 +1,52 @@
+{
+  "matrix_id": "laguna-xs2-vs-north-mini-2026-06-22",
+  "description": "Laguna XS 2 (OpenRouter free) vs North Mini on ci_forensics + maintenance_value + product_workflows, sparse and contract_visible, pass@3.",
+  "output_root": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22",
+  "runs_root": "runs/matrix/laguna-xs2-vs-north-mini-2026-06-22",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "first_output_timeout": 600,
+    "delay_seconds": 15,
+    "backoff_multiplier": 2.0,
+    "backoff_ceiling": 300,
+    "inter_cell_delay": 10,
+    "runs": 3,
+    "prompt_modes": ["sparse", "contract_visible"],
+    "packs": ["ci_forensics", "maintenance_value", "product_workflows"],
+    "warmup": false
+  },
+  "models": [
+    {
+      "alias": "laguna-xs2",
+      "id": "openrouter/poolside/laguna-xs.2:free",
+      "runtime": "opencode",
+      "timeout": 900,
+      "first_output_timeout": 600,
+      "notes": "Laguna XS 2 free tier via OpenRouter. Cloud API."
+    },
+    {
+      "alias": "north-mini",
+      "id": "opencode/north-mini-code-free",
+      "runtime": "opencode",
+      "timeout": 900,
+      "first_output_timeout": 600,
+      "notes": "North Mini Code free tier. Cloud API."
+    }
+  ],
+  "packs": {
+    "ci_forensics": {
+      "runs": 3,
+      "prompt_modes": ["sparse", "contract_visible"]
+    },
+    "maintenance_value": {
+      "runs": 3,
+      "prompt_modes": ["sparse", "contract_visible"]
+    },
+    "product_workflows": {
+      "runs": 3,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

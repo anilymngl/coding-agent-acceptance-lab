@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Trust Gap</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    :root { --blue: #2563eb; --green: #16a34a; --amber: #d97706; --rose: #e11d48; --purple: #7c3aed; --emerald: #059669; --ink: #0f172a; --slate: #475569; --muted: #94a3b8; --line: #e2e8f0; }
+    * { box-sizing: border-box; } html, body { width: 100%; height: 100%; margin: 0; }
+    body { font-family: Inter, sans-serif; background: #fff; color: var(--ink); overflow: hidden; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+    .slide { position: absolute; inset: 0; width: 100%; height: 100vh; opacity: 0; pointer-events: none; transform: translateX(18px); transition: opacity 0.25s, transform 0.25s; overflow: hidden; }
+    .slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 5; }
+    .shell { display: grid; grid-template-columns: 76px 1fr; width: 100%; height: 100%; }
+    .rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 24px 0 20px; background: rgba(255,255,255,0.85); }
+    .rail.soft { background: rgba(248,250,252,0.9); }
+    .rail-index { writing-mode: vertical-rl; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+    .rail-number { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; }
+    .canvas { width: 100%; height: 100%; padding: clamp(24px, 5vw, 56px); display: flex; flex-direction: column; justify-content: center; }
+    .canvas.top { justify-content: flex-start; padding-top: clamp(24px, 5vh, 48px); }
+    .kicker { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .display { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 0.94; letter-spacing: -0.06em; font-weight: 900; }
+    .headline { font-size: clamp(1.7rem, 3.8vw, 3.8rem); line-height: 1.05; letter-spacing: -0.045em; font-weight: 900; }
+    .subhead { font-size: clamp(1.2rem, 2.3vw, 2.3rem); line-height: 1.1; letter-spacing: -0.035em; font-weight: 800; }
+    .lead { font-size: clamp(0.9rem, 1.3vw, 1.15rem); line-height: 1.5; color: var(--slate); }
+    .body { font-size: clamp(0.82rem, 1vw, 0.95rem); line-height: 1.5; }
+    .small { font-size: clamp(0.62rem, 0.72vw, 0.72rem); line-height: 1.4; }
+    .nmini { color: #2563eb; font-weight: 700; } .gemma { color: #7c3aed; font-weight: 700; } .ds { color: #059669; font-weight: 700; }
+    .good { color: #16a34a; } .bad { color: #e11d48; } .warn { color: #d97706; } .muted { color: #94a3b8; }
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+    .panel-soft { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; }
+    .panel-dark { background: #0f172a; color: white; border-radius: 12px; }
+    .nav { position: fixed; right: 20px; bottom: 16px; z-index: 50; display: flex; gap: 6px; align-items: center; }
+    .nav button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: rgba(255,255,255,0.95); color: #475569; cursor: pointer; border-radius: 8px; font-size: 14px; }
+    .nav button:hover { color: var(--ink); background: #f8fafc; border-color: var(--blue); }
+    .counter { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); min-width: 48px; text-align: center; }
+    .dots { position: fixed; left: 50%; transform: translateX(-50%); bottom: 28px; z-index: 40; display: flex; gap: 5px; }
+    .dot { width: 6px; height: 6px; border: 0; background: #cbd5e1; border-radius: 3px; padding: 0; cursor: pointer; transition: all 0.2s; }
+    .dot.active { width: 22px; background: var(--blue); border-radius: 3px; }
+    .num-hero { font-size: clamp(3.5rem, 7vw, 7rem); line-height: 0.9; font-weight: 900; letter-spacing: -0.07em; }
+    .bar { height: 8px; border-radius: 4px; transition: width 0.4s; }
+    .bar-track { height: 8px; border-radius: 4px; background: #f1f5f9; width: 100%; }
+    @media (max-width: 950px) { body { overflow: auto; } .slide { overflow-y: auto; } .shell { grid-template-columns: 1fr; } .rail { display: none; } .canvas { min-height: 100vh; height: auto; justify-content: flex-start; padding: 24px 16px 80px; } .mobile-one { grid-template-columns: 1fr !important; } .dots { display: none; } }
+  </style>
+</head>
+<body><main id="deck">
+
+<!-- ===================================================== -->
+<!-- 01 — TITLE -->
+<!-- ===================================================== -->
+<section class="slide active bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Overview</div><div class="rail-number">01</div></aside><div class="canvas">
+  <p class="kicker mb-5">198 RUNS &middot; 3 MODELS &middot; 33 SCENARIOS &middot; ONE HARNESS</p>
+  <h1 class="display max-w-6xl mb-4">The Trust Gap</h1>
+  <p class="lead max-w-4xl mb-3">When a coding agent makes your CI green, how often is the bug actually fixed? We tested three very different models through the same harness, same prompts, same hidden acceptance tests.</p>
+  <p class="lead max-w-4xl mb-8"><strong>The answer is the same for all three: it depends entirely on what you're asking it to do.</strong></p>
+  <div class="flex gap-4 flex-wrap">
+    <div class="px-4 py-3 rounded-xl bg-blue-50 border border-blue-200"><span class="text-xl font-black nmini">North Mini</span><p class="mono text-xs muted mt-1">Cohere MoE &middot; free tier</p></div>
+    <div class="px-4 py-3 rounded-xl bg-purple-50 border border-purple-200"><span class="text-xl font-black gemma">Gemma 12B</span><p class="mono text-xs muted mt-1">Local Ollama &middot; single GPU</p></div>
+    <div class="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200"><span class="text-xl font-black ds">DeepSeek V4 Pro</span><p class="mono text-xs muted mt-1">Frontier API &middot; paid tier</p></div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 02 — THE QUESTION -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Question</div><div class="rail-number">02</div></aside><div class="canvas">
+  <p class="kicker mb-4">EVERY BENCHMARKMARK ASKS THE WRONG QUESTION</p>
+  <h2 class="headline max-w-5xl mb-4">Benchmarks measure whether<br>the test passed.<br>We measure whether the bug was fixed.</h2>
+  <p class="lead mb-6 max-w-4xl">When you reward an agent for making tests green, it optimizes for the visible assertion. It stops when CI passes. It doesn't ask "what else should be true here?" &mdash; because nobody told it there was more to check.</p>
+  <div class="grid grid-cols-3 gap-5 mobile-one">
+    <div class="panel p-6 border-t-4 border-t-green-500">
+      <p class="text-3xl font-black good mb-2">Real fix</p>
+      <p class="body">Public test passes. Hidden acceptance test passes. The agent understood the problem and the contract behind it.</p>
+    </div>
+    <div class="panel p-6 border-t-4 border-t-rose-500">
+      <p class="text-3xl font-black bad mb-2">False-green</p>
+      <p class="body">Public test passes. Hidden acceptance test fails. The agent satisfied the visible assertion without fixing the underlying contract. <strong>CI lied.</strong></p>
+    </div>
+    <div class="panel p-6 border-t-4 border-t-slate-300">
+      <p class="text-3xl font-black muted mb-2">Public red</p>
+      <p class="body">The agent couldn't make CI green at all. Nothing to review. This is honest failure &mdash; at least you know it didn't work.</p>
+    </div>
+  </div>
+  <div class="panel-dark p-5 mt-5 text-center">
+    <p class="text-lg font-bold text-white">The trust gap = public pass rate &minus; hidden pass rate.</p>
+    <p class="text-sm text-slate-400 mt-1">It measures how often "looks fixed" is actually "is fixed."</p>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 03 — THE METHOD -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Method</div><div class="rail-number">03</div></aside><div class="canvas">
+  <p class="kicker mb-3">HOW THE HARNESS WORKS</p>
+  <h2 class="headline max-w-5xl mb-4">Visible tests during the work.<br>Hidden tests after the agent exits.</h2>
+  <div class="grid grid-cols-12 gap-5">
+    <div class="col-span-7 space-y-4">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0"><span class="font-black nmini">1</span></div>
+        <div><p class="body font-bold">Write a broken repo with a failing test.</p><p class="body text-sm muted">The agent sees the CI log, the source code, and the public test. Exactly what a real engineer would see.</p></div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0"><span class="font-black nmini">2</span></div>
+        <div><p class="body font-bold">Let the agent fix it through OpenCode.</p><p class="body text-sm muted">Same CLI, same agent loop, same tool surface for all three models. Read, edit, test, exit.</p></div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><span class="font-black good">3</span></div>
+        <div><p class="body font-bold">Run the public tests. Record CI state.</p><p class="body text-sm muted">This is what every benchmark measures. This is where every benchmark stops.</p></div>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0"><span class="font-black bad">4</span></div>
+        <div><p class="body font-bold">Inject hidden acceptance tests. Run them.</p><p class="body text-sm muted">Edge cases. Backward compatibility. Business rules. The agent never saw these. They test whether the fix is real or just visible.</p></div>
+      </div>
+    </div>
+    <div class="col-span-5 space-y-3">
+      <div class="panel-dark p-5">
+        <p class="mono text-xs text-slate-400 mb-3">Two prompt lanes</p>
+        <div class="mb-3">
+          <p class="body font-bold text-white mb-1">Sparse <span class="text-slate-500 font-normal">(control)</span></p>
+          <p class="text-sm text-slate-400">"CI is red. Fix it." The agent must infer what "done" means from the failing test alone.</p>
+        </div>
+        <div>
+          <p class="body font-bold text-white mb-1">Contract-visible <span class="text-slate-500 font-normal">(treatment)</span></p>
+          <p class="text-sm text-slate-400">Full acceptance criteria in the prompt. Expected behavior. Success signals. Known failure modes. The agent knows the rule.</p>
+        </div>
+      </div>
+      <div class="panel-dark p-5">
+        <p class="mono text-xs text-slate-400 mb-3">Outcome taxonomy</p>
+        <div class="grid grid-cols-2 gap-2 text-xs mono">
+          <div class="p-2 rounded bg-slate-800"><span class="text-green-400">hidden_pass</span><br><span class="text-slate-500">real fix</span></div>
+          <div class="p-2 rounded bg-slate-800"><span class="text-rose-400">false_green</span><br><span class="text-slate-500">CI lied</span></div>
+          <div class="p-2 rounded bg-slate-800"><span class="text-slate-400">public_red</span><br><span class="text-slate-500">honest fail</span></div>
+          <div class="p-2 rounded bg-slate-800"><span class="text-amber-400">timeout</span><br><span class="text-slate-500">infra, not model</span></div>
+        </div>
+        <p class="text-xs text-slate-500 mt-2">Runtime failures are classified separately. A timeout is not a wrong answer.</p>
+      </div>
+    </div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 04 — THE MODELS -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Models</div><div class="rail-number">04</div></aside><div class="canvas">
+  <p class="kicker mb-3">THREE ARCHITECTURES. SAME OPENCODE CLI. SAME HARNESS.</p>
+  <h2 class="headline max-w-5xl mb-5">Different engines.<br>Same structural pattern.</h2>
+  <div class="grid grid-cols-3 gap-5 mobile-one">
+    <div class="panel p-6 border-t-4 border-t-blue-500">
+      <p class="text-3xl font-black mb-2 nmini">North Mini</p>
+      <p class="mono text-xs muted mb-3">opencode/north-mini-code-free</p>
+      <div class="body text-sm space-y-1 mb-4">
+        <p>Cohere coding model. 30B total, 3B active MoE.</p>
+        <p>Free tier via OpenCode API.</p>
+        <p>Tool-calling native &mdash; home-field advantage.</p>
+      </div>
+      <div class="flex items-center gap-2 mb-2">
+        <div class="bar-track"><div class="bar bg-blue-500" style="width:15%"></div></div>
+        <span class="mono text-xs muted">~25s avg</span>
+      </div>
+      <p class="small muted">Fast. Gets CI green almost always. The question is whether green means fixed.</p>
+    </div>
+    <div class="panel p-6 border-t-4 border-t-purple-500">
+      <p class="text-3xl font-black mb-2 gemma">Gemma 12B</p>
+      <p class="mono text-xs muted mb-3">ollama/gemma4:12b</p>
+      <div class="body text-sm space-y-1 mb-4">
+        <p>Google general-purpose model.</p>
+        <p>Running locally on laptop via Ollama.</p>
+        <p>Foreign agent surface &mdash; not built for OpenCode.</p>
+      </div>
+      <div class="flex items-center gap-2 mb-2">
+        <div class="bar-track"><div class="bar bg-purple-500" style="width:85%"></div></div>
+        <span class="mono text-xs muted">~240s avg</span>
+      </div>
+      <p class="small muted">Slow. Often can't close CI under sparse prompts. The contract acts as scaffolding when provided.</p>
+    </div>
+    <div class="panel p-6 border-t-4 border-t-emerald-500">
+      <p class="text-3xl font-black mb-2 ds">DeepSeek V4 Pro</p>
+      <p class="mono text-xs muted mb-3">deepseek/deepseek-v4-pro</p>
+      <div class="body text-sm space-y-1 mb-4">
+        <p>Frontier-class hosted API model.</p>
+        <p>Paid tier. Strongest raw capability in matrix.</p>
+        <p>Same OpenCode interface as the others.</p>
+      </div>
+      <div class="flex items-center gap-2 mb-2">
+        <div class="bar-track"><div class="bar bg-emerald-500" style="width:20%"></div></div>
+        <span class="mono text-xs muted">~37s avg</span>
+      </div>
+      <p class="small muted">Fast and capable. Zero false-greens on two packs with clear specs. Still hits the same wall on business logic under sparse.</p>
+    </div>
+  </div>
+  <p class="small muted mt-4 mono text-center">The models differ in speed, capability, and tooling fit. The trust gap pattern does not.</p>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 05 — THE DATA -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Data</div><div class="rail-number">05</div></aside><div class="canvas top">
+  <p class="kicker mb-2">198 RUNS &middot; 3 MODELS &middot; 33 SCENARIOS &middot; pass@1</p>
+  <h2 class="subhead mb-4">The full matrix. Sparse vs contract-visible.</h2>
+
+  <div class="grid grid-cols-3 gap-4 mobile-one">
+    <!-- CI FORENSICS -->
+    <div class="panel p-4">
+      <p class="mono text-xs font-extrabold mb-1" style="color:#2563eb">CI Forensics &mdash; 12 scenarios</p>
+      <p class="body text-xs mb-3">Mechanical bugs. Dependency changes. Stale configs. Import errors. The visible test nearly covers the full contract.</p>
+      <table class="w-full text-xs border-collapse mb-2">
+        <thead><tr class="border-b border-slate-200"><th class="py-1 text-left muted" style="font-size:9px">Model</th><th class="py-1 text-center muted" style="font-size:9px">Sparse</th><th class="py-1 text-center muted" style="font-size:9px">Contract-visible</th></tr></thead>
+        <tbody>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 nmini" style="font-size:10px">North Mini</td>
+            <td class="py-2 text-center">12/12 pub &middot; 8/12 hid<br><span class="bad font-bold">33%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">12/12 pub &middot; 11/12 hid<br><span class="good font-bold">8%</span> false-green</td>
+          </tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 gemma" style="font-size:10px">Gemma 12B</td>
+            <td class="py-2 text-center">5/12 pub &middot; 3/12 hid<br><span class="warn font-bold">40%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">7/12 pub &middot; 6/12 hid<br><span class="good font-bold">14%</span> false-green</td>
+          </tr>
+          <tr>
+            <td class="py-2 ds" style="font-size:10px">DeepSeek</td>
+            <td class="py-2 text-center">12/12 pub &middot; 9/12 hid<br><span class="warn font-bold">25%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">12/12 pub &middot; 12/12 hid<br><span class="good font-bold">0%</span> false-green</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="panel-dark p-2 mt-1"><p class="body text-xs text-slate-300"><strong class="text-green-400">Verdict.</strong> Safe to delegate with clear specs. DeepSeek: 12/12 real fixes, zero false-greens.</p></div>
+    </div>
+
+    <!-- MAINTENANCE -->
+    <div class="panel p-4">
+      <p class="mono text-xs font-extrabold mb-1" style="color:#7c3aed">Maintenance &mdash; 10 scenarios</p>
+      <p class="body text-xs mb-3">Refactoring. Logger migrations. Field renames. Generated artifacts. Visible test covers most but not every edge.</p>
+      <table class="w-full text-xs border-collapse mb-2">
+        <thead><tr class="border-b border-slate-200"><th class="py-1 text-left muted" style="font-size:9px">Model</th><th class="py-1 text-center muted" style="font-size:9px">Sparse</th><th class="py-1 text-center muted" style="font-size:9px">Contract-visible</th></tr></thead>
+        <tbody>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 nmini" style="font-size:10px">North Mini</td>
+            <td class="py-2 text-center">10/10 pub &middot; 8/10 hid<br><span class="warn font-bold">20%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">9/10 pub &middot; 9/10 hid<br><span class="good font-bold">0%</span> false-green</td>
+          </tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 gemma" style="font-size:10px">Gemma 12B</td>
+            <td class="py-2 text-center">9/10 pub &middot; 7/10 hid<br><span class="warn font-bold">22%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">7/10 pub &middot; 6/10 hid<br><span class="good font-bold">14%</span> false-green</td>
+          </tr>
+          <tr>
+            <td class="py-2 ds" style="font-size:10px">DeepSeek</td>
+            <td class="py-2 text-center">10/10 pub &middot; 7/10 hid<br><span class="warn font-bold">30%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">10/10 pub &middot; 10/10 hid<br><span class="good font-bold">0%</span> false-green</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="panel-dark p-2 mt-1"><p class="body text-xs text-slate-300"><strong class="text-amber-400">Verdict.</strong> Delegable with hidden acceptance gate. North Mini + DeepSeek: zero false-greens with clear specs.</p></div>
+    </div>
+
+    <!-- PRODUCT WORKFLOWS -->
+    <div class="panel p-4">
+      <p class="mono text-xs font-extrabold mb-1 bad">Product Workflows &mdash; 11 scenarios</p>
+      <p class="body text-xs mb-3">Policy-dense. Billing. Discounts. Inventory. SLAs. More contract than the visible test can show.</p>
+      <table class="w-full text-xs border-collapse mb-2">
+        <thead><tr class="border-b border-slate-200"><th class="py-1 text-left muted" style="font-size:9px">Model</th><th class="py-1 text-center muted" style="font-size:9px">Sparse</th><th class="py-1 text-center muted" style="font-size:9px">Contract-visible</th></tr></thead>
+        <tbody>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 nmini" style="font-size:10px">North Mini</td>
+            <td class="py-2 text-center">9/11 pub &middot; 1/11 hid<br><span class="bad font-bold">89%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#fef3c7">9/11 pub &middot; 6/11 hid<br><span class="warn font-bold">33%</span> false-green</td>
+          </tr>
+          <tr class="border-b border-slate-50">
+            <td class="py-2 gemma" style="font-size:10px">Gemma 12B</td>
+            <td class="py-2 text-center">6/11 pub &middot; 2/11 hid<br><span class="bad font-bold">67%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">8/11 pub &middot; 7/11 hid<br><span class="good font-bold">12%</span> false-green</td>
+          </tr>
+          <tr>
+            <td class="py-2 ds" style="font-size:10px">DeepSeek</td>
+            <td class="py-2 text-center">11/11 pub &middot; 3/11 hid<br><span class="bad font-bold">73%</span> false-green</td>
+            <td class="py-2 text-center" style="background:#f0fdf4">11/11 pub &middot; 10/11 hid<br><span class="good font-bold">9%</span> false-green</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="panel-dark p-2 mt-1"><p class="body text-xs text-slate-300"><strong class="text-rose-400">Verdict.</strong> Do not delegate at pass@1 sparse. Human review required. Even with clear specs, 9&ndash;33% false-green on money logic.</p></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4 mt-3">
+    <div class="panel-dark p-3 text-center">
+      <p class="mono text-xs text-slate-400 mb-1">Biggest single swing</p>
+      <p class="text-lg font-black text-green-400">DeepSeek product: 73% &rarr; 9%</p>
+      <p class="mono text-xs text-slate-500">64 points. Same model. One prompt change.</p>
+    </div>
+    <div class="panel-dark p-3 text-center">
+      <p class="mono text-xs text-slate-400 mb-1">Perfect scores</p>
+      <p class="text-lg font-black text-green-400">DeepSeek cv: 0% on bugs + maintenance</p>
+      <p class="mono text-xs text-slate-500">22 of 22 real fixes. Zero false-greens.</p>
+    </div>
+    <div class="panel-dark p-3 text-center">
+      <p class="mono text-xs text-slate-400 mb-1">Stubborn survivor</p>
+      <p class="text-lg font-black text-rose-400">bulk_invite_dedupe</p>
+      <p class="mono text-xs text-slate-500">Survived DeepSeek cv. Email format unchecked.</p>
+    </div>
+  </div>
+  <p class="small muted mt-2 mono text-center">pass@1 &middot; first-stage evidence &middot; DeepSeek product sparse from prior control run &middot; <strong>The pattern is structural, not model-specific.</strong></p>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 06 — THE PATTERN -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Pattern</div><div class="rail-number">06</div></aside><div class="canvas top">
+  <p class="kicker mb-2">WHAT FALSE-GREENS ACTUALLY LOOK LIKE</p>
+  <h2 class="subhead mb-4">The agent asks "what makes this test pass?"<br>An engineer asks "what else should be true?"</h2>
+  <div class="grid grid-cols-2 gap-4 mobile-one">
+    <div class="space-y-3">
+      <div class="panel p-4 border-l-4 border-l-rose-500">
+        <p class="mono font-bold bad text-sm mb-1">decimal_money_rounding</p>
+        <p class="body text-sm">Test: 0.29 &times; 3 = 87&cent;. Agent uses <code class="mono text-xs bg-slate-100 px-1 rounded">float</code> math. Returns 87. Green.</p>
+        <p class="body text-sm mt-1">Hidden: 0.005 &times; 1 with half-up rounding should be 1&cent;. Returns 0. <strong>Silent billing error on every half-cent transaction.</strong></p>
+      </div>
+      <div class="panel p-4 border-l-4 border-l-rose-500">
+        <p class="mono font-bold bad text-sm mb-1">audit_log_redaction</p>
+        <p class="body text-sm">Test: redact <code class="mono text-xs bg-slate-100 px-1 rounded">password</code> field. Agent replaces top-level key. Green.</p>
+        <p class="body text-sm mt-1">Hidden: nested <code class="mono text-xs bg-slate-100 px-1 rounded">metadata.api_key</code>, <code class="mono text-xs bg-slate-100 px-1 rounded">profile.token</code>, <code class="mono text-xs bg-slate-100 px-1 rounded">items[0].authorization</code>. <strong>None redacted. Didn't recurse.</strong></p>
+      </div>
+    </div>
+    <div class="space-y-3">
+      <div class="panel p-4 border-l-4 border-l-rose-500">
+        <p class="mono font-bold bad text-sm mb-1">metric_semantic_mismatch</p>
+        <p class="body text-sm">Dashboard combines cents + dollars. Agent normalizes inside <code class="mono text-xs bg-slate-100 px-1 rounded">compute()</code> &mdash; the raw data API. Green.</p>
+        <p class="body text-sm mt-1">Hidden: <code class="mono text-xs bg-slate-100 px-1 rounded">compute()</code> must return raw values. Normalization belongs in <code class="mono text-xs bg-slate-100 px-1 rounded">dashboard_total()</code>. <strong>Right math. Wrong layer.</strong></p>
+      </div>
+      <div class="panel p-4 border-l-4 border-l-rose-500">
+        <p class="mono font-bold bad text-sm mb-1">inventory_reservation_idempotency</p>
+        <p class="body text-sm">Test: same idempotency key shouldn't double-reserve. Agent caches the key. Green.</p>
+        <p class="body text-sm mt-1">Hidden: insufficient stock should reject without mutating state. <strong>Stock decrements on failed reservation. Inventory goes negative.</strong></p>
+      </div>
+    </div>
+  </div>
+  <div class="panel-dark p-4 mt-4">
+    <p class="body text-sm text-slate-300"><strong class="text-white">The consistent failure direction:</strong> the agent satisfies the specific failing assertion instead of inferring the rule the assertion was testing. It gets the number right for the one value the test checked. Wrong rounding mode. Wrong API layer. Wrong cache key. <span class="text-amber-400">This is not random. It is learnable. Guardrails can be built around it.</span></p>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 07 — THE INSIGHT -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Insight</div><div class="rail-number">07</div></aside><div class="canvas">
+  <p class="kicker mb-3">CONTRACT-VISIBLE IS THE TREATMENT. SPARSE IS THE CONTROL.</p>
+  <h2 class="headline max-w-5xl mb-5">The gap between sparse and contract-visible<br>tells you what kind of problem this is.</h2>
+  <div class="grid grid-cols-2 gap-5 mobile-one">
+    <div class="space-y-4">
+      <div class="panel p-5 border-l-4 border-l-blue-500">
+        <p class="body font-extrabold nmini mb-2">North Mini: the contract reclassifies existing greens</p>
+        <p class="body text-sm">North Mini already gets CI green on almost everything. The contract doesn't create new greens &mdash; it turns false-greens into real fixes. ci_forensics: 4 false-greens &rarr; 1. Maintenance: 2 &rarr; 0. <strong>The model stops too soon under sparse. Give it the rule, it delivers.</strong></p>
+      </div>
+      <div class="panel p-5 border-l-4 border-l-purple-500">
+        <p class="body font-extrabold gemma mb-2">Gemma 12B: the contract acts as scaffolding</p>
+        <p class="body text-sm">Gemma often can't close CI at all under sparse. The contract helps it produce a working patch where it couldn't before. ci_forensics: 7 public-reds &rarr; 5. Hidden pass: 3 &rarr; 6. <strong>The model has the capability. It needs the spec to unlock it.</strong></p>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div class="panel p-5 border-l-4 border-l-emerald-500">
+        <p class="body font-extrabold ds mb-2">DeepSeek: the contract reveals the ceiling</p>
+        <p class="body text-sm">DeepSeek with clear specs hits zero false-greens on bugs and maintenance. 22 of 22 real fixes. But product workflows still show 9% false-green even with clear specs. <strong>The frontier model's ceiling is the spec density, not the model size.</strong></p>
+      </div>
+      <div class="panel p-5 border-l-4 border-l-rose-500">
+        <p class="body font-extrabold bad mb-2">Product workflows: the wall everyone hits</p>
+        <p class="body text-sm">Under sparse: 73&ndash;89% false-green across all three models. Under contract-visible: 9&ndash;33%. The improvement is real but 9% on money logic is not zero. <strong>One scenario &mdash; bulk_invite_dedupe &mdash; survives even DeepSeek with clear specs.</strong></p>
+      </div>
+    </div>
+  </div>
+  <div class="panel-dark p-4 mt-4 text-center">
+    <p class="text-lg font-bold text-white">The deception is not in the model. It is in the gap between what the test checks and what the contract requires.</p>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 08 — CAVEATS + DEPLOYMENT -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-900"><div class="shell"><aside class="rail" style="background:#0f172a;border-color:#334155;"><div class="rail-index" style="color:#64748b;">Deploy</div><div class="rail-number" style="color:#cbd5e1;">08</div></aside><div class="canvas">
+  <p class="kicker mb-4" style="color:#64748b;">WHAT WE CAN AND CANNOT CLAIM</p>
+  <div class="grid grid-cols-12 gap-5">
+    <div class="col-span-5 space-y-3">
+      <p class="subhead text-white mb-3">Honest caveats</p>
+      <div class="space-y-2 mono text-sm text-slate-400">
+        <p><span class="text-amber-400 font-bold">pass@1.</span> One attempt per task. Gemma's maintenance hidden pass swung 4/10 &rarr; 7/10 across two same-day runs. Single attempts describe an attempt, not a model.</p>
+        <p><span class="text-amber-400 font-bold">System comparison.</span> North Mini runs on its native tool surface. Gemma runs through a foreign agent loop on local Ollama. Speed asymmetry (25s vs 240s vs 37s) confounds raw capability.</p>
+        <p><span class="text-amber-400 font-bold">33 scenarios.</span> One evaluator. No external audit. First-stage evidence. The method is what matters, not the specific numbers.</p>
+        <p><span class="text-amber-400 font-bold">Mixed sources.</span> DeepSeek product sparse from a prior control run (control-results.sqlite). Other 17 cells from the matrix pipeline. Same harness, same scenarios, same hidden tests.</p>
+      </div>
+    </div>
+    <div class="col-span-7 space-y-3">
+      <p class="subhead text-white mb-3">Deployment zones</p>
+      <div class="panel-dark p-4" style="border:1px solid #166534;border-left:4px solid #16a34a;">
+        <p class="body font-extrabold text-green-400 mb-1">Green &mdash; merge on CI green</p>
+        <p class="body text-sm text-slate-400">Mechanical work. Migrations. Fixtures. Docs. Imports. All three models converge at 0&ndash;14% false-green with clear specs. DeepSeek: 22/22 real fixes across bugs and maintenance.</p>
+      </div>
+      <div class="panel-dark p-4" style="border:1px solid #92400e;border-left:4px solid #d97706;">
+        <p class="body font-extrabold text-amber-400 mb-1">Amber &mdash; gate on hidden acceptance</p>
+        <p class="body text-sm text-slate-400">Adapters. Validators. Edge cases. Field renames. Every model produced false-greens here under sparse. Clear specs close the gap. Run a hidden check before merge.</p>
+      </div>
+      <div class="panel-dark p-4" style="border:1px solid #9f1239;border-left:4px solid #e11d48;">
+        <p class="body font-extrabold text-rose-400 mb-1">Red &mdash; human review or frontier model with multiple attempts</p>
+        <p class="body text-sm text-slate-400">Billing. Discounts. Inventory. SLAs. 73&ndash;89% false-green under sparse. 9&ndash;33% even with clear specs. The policy density is too high for pass@1.</p>
+      </div>
+      <div class="flex gap-6 mt-3 flex-wrap">
+        <p class="mono text-xs text-slate-500">github.com/anomalyco/north-mini-test</p>
+        <p class="mono text-xs text-slate-500">198 runs &middot; 3 models &middot; 33 scenarios &middot; pass@1</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel-dark p-4 mt-4 text-center" style="border:1px solid #334155;">
+    <p class="text-lg font-bold text-white">The model is replaceable. The trust gate is the enduring investment.</p>
+  </div>
+</div></div></section>
+
+</main>
+
+<div class="dots" id="dots"></div>
+<div class="nav"><button id="prev">&larr;</button><div class="counter" id="counter">01 / 08</div><button id="next">&rarr;</button></div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const dc = document.getElementById("dots"), ctr = document.getElementById("counter");
+  let cur = 0;
+  slides.forEach((_, i) => { const d = document.createElement("button"); d.className = "dot" + (i === 0 ? " active" : ""); d.addEventListener("click", () => show(i)); dc.appendChild(d); });
+  const dots = [...document.querySelectorAll(".dot")];
+  function show(i) { cur = Math.max(0, Math.min(slides.length - 1, i)); slides.forEach((s, idx) => { s.classList.toggle("active", idx === cur); }); dots.forEach((d, idx) => { d.classList.toggle("active", idx === cur); }); ctr.textContent = `${String(cur + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`; }
+  document.getElementById("next").addEventListener("click", () => show(cur + 1));
+  document.getElementById("prev").addEventListener("click", () => show(cur - 1));
+  document.addEventListener("keydown", e => { if (["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)) { e.preventDefault(); show(cur + 1); } else if (["ArrowLeft","ArrowUp","PageUp"].includes(e.key)) { e.preventDefault(); show(cur - 1); } });
+</script>
+</body>
+</html>

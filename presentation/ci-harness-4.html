@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>North Mini Test — Trust-Gap Evaluation Framework</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    :root { --ink: #0f172a; --slate: #475569; --muted: #94a3b8; --line: #e2e8f0; --paper: #ffffff; --paper-soft: #f8fafc; --blue: #2563eb; --blue-light: #dbeafe; --green: #16a34a; --green-light: #dcfce7; --amber: #d97706; --amber-light: #fef3c7; --rose: #e11d48; --rose-light: #ffe4e6; --purple: #7c3aed; --purple-light: #ede9fe; }
+    * { box-sizing: border-box; } html, body { width: 100%; height: 100%; margin: 0; }
+    body { font-family: Inter, sans-serif; background: var(--paper); color: var(--ink); overflow: hidden; }
+    button, input, textarea { font: inherit; } .mono { font-family: "JetBrains Mono", monospace; }
+    .slide { position: absolute; inset: 0; width: 100%; height: 100vh; opacity: 0; pointer-events: none; transform: translateX(18px); transition: opacity 0.25s ease, transform 0.25s ease; overflow: hidden; }
+    .slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 5; }
+    .shell { display: grid; grid-template-columns: 76px 1fr; width: 100%; height: 100%; }
+    .rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 28px 0 24px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); }
+    .rail.soft { background: rgba(248,250,252,0.9); }
+    .rail-index { writing-mode: vertical-rl; text-orientation: mixed; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+    .rail-number { font-family: "JetBrains Mono", monospace; color: var(--ink); font-weight: 700; font-size: 13px; }
+    .canvas { width: 100%; height: 100%; padding: clamp(28px, 5vw, 60px); display: flex; flex-direction: column; justify-content: center; }
+    .canvas.top { justify-content: flex-start; padding-top: clamp(32px, 6vh, 56px); }
+    .kicker { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .display { font-size: clamp(2.5rem, 5.5vw, 6rem); line-height: 0.93; letter-spacing: -0.06em; font-weight: 900; }
+    .headline { font-size: clamp(1.7rem, 3.5vw, 3.8rem); line-height: 1.05; letter-spacing: -0.045em; font-weight: 900; }
+    .subhead { font-size: clamp(1.3rem, 2.3vw, 2.4rem); line-height: 1.1; letter-spacing: -0.035em; font-weight: 800; }
+    .lead { font-size: clamp(0.9rem, 1.3vw, 1.2rem); line-height: 1.5; color: var(--slate); }
+    .body { font-size: clamp(0.82rem, 1vw, 0.95rem); line-height: 1.5; }
+    .small { font-size: clamp(0.62rem, 0.75vw, 0.72rem); line-height: 1.4; }
+    .rule { width: 100%; height: 1px; background: var(--line); }
+    .blue { color: var(--blue); } .green { color: var(--green); } .amber { color: var(--amber); } .rose { color: var(--rose); } .purple { color: var(--purple); } .muted { color: var(--muted); } .slate { color: var(--slate); }
+    .panel { background: #ffffff; border: 1px solid var(--line); border-radius: 12px; }
+    .panel-soft { background: var(--paper-soft); border: 1px solid var(--line); border-radius: 10px; }
+    .panel-dark { background: #0f172a; color: white; border-radius: 12px; }
+    .mt-c { margin-top: clamp(10px, 2vh, 22px); }
+    .gap-c { gap: clamp(8px, 1.2vw, 16px); }
+    .quote { border-left: 5px solid var(--blue); padding-left: 18px; }
+    .stat-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 14px; }
+    .nav { position: fixed; right: 20px; bottom: 16px; z-index: 50; display: flex; gap: 6px; align-items: center; }
+    .nav button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: rgba(255,255,255,0.95); color: #475569; cursor: pointer; border-radius: 8px; font-size: 14px; }
+    .nav button:hover { color: var(--ink); background: #f8fafc; border-color: var(--blue); }
+    .counter { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); min-width: 48px; text-align: center; }
+    .dots { position: fixed; left: 50%; transform: translateX(-50%); bottom: 28px; z-index: 40; display: flex; gap: 5px; }
+    .dot { width: 6px; height: 6px; border: 0; background: #cbd5e1; border-radius: 3px; padding: 0; cursor: pointer; transition: all 0.2s; }
+    .dot.active { width: 22px; background: var(--blue); border-radius: 3px; }
+    .scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .scen-cell { padding: 4px 6px; font-size: 10px; line-height: 1.3; border-radius: 4px; }
+    .scen-cell.good { background: var(--green-light); color: #166534; }
+    .scen-cell.fg { background: var(--rose-light); color: #9f1239; }
+    .scen-cell.red { background: #f1f5f9; color: #64748b; }
+    .scen-cell.stall { background: var(--amber-light); color: #92400e; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+    .tag.good { background: var(--green-light); color: #166534; }
+    .tag.bad { background: var(--rose-light); color: #9f1239; }
+    .tag.warn { background: var(--amber-light); color: #92400e; }
+    .tag.info { background: var(--blue-light); color: #1d4ed8; }
+    @media (max-width: 950px) { body { overflow: auto; } .slide { overflow-y: auto; } .shell { grid-template-columns: 1fr; } .rail { display: none; } .canvas { min-height: 100vh; height: auto; justify-content: flex-start; padding: 28px 18px 80px; } .mobile-one { grid-template-columns: 1fr !important; } .scenario-grid { grid-template-columns: repeat(2, 1fr); } .dots { display: none; } }
+  </style>
+</head>
+<body>
+<main id="deck">
+
+<!-- ===================================================== -->
+<!-- 01 — TITLE -->
+<!-- ===================================================== -->
+<section class="slide active bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Overview</div><div class="rail-number">01</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-5">A TRUST-GAP EVALUATION FRAMEWORK FOR CODING AGENTS</p>
+      <h1 class="display max-w-6xl mb-3">When an agent makes CI green,<br>is the bug actually fixed?</h1>
+      <p class="lead max-w-4xl mb-8">132 pass@1 runs. 2 models. 3 work-type packs. 2 prompt strategies. <strong>One question.</strong> A weekend project that demonstrates what evaluation should look like when you stop conflating "looks done" with "is done."</p>
+      <div class="flex gap-6 flex-wrap">
+        <div class="stat-badge bg-green-50 text-green-700 border border-green-200"><span class="text-2xl font-black">12</span> cells complete</div>
+        <div class="stat-badge bg-blue-50 text-blue-700 border border-blue-200"><span class="text-2xl font-black">132</span> total runs</div>
+        <div class="stat-badge bg-purple-50 text-purple-700 border border-purple-200"><span class="text-2xl font-black">6h50m</span> wall clock</div>
+        <div class="stat-badge bg-amber-50 text-amber-700 border border-amber-200"><span class="text-2xl font-black">2</span> models</div>
+        <div class="stat-badge bg-rose-50 text-rose-700 border border-rose-200"><span class="text-2xl font-black">3</span> packs</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 02 — THE PROBLEM -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Problem</div><div class="rail-number">02</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">WHAT EXISTING EVALUATIONS MISS</p>
+      <h2 class="headline max-w-5xl mb-3">The dominant agent use case is CI repair.<br>Nobody tests whether the repair is real.</h2>
+      <div class="grid grid-cols-3 gap-c mt-c mobile-one">
+        <div class="panel p-6 border-t-4 border-t-rose-500">
+          <p class="text-5xl font-black rose mb-2">01</p>
+          <p class="text-lg font-extrabold mb-2">Standard benchmarks measure greenfield code generation</p>
+          <p class="body slate">"Write a function that does X." Ground truth is the reference implementation. No concept of an existing codebase, partial correctness, or a wrong but plausible fix.</p>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-amber-500">
+          <p class="text-5xl font-black amber mb-2">02</p>
+          <p class="text-lg font-extrabold mb-2">The real workflow is "CI is red, fix it"</p>
+          <p class="body slate">A developer opens a ticket, sees a failing test, and edits existing code to make it pass. The unit of work is a <strong>patch</strong> against an existing codebase, not a greenfield module.</p>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-blue-500">
+          <p class="text-5xl font-black blue mb-2">03</p>
+          <p class="text-lg font-extrabold mb-2">Models optimize for the visible signal</p>
+          <p class="body slate">Visible CI tests create an <strong>optimization attractor</strong> — the model stops when the light turns green. It doesn't know there's a deeper contract to satisfy. Evaluate by CI pass rate, and you train agents to delete assertions.</p>
+        </div>
+      </div>
+      <div class="panel-dark p-6 mt-c text-center"><p class="text-xl font-bold text-white">If you evaluate agents by CI pass rate, you are training them to produce false-greens.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 03 — THE ARCHITECTURE -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Design</div><div class="rail-number">03</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">THE CORE INSIGHT: PUBLIC VS HIDDEN</p>
+      <h2 class="headline max-w-5xl mb-2">Every scenario has two test layers. The model sees only one. The evaluator sees both.</h2>
+      <p class="lead mb-6 max-w-4xl">Public tests = what a real CI pipeline shows the agent. Hidden tests = injected <strong>after</strong> the agent exits, checking the full behavioral contract. <span class="green font-bold">public=1, hidden=0</span> is a <span class="rose font-bold">false-green</span> — CI passed, the bug did not.</p>
+      <div class="grid grid-cols-3 gap-c mobile-one">
+        <div class="panel p-6 border-t-4 border-t-green-500"><p class="kicker green mb-3">Hidden Pass</p><p class="mono text-sm mb-3"><span class="tag good">public=1</span> <span class="tag good">hidden=1</span></p><p class="text-lg font-extrabold mb-2">The fix is real.</p><p class="body slate">The model understood the problem. The patch holds under the full contract including edge cases the public test never covered. <strong>This is what you want.</strong></p></div>
+        <div class="panel p-6 border-t-4 border-t-rose-500"><p class="kicker rose mb-3">False-Green</p><p class="mono text-sm mb-3"><span class="tag good">public=1</span> <span class="tag bad">hidden=0</span></p><p class="text-lg font-extrabold mb-2">CI is green. The bug is not fixed.</p><p class="body slate">The model gamed the visible test — deleted an assertion, caught an exception, returned a constant. The CI signal lied to you. <strong>This is the deployment-changing number.</strong></p></div>
+        <div class="panel p-6 border-t-4 border-t-slate-300"><p class="kicker muted mb-3">Public Red</p><p class="mono text-sm mb-3"><span class="tag bad">public=0</span> <span class="muted">hidden=0</span></p><p class="text-lg font-extrabold mb-2">CI is still red.</p><p class="body slate">The model couldn't even make the visible tests pass. Tool-loop failure, execution error, or genuine capability gap. <strong>Nothing to merge.</strong></p></div>
+      </div>
+      <div class="grid grid-cols-12 gap-c mt-c">
+        <div class="col-span-7 quote"><p class="text-2xl font-extrabold"><span class="green">Headline metric: Trust Gap</span> = public pass rate − hidden pass rate.</p><p class="body slate mt-2">A 30% trust gap means 3 out of 10 green-CI patches are fake. This is not "accuracy." It is <strong>how often the CI signal lies to you</strong>. The metric separates model capability from model honesty.</p></div>
+        <div class="col-span-5 panel-dark p-5"><p class="mono text-sm text-slate-300 mb-2">8-Outcome Taxonomy</p><p class="mono text-xs text-slate-400 space-y-0.5"><span class="text-green-400">hidden_pass</span> · <span class="text-rose-400">false_green</span> · <span class="text-slate-500">public_red</span><br><span class="text-amber-400">agent_timeout</span> · <span class="text-amber-400">no_output_timeout</span><br><span class="text-slate-500">provider_error</span> · <span class="text-slate-500">runner_error</span> · <span class="text-slate-600">missing</span></p><p class="mono text-xs text-slate-500 mt-2">Semantic outcomes ≠ operational outcomes. Never conflate a stall with a wrong answer.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 04 — THE PIPELINE -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Pipeline</div><div class="rail-number">04</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">THE EVIDENCE ASSEMBLY LINE</p>
+      <h2 class="headline max-w-5xl mb-2">Five stages. Full traceability. Nothing hidden from the evaluator.</h2>
+      <p class="lead mb-6 max-w-4xl">Every scenario run produces a complete, auditable record — prompt, trajectory, patch, public output, hidden output, evaluator verdict. SQLite row plus file artifacts. <strong>Every claim is traceable to a specific run.</strong></p>
+      <div class="grid grid-cols-5 gap-0 mobile-one" style="gap:0">
+        <div class="panel p-4 border-t-4 border-t-blue-500"><p class="kicker blue text-xs">1. Prepare</p><p class="text-sm font-extrabold mt-1">Build disposable worktree with red CI</p><p class="body slate text-xs mt-1">Baseline must start failing. Validated before agent runs.</p></div>
+        <div class="flex items-center justify-center"><p class="text-xl muted">→</p></div>
+        <div class="panel p-4 border-t-4 border-t-green-500"><p class="kicker green text-xs">2. Agent Run</p><p class="text-sm font-extrabold mt-1">Model attempts repair</p><p class="body slate text-xs mt-1">Sees only failing test output. No acceptance criteria. Like a real ticket.</p></div>
+        <div class="flex items-center justify-center"><p class="text-xl muted">→</p></div>
+        <div class="panel p-4 border-t-4 border-t-slate-300"><p class="kicker muted text-xs">3. Public Gate</p><p class="text-sm font-extrabold mt-1">Run visible tests</p><p class="body slate text-xs mt-1">Is CI green? This is what the model was optimizing for. Recorded as-is.</p></div>
+      </div>
+      <div class="grid grid-cols-5 gap-0 mt-2 mobile-one" style="gap:0">
+        <div class="panel p-4 border-t-4 border-t-rose-500"><p class="kicker rose text-xs">4. Hidden Gate</p><p class="text-sm font-extrabold mt-1">Inject real acceptance tests</p><p class="body slate text-xs mt-1">Tests model never saw. Injected after agent exits. The actual contract enforced.</p></div>
+        <div class="flex items-center justify-center"><p class="text-xl muted">→</p></div>
+        <div class="panel p-4 border-t-4 border-t-purple-500"><p class="kicker purple text-xs">5. Evidence Package</p><p class="text-sm font-extrabold mt-1">Store full envelope</p><p class="body slate text-xs mt-1">Prompt, patch, stdout, both outputs, evaluator verdict. SQLite + artifacts.</p></div>
+        <div class="flex items-center justify-center"></div>
+        <div class="flex items-center"></div>
+      </div>
+      <div class="panel-dark p-5 mt-c"><p class="mono text-xs text-slate-400">scenario.json → git worktree → opencode trajectory → public_pass → hidden_pass → evaluator_review → sqlite_row</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 05 — THE EVALUATOR -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Evaluator</div><div class="rail-number">05</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">ANTI-HALLUCINATION BY DESIGN</p>
+      <h2 class="headline max-w-5xl mb-2">The evaluator is an agent with a workbench, not a vibes-based classifier.</h2>
+      <p class="lead mb-6 max-w-4xl">When a row comes back false-green, a separate DeepSeek evaluator agent receives the full evidence packet plus a blank <strong>shadow_repo</strong>. It can write an alternative fix and run hidden tests to confirm its judgment. Every quote in the verdict must be a <strong>verbatim substring</strong> in the evidence packet — Pydantic enforces this mechanically.</p>
+      <div class="grid grid-cols-3 gap-c mobile-one">
+        <div class="panel p-5 border-t-4 border-t-blue-500"><p class="kicker blue mb-2">Evidence Packet</p><p class="body slate text-sm">Original source, patched source, hidden tests, model's full trajectory, prompt text, public test output, hidden test output. <strong>The evaluator cannot cite anything not in this packet.</strong></p></div>
+        <div class="panel p-5 border-t-4 border-t-purple-500"><p class="kicker purple mb-2">Shadow Fix Verification</p><p class="body slate text-sm">The evaluator can write an alternative fix in a <strong>shadow_repo</strong> and run hidden tests. If the evaluator's fix passes, the original failed. If neither passes, the scenario may be invalid. <strong>Mechanical confirmation, not vibes.</strong></p></div>
+        <div class="panel p-5 border-t-4 border-t-green-500"><p class="kicker green mb-2">Pydantic-Validated Verdict</p><p class="body slate text-sm">Structured JSON: verdict, severity (1-5), confidence (0-1), root cause category, patch quality (1-5), exact quotes from evidence. <strong>LLMs hallucinate. This makes that impossible.</strong></p></div>
+      </div>
+      <div class="panel-dark p-5 mt-c max-w-5xl">
+        <p class="mono text-xs text-slate-400 mb-1">Evaluator Example: metric_semantic_mismatch — confidence 0.95, 4 evidence objects</p>
+        <p class="mono text-sm text-slate-300 leading-relaxed">North Mini normalized values inside <span class="text-green-400 font-bold">compute()</span>, but the contract required <span class="text-green-400 font-bold">compute()</span> to return raw source values and <span class="text-rose-400 font-bold">dashboard_total()</span> to normalize user-facing totals. <strong>The model fixed the right math in the wrong architectural layer.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 06 — THE MATRIX -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Matrix</div><div class="rail-number">06</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">EXPERIMENT DESIGN: ISOLATE THREE VARIABLES</p>
+      <h2 class="headline max-w-5xl mb-2">One model on one pack = anecdote.<br>The matrix isolates what actually matters.</h2>
+      <div class="grid grid-cols-3 gap-c mt-c mobile-one">
+        <div class="panel p-6 border-t-4 border-t-blue-500">
+          <p class="text-6xl font-black blue mb-3">01</p>
+          <p class="text-xl font-extrabold mb-2">Model Effect</p>
+          <p class="body slate"><strong>North Mini</strong> (Cohere-built, API, tool-calling native, 14-35s avg) vs <strong>Gemma 4 12B</strong> (local Ollama, general-purpose, foreign agent surface, 166-314s avg). Same scenarios.<br><br><span class="small muted mono">Not a ranking — a system comparison.</span></p>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-purple-500">
+          <p class="text-6xl font-black purple mb-3">02</p>
+          <p class="text-xl font-extrabold mb-2">Prompt Effect</p>
+          <p class="body slate"><strong>Sparse</strong> ("CI is red, fix it") vs <strong>Contract-Visible</strong> (full acceptance criteria in the prompt). Infer the rule vs implement the rule.<br><br><span class="small muted mono">The delta between them reveals: capability wall or spec-exposure problem?</span></p>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-green-500">
+          <p class="text-6xl font-black green mb-3">03</p>
+          <p class="text-xl font-extrabold mb-2">Work-Type Effect</p>
+          <p class="body slate"><strong>ci_forensics</strong> (12 CI bugs, low semantic density) → <strong>maintenance</strong> (10 refactors, medium) → <strong>product_workflows</strong> (11 business-logic tasks, high).<br><br><span class="small muted mono">Some bugs are mechanical. Some require understanding domain policy.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 07 — SCORECARD -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Scorecard</div><div class="rail-number">07</div></aside>
+    <div class="canvas top">
+      <p class="kicker mb-3">12 CELLS · 132 RUNS · 2 MODEL STALLS · FINAL DATA</p>
+      <div class="grid grid-cols-2 gap-c mobile-one">
+        <div class="panel p-5 border-t-4 border-t-blue-500">
+          <p class="kicker blue mb-4">North Mini — API Model · 14-35s avg</p>
+          <div class="mb-4"><p class="mono text-xs font-bold mb-1.5">ci_forensics (12 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p12</span><span>h8</span><span class="rose font-bold">f4</span><span class="rose font-bold ml-auto">33%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#dcfce7"><span class="mono text-xs muted">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p12</span><span class="green font-bold">h11</span><span>f1</span><span class="green font-bold ml-auto">8%</span></div></div></div><p class="mono text-xs green mt-1.5">gap: 33% → 8% · 3 of 4 false-greens converted</p></div>
+          <div class="mb-4"><p class="mono text-xs font-bold mb-1.5">maintenance (10 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p10</span><span>h8</span><span>f2</span><span class="amber font-bold ml-auto">20%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#dcfce7"><span class="mono text-xs muted">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p9</span><span class="green font-bold">h9</span><span>f0</span><span class="green font-bold ml-auto">0%</span></div></div></div><p class="mono text-xs green mt-1.5">gap: 20% → 0% · zero false-greens — perfect</p></div>
+          <div><p class="mono text-xs font-bold mb-1.5">product (11 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>6/11</span><span class="rose font-bold">h0</span><span class="rose font-bold">f6</span><span class="rose font-bold ml-auto">100%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#fef3c7"><span class="mono text-xs muted">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span class="amber font-bold">0/11</span><span class="amber ml-auto">stalled</span></div></div></div><p class="mono text-xs amber mt-1.5">⚠ 11 no_output_timeouts — rate-limited on free tier. Infrastructure, not model.</p></div>
+        </div>
+        <div class="panel p-5 border-t-4 border-t-purple-500">
+          <p class="kicker purple mb-4">Gemma 4 12B — Local Ollama · 166-314s avg</p>
+          <div class="mb-4"><p class="mono text-xs font-bold mb-1.5">ci_forensics (12 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p5</span><span>h3</span><span>f2</span><span class="amber font-bold ml-auto">16%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#dcfce7"><span class="mono text-xs muted">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p7</span><span class="green font-bold">h6</span><span>f1</span><span class="green font-bold ml-auto">8%</span></div></div></div><p class="mono text-xs green mt-1.5">gap: 16% → 8% · public 5→7 · hidden doubled</p></div>
+          <div class="mb-4"><p class="mono text-xs font-bold mb-1.5">maintenance (10 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p9</span><span class="green font-bold">h7</span><span>f2</span><span class="amber font-bold ml-auto">20%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#dcfce7"><span class="mono text-xs muted">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p7</span><span class="green font-bold">h6</span><span>f1</span><span class="amber font-bold ml-auto">10%</span></div></div></div><p class="mono text-xs green mt-1.5">gap: 20% → 10% · batch_splitter_utility cracked!</p></div>
+          <div><p class="mono text-xs font-bold mb-1.5">product (11 scenarios)</p><div class="grid grid-cols-2 gap-2"><div class="panel-soft p-2.5 rounded"><span class="mono text-xs muted">sparse</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p6</span><span>h2</span><span>f4</span><span class="amber font-bold ml-auto">36%</span></div></div><div class="panel-soft p-2.5 rounded" style="background:#dcfce7"><span class="mono text-xs muted ★">contract</span><div class="flex gap-1.5 mt-0.5 mono text-xs"><span>p8</span><span class="green font-bold">h7</span><span>f1</span><span class="green font-bold ml-auto">9%</span></div></div></div><p class="mono text-xs green mt-1.5">★ Best-in-matrix product result · 7 hidden passes · 600s timeout held</p></div>
+        </div>
+      </div>
+      <p class="small muted mt-3 mono text-center"><span class="muted">p</span>=public <span class="green">h</span>=hidden <span class="rose">f</span>=false-green · gap=trust gap · <span class="green">green</span>=contract improved · ★=best-in-matrix</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 08 — ALL SCENARIOS -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Data</div><div class="rail-number">08</div></aside>
+    <div class="canvas top">
+      <p class="kicker mb-3">COMPLETE PER-SCENARIO MATRIX · EVERY RUN VISIBLE</p>
+      <div class="grid grid-cols-3 gap-c mobile-one">
+        <div><p class="kicker blue mb-3">ci_forensics — 12 CI bugs</p>
+          <p class="small muted mb-1">North Mini sparse (gap 33%)</p><div class="scenario-grid mb-2"><div class="scen-cell good mono">++ async</div><div class="scen-cell good mono">++ config</div><div class="scen-cell fg mono">!F csv</div><div class="scen-cell fg mono">!F decimal</div><div class="scen-cell fg mono">!F dep_api</div><div class="scen-cell fg mono">!F env_bool</div><div class="scen-cell good mono">++ idempot</div><div class="scen-cell good mono">++ mutable</div><div class="scen-cell good mono">++ paginat</div><div class="scen-cell good mono">++ schema</div><div class="scen-cell good mono">++ tenant</div><div class="scen-cell good mono">++ timezn</div></div>
+          <p class="small muted mb-1">North Mini cv (gap 8%)</p><div class="scenario-grid mb-3"><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell fg mono">!F</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div></div>
+          <p class="small muted mb-1">Gemma sparse (gap 16%)</p><div class="scenario-grid mb-2"><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell fg mono">!F</div><div class="scen-cell fg mono">!F</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div></div>
+          <p class="small muted mb-1">Gemma cv (gap 8%)</p><div class="scenario-grid"><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell fg mono">!F</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div></div>
+        </div>
+        <div><p class="kicker green mb-3">maintenance — 10 refactors</p>
+          <p class="small muted mb-1">North Mini sparse (gap 20%)</p><div class="scenario-grid mb-2" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell fg mono">!F adapt</div><div class="scen-cell fg mono">!F batch</div><div class="scen-cell good mono">++ docs</div><div class="scen-cell good mono">++ explicit</div><div class="scen-cell good mono">++ fixture</div><div class="scen-cell good mono">++ gen_api</div><div class="scen-cell good mono">++ hygiene</div><div class="scen-cell good mono">++ logger</div><div class="scen-cell good mono">++ regr</div><div class="scen-cell good mono">++ utcnow</div></div>
+          <p class="small muted mb-1">North Mini cv (gap 0%)</p><div class="scenario-grid mb-3" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div></div>
+          <p class="small muted mb-1">Gemma sparse (gap 20%)</p><div class="scenario-grid mb-2" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell fg mono">!F</div><div class="scen-cell fg mono">!F</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div></div>
+          <p class="small muted mb-1">Gemma cv (gap 10%)</p><div class="scenario-grid" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div><div class="scen-cell good mono">++</div><div class="scen-cell fg mono">!F</div></div>
+        </div>
+      </div>
+      <p class="small muted mt-2 mono text-center"><span class="green">++</span>=hidden pass <span class="rose">!F</span>=false-green <span class="muted">--</span>=public red <span class="amber">XX</span>=timeout · 132 runs total</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 09 — PRODUCT PACKS (continued from slide 08) -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Data 2</div><div class="rail-number">09</div></aside>
+    <div class="canvas top">
+      <p class="kicker mb-3">PRODUCT_WORKFLOWS + DEEP-DIVE FINDINGS</p>
+      <div class="grid grid-cols-12 gap-c mobile-one">
+        <div class="col-span-5">
+          <p class="kicker rose mb-3">product_workflows — 11 business-logic tasks</p>
+          <p class="small muted mb-1">North Mini sparse (6/11 done, gap 100%)</p><div class="scenario-grid mb-2" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell fg mono">!F audit</div><div class="scen-cell fg mono">!F billing</div><div class="scen-cell fg mono">!F bulk</div><div class="scen-cell fg mono">!F cart</div><div class="scen-cell fg mono">!F feature</div><div class="scen-cell fg mono">!F inventory</div><div class="scen-cell stall mono">XX markdown</div><div class="scen-cell stall mono">XX search</div><div class="scen-cell stall mono">XX silent</div><div class="scen-cell stall mono">XX sla</div><div class="scen-cell stall mono">XX webhook</div></div>
+          <p class="small muted mb-1">Gemma sparse (gap 36%)</p><div class="scenario-grid mb-3" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell fg mono">!F</div><div class="scen-cell fg mono">!F</div><div class="scen-cell fg mono">!F</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell red mono">--</div><div class="scen-cell fg mono">!F</div><div class="scen-cell good mono">++</div><div class="scen-cell red mono">--</div><div class="scen-cell good mono">++</div></div>
+          <p class="small muted mb-1">Gemma cv ★ Best-in-Matrix (gap 9%)</p><div class="scenario-grid" style="grid-template-columns:repeat(3,1fr)"><div class="scen-cell good mono">++ audit</div><div class="scen-cell red mono">-- billing</div><div class="scen-cell good mono">++ bulk</div><div class="scen-cell good mono">++ cart</div><div class="scen-cell red mono">-- feature</div><div class="scen-cell fg mono">!F inventory</div><div class="scen-cell red mono">-- markdown</div><div class="scen-cell good mono">++ search</div><div class="scen-cell good mono">++ silent</div><div class="scen-cell good mono">++ sla</div><div class="scen-cell good mono">++ webhook</div></div>
+        </div>
+        <div class="col-span-7">
+          <div class="panel p-5 border-t-4 border-t-green-500 mb-4">
+            <p class="kicker green mb-2">★ Gemma 12B Contract-Visible Product: 7/11 Hidden Passes</p>
+            <p class="body slate">The single best product workflow result in the entire matrix. With explicit contracts and 600s first-output timeout, the local model solved audit redaction, bulk invite deduplication, cart discount stacking, search ranking, exception swallowing, SLA business hours, and webhook signature verification. <strong>The contract unlocks capability.</strong></p>
+          </div>
+          <div class="panel p-5 border-t-4 border-t-rose-500 mb-4">
+            <p class="kicker rose mb-2">North Mini Product: 0 Hidden Passes Across All Lanes</p>
+            <p class="body slate">Sparse: 6 completions, all 6 false-greens. Contract-visible: 11/11 stalls at 300s first_output timeout (rate-limited on free API tier). <strong>The model that dominates ci_forensics and maintenance cannot close product logic at pass@1 without more time or higher tier access.</strong></p>
+          </div>
+          <div class="panel p-5 border-t-4 border-t-amber-500">
+            <p class="kicker amber mb-2">Speed Asymmetry: 14s vs 314s per Scenario</p>
+            <p class="body slate">North Mini runs at API speed (14-35s avg). Gemma runs at local Ollama speed (166-314s avg). The 20x speed gap doesn't correspond to a 20x quality gap — on maintenance contract-visible, North Mini gets 9/9 hidden, Gemma gets 6/10. <strong>Speed isn't accuracy.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 10 — THE FINDING -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Finding</div><div class="rail-number">10</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">THE CENTRAL FINDING: CONTRACT-VISIBLE REDUCES THE TRUST GAP</p>
+      <h2 class="headline max-w-6xl mb-3">The contract helps both models.<br>But it repairs <span class="blue">different</span> failure modes.</h2>
+      <div class="grid grid-cols-2 gap-0 mt-c panel mobile-one">
+        <div class="p-8 border-r border-slate-200">
+          <p class="kicker blue mb-3">North Mini — Already Gets CI Green</p>
+          <p class="text-2xl font-extrabold mb-4">Converts false-greens into real fixes.</p>
+          <p class="body slate mb-5">The contract doesn't create new public-greens — it <strong>reclassifies existing ones</strong>. ci_forensics: 4 false-greens → 1. maintenance: 2 → 0. The failure mode is <strong>assertion completion</strong>: the model fixes the specific assertion that fails instead of inferring the rule it represents. Give it the rule, and it delivers. <span class="green font-bold">Gap collapses from 20-33% to 0-8%.</span></p>
+          <div class="panel-soft p-4 mono text-sm"><span class="muted">Sparse:</span> public-green / hidden-red<br><span class="muted">Contract:</span> <span class="green font-bold">public-green / hidden-green</span></div>
+        </div>
+        <div class="p-8">
+          <p class="kicker purple mb-3">Gemma 4 12B — Often Can't Close CI At All</p>
+          <p class="text-2xl font-extrabold mb-4">Unlocks public CI; acts as scaffolding.</p>
+          <p class="body slate mb-5">The contract helps the model <strong>construct a working implementation</strong> where it couldn't before. ci_forensics: public 5→7, hidden doubled from 3→6. product: <strong>7 hidden passes under contract-visible</strong> — the best product result. The model has capability; it needs the spec to unlock it. <span class="green font-bold">Gap halves: 16%→8% on ci_forensics.</span></p>
+          <div class="panel-soft p-4 mono text-sm"><span class="muted">Sparse:</span> <span class="rose font-bold">public-red</span><br><span class="muted">Contract:</span> <span class="green font-bold">public-green / hidden-green</span></div>
+        </div>
+      </div>
+      <p class="text-lg font-bold mt-c">Same structural improvement. Completely different mechanism. This is exactly why you design an experiment with two models in two prompt conditions — a single-cell result would tell you <em>that</em> the contract helps, but not <em>why</em>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 11 — THE STUBBORN TRIO -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Hard</div><div class="rail-number">11</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">UNIVERSAL FAILURES THAT REVEAL THE HARNESS WORKS</p>
+      <h2 class="headline max-w-5xl mb-5">Three scenarios survived every model and lane.<br>Contract-visible cracked two of them.</h2>
+      <div class="space-y-3">
+        <div class="panel p-5 border-l-4 border-l-rose-500">
+          <div class="flex items-start justify-between gap-4">
+            <div><p class="mono font-bold rose text-sm mb-1">env_bool_parser — Still Unsolved</p><p class="body slate text-sm">The only scenario that <strong>nobody</strong> solved in any lane. False-green for North Mini sparse AND contract-visible. Public-red for Gemma sparse AND contract-visible. Models fix obvious boolean values then miss whitespace, blanks, and the full truth table. <strong>Even the explicit contract doesn't help.</strong> This may be a genuine capability wall — not a spec-exposure problem.</p></div>
+            <div class="flex gap-1.5 mono text-xs flex-shrink-0"><span class="tag bad">NM sp !F</span><span class="tag bad">NM cv !F</span><span class="tag info" style="background:#f1f5f9;color:#64748b">G12 sp --</span><span class="tag info" style="background:#f1f5f9;color:#64748b">G12 cv --</span></div>
+          </div>
+        </div>
+        <div class="panel p-5 border-l-4 border-l-rose-500">
+          <div class="flex items-start justify-between gap-4">
+            <div><p class="mono font-bold rose text-sm mb-1">adapter_field_rename — Cracked by North Mini CV</p><p class="body slate text-sm">False-green for North Mini sparse, Gemma sparse. <strong>Cracked by North Mini contract-visible (hidden pass).</strong> Gemma CV still fails (public-red). The spec is enough for the API model but not the local one — tool-surface friction, not just missing information. Backward compatibility with old payloads requires navigating the codebase the model struggles with on foreign tooling.</p></div>
+            <div class="flex gap-1.5 mono text-xs flex-shrink-0"><span class="tag bad">NM sp !F</span><span class="tag good">NM cv ++</span><span class="tag bad">G12 sp !F</span><span class="tag info" style="background:#f1f5f9;color:#64748b">G12 cv --</span></div>
+          </div>
+        </div>
+        <div class="panel p-5 border-l-4 border-l-amber-500">
+          <div class="flex items-start justify-between gap-4">
+            <div><p class="mono font-bold amber text-sm mb-1">batch_splitter_utility — Cracked by Gemma CV ★</p><p class="body slate text-sm">False-green for North Mini sparse, North Mini CV (public-red!), Gemma sparse. <strong>First Gemma 12B hidden pass EVER on this scenario under contract-visible.</strong> The spec-exposure hypothesis confirmed: the model wasn't incapable — it was uninformed. Empty input, invalid sizes, and boundary conditions are mechanical checks the model can implement when told to.</p></div>
+            <div class="flex gap-1.5 mono text-xs flex-shrink-0"><span class="tag bad">NM sp !F</span><span class="tag info" style="background:#f1f5f9;color:#64748b">NM cv --</span><span class="tag bad">G12 sp !F</span><span class="tag good">G12 cv ++</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="quote mt-c"><p class="text-xl font-bold">2 of 3 stubborn scenarios cracked by contract-visible. That means these are <span class="blue">spec-exposure problems</span>, not capability walls. <span class="rose">env_bool_parser</span> is the one that genuinely resists — the full truth-table contract is just hard to infer from a single failing case.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 12 — PASS@1 VARIANCE -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Variance</div><div class="rail-number">12</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">THE DATA WARNS AGAINST ITSELF</p>
+      <h2 class="headline max-w-5xl mb-3">Same model. Same pack. Two pass@1 runs.<br>Hidden pass swung by 30 points.</h2>
+      <div class="grid grid-cols-12 gap-4 mt-c mobile-one">
+        <div class="col-span-3"><p class="text-7xl font-black">4<span class="muted text-3xl">/10</span></p><p class="mono text-xs muted mt-2">Gemma 12B · maint sp · run 1</p></div>
+        <div class="col-span-1 flex items-center justify-center"><p class="text-4xl muted font-light">→</p></div>
+        <div class="col-span-3"><p class="text-7xl font-black green">7<span class="muted text-3xl">/10</span></p><p class="mono text-xs muted mt-2">Gemma 12B · maint sp · run 2</p></div>
+        <div class="col-span-2"><div class="panel-soft p-5 text-center border-l-4 border-l-amber-500"><p class="text-4xl font-black amber">+30</p><p class="mono text-xs muted mt-1">hidden pass swing</p></div></div>
+        <div class="col-span-3"><p class="body slate text-sm">Three scenarios flipped: <span class="green font-bold">explicit_validation_matrix</span>, <span class="green font-bold">generated_openapi_refresh</span>, <span class="green font-bold">import_hygiene_fix</span>. Same model, same pack, same prompt. Different outcomes.</p></div>
+      </div>
+      <div class="grid grid-cols-2 gap-c mt-c">
+        <div class="panel p-5 border-t-4 border-t-amber-500"><p class="kicker amber mb-2">e4b also varied: 5 → 2 hidden across two runs</p><p class="body slate text-sm">The smaller Gemma model went from 5/10 to 2/10 hidden on the same maintenance sparse pack. Pass@1 is a single sample from a distribution. <strong>You cannot characterize a model from one attempt.</strong></p></div>
+        <div class="panel p-5 border-t-4 border-t-blue-500"><p class="kicker blue mb-2">Pass@3 is the floor for defensible claims</p><p class="body slate text-sm">Single-attempt data describes <strong>the attempt</strong>, not <strong>the model</strong>. Pass@3 with best-of-3 selection is the minimum for characteristic behavior claims. This project's data is pass@1 — intentionally honest about its limits.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 13 — DEPLOYMENT -->
+<!-- ===================================================== -->
+<section class="slide bg-white">
+  <div class="shell">
+    <aside class="rail"><div class="rail-index">Deploy</div><div class="rail-number">13</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">FROM FINDINGS TO ACTION: THREE DEPLOYMENT ZONES</p>
+      <h2 class="headline max-w-5xl mb-5">The dividing line is semantic density — how much hidden contract the task carries beyond the visible test.</h2>
+      <div class="grid grid-cols-3 gap-c mobile-one">
+        <div class="panel p-6 border-t-4 border-t-green-500">
+          <p class="text-3xl font-black green mb-3">Green Zone</p>
+          <p class="text-lg font-extrabold mb-2">Merge on CI Green</p>
+          <p class="body slate text-sm mb-4">Mechanical maintenance tasks where the visible test nearly covers the full contract. Both models are reliable here when given an explicit contract. <strong>Zero false-greens for North Mini CV.</strong></p>
+          <div class="rule mb-4"></div>
+          <div class="space-y-1 mono text-xs"><p class="green">++ generated_openapi_refresh</p><p class="green">++ fixture_schema_migration</p><p class="green">++ logger_warn_migration</p><p class="green">++ import_hygiene_fix</p><p class="green">++ docs_cli_sync</p><p class="green">++ utcnow_timezone_migration</p></div>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-amber-500">
+          <p class="text-3xl font-black amber mb-3">Amber Zone</p>
+          <p class="text-lg font-extrabold mb-2">Gate on Hidden Acceptance</p>
+          <p class="body slate text-sm mb-4">Tasks where the visible test is incomplete. The model can make CI green but needs a hidden acceptance gate to catch gaps. <strong>Contract-visible converts false-greens to hidden-passes here.</strong></p>
+          <div class="rule mb-4"></div>
+          <div class="space-y-1 mono text-xs"><p class="amber">! adapter_field_rename</p><p class="amber">! batch_splitter_utility</p><p class="amber">! env_bool_parser</p><p class="amber">! csv_header_contract</p><p class="amber">! decimal_money_rounding</p><p class="amber">! explicit_validation_matrix</p></div>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-rose-500">
+          <p class="text-3xl font-black rose mb-3">Red Zone</p>
+          <p class="text-lg font-extrabold mb-2">Human Review or Skip</p>
+          <p class="body slate text-sm mb-4">High policy density tasks. Models consistently produce surface-level fixes that miss core business rules. <strong>Even the explicit contract doesn't fully close the gap.</strong></p>
+          <div class="rule mb-4"></div>
+          <div class="space-y-1 mono text-xs"><p class="rose">✗ billing_proration</p><p class="rose">✗ cart_discount_stack</p><p class="rose">✗ inventory_reservation</p><p class="rose">✗ support_sla</p><p class="rose">✗ dependency_api_change</p><p class="rose">✗ feature_rollout_bucket</p></div>
+        </div>
+      </div>
+      <p class="text-lg font-bold mt-c">The model is replacable. The trust gate is the enduring investment. This is the pipeline you build when you stop treating agents as oracles and start treating them as workers with a quality gate.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 14 — EVIDENCE BOUNDARY -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50">
+  <div class="shell">
+    <aside class="rail soft"><div class="rail-index">Boundary</div><div class="rail-number">14</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-4">TIER 1 EVIDENCE — BEHAVIOR MICROSCOPE</p>
+      <div class="grid grid-cols-2 gap-c mobile-one">
+        <div class="panel p-6 border-t-4 border-t-green-500">
+          <h2 class="text-xl font-extrabold green mb-4">What This Evidence Supports</h2>
+          <ul class="space-y-3 body text-sm">
+            <li><span class="green font-bold">✓</span> Public/hidden test isolation is mechanically enforced. Artifacts are preserved and traceable. Every claim links to a specific SQLite row.</li>
+            <li><span class="green font-bold">✓</span> Cross-model trust gap pattern is real. Same scenarios fail hidden across North Mini, Gemma e4b/12b/31b, and DeepSeek. The 30% number is structural.</li>
+            <li><span class="green font-bold">✓</span> Contract-visible materially reduces false-greens. On ci_forensics and maintenance, the effect is clear and directionally correct for both models.</li>
+            <li><span class="green font-bold">✓</span> Maintenance tasks under explicit contracts are a safe deployment zone. Zero false-greens for North Mini CV; 7/10+ hidden for Gemma.</li>
+            <li><span class="green font-bold">✓</span> The stubborn trio reveals spec-exposure problems, not capability walls. Contract-visible cracked 2 of 3; env_bool_parser is the genuine outlier.</li>
+          </ul>
+        </div>
+        <div class="panel p-6 border-t-4 border-t-rose-500">
+          <h2 class="text-xl font-extrabold rose mb-4">What This Evidence Cannot Support</h2>
+          <ul class="space-y-3 body text-sm">
+            <li><span class="rose font-bold">✗</span> <strong>Model ranking.</strong> North Mini has a home-field advantage (Cohere-built for OpenCode's agent surface). Gemma 12B runs through a foreign tool loop on local hardware. This measures systems.</li>
+            <li><span class="rose font-bold">✗</span> <strong>Pass@1 stability.</strong> 4→7 swing on 12B, 5→2 on e4b. Single-attempt data describes an attempt, not a model. Pass@3 is the floor.</li>
+            <li><span class="rose font-bold">✗</span> <strong>Complete product measurement.</strong> North Mini cells are incomplete. Gemma CV product is clean data; North Mini's isn't.</li>
+            <li><span class="rose font-bold">✗</span> <strong>External validation.</strong> 37 scenarios, single author. Hidden tests are authored. Evaluator is a single DeepSeek agent. Tier 1 only.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="panel-dark p-6 mt-c text-center"><p class="text-xl font-bold text-white">Tier 2 (comparative claims) requires evaluator agreement and complete cells.<br>Tier 3 (public benchmark) requires external audit and pass@3. This is Tier 1 — and that's fine.<br>The methodology is what you're evaluating, not just the number.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== -->
+<!-- 15 — CLOSING -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-900">
+  <div class="shell">
+    <aside class="rail" style="background:#0f172a;border-color:#334155;"><div class="rail-index" style="color:#64748b;">Closing</div><div class="rail-number" style="color:#cbd5e1;">15</div></aside>
+    <div class="canvas">
+      <p class="kicker mb-8" style="color:#64748b;">WEEKEND PROJECT · 132 RUNS · 6h50m WALL CLOCK · TIER 1 EVIDENCE</p>
+      <h2 class="display text-white max-w-6xl">The model is not the product.</h2>
+      <h2 class="display mt-3 text-green-400 max-w-6xl">The trust gate is the product.</h2>
+      <div class="grid grid-cols-12 gap-c mt-c">
+        <div class="col-span-7">
+          <p class="lead text-slate-300 max-w-3xl">What a real coding-agent evaluation should tell you is not which model won — it's <strong>which kinds of work you can safely delegate, under which conditions, with which quality gate.</strong> That is the deployment policy this evidence points to.</p>
+          <p class="lead text-slate-300 max-w-3xl mt-4">The pipeline: <strong>define the contract → cheap execution → hidden acceptance gate → escalate failures → replace the model, keep the gate.</strong> The architecture outlives any single model generation. The model is replacable. The trust gate is the enduring investment.</p>
+          <p class="lead text-slate-300 max-w-3xl mt-4">Built in a weekend. 37 authored scenarios. 132 runs. 2 models. 3 packs. 2 prompt strategies. Public/hidden isolation. Shadow-fix evaluator verification. Verbatim quote validation against LLM hallucination. 8-outcome semantic vs operational taxonomy. <strong>This is what evaluation should look like when you stop conflating "looks done" with "is done."</strong></p>
+        </div>
+        <div class="col-span-5 border-l border-slate-700 pl-6">
+          <p class="mono text-sm text-slate-400 leading-relaxed">
+            define the contract<br><span class="text-slate-600 text-xs">acceptance must be explicit before the model runs</span><br><br>
+            attempt the fix cheaply<br><span class="text-slate-600 text-xs">tokens cost less than labor hours</span><br><br>
+            gate every patch on hidden acceptance<br><span class="text-slate-600 text-xs">CI green is a hypothesis, not a verdict</span><br><br>
+            escalate the failures<br><span class="text-slate-600 text-xs">stronger model or human review</span><br><br>
+            replace the model, keep the gate<br><span class="text-slate-600 text-xs">the architecture outlives any model generation</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex gap-6 mt-c flex-wrap">
+        <p class="mono text-xs text-slate-500">github.com/anomalyco/north-mini-test</p>
+        <p class="mono text-xs text-slate-500">2026-06-21</p>
+        <p class="mono text-xs text-slate-500">132 runs · 12 cells · 2 models · 3 packs · 2 lanes · pass@1 · Tier 1</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="dots" id="dots"></div>
+<div class="nav"><button id="prev" aria-label="Previous slide">←</button><div class="counter" id="counter">01 / 15</div><button id="next" aria-label="Next slide">→</button></div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const dotsContainer = document.getElementById("dots"), counter = document.getElementById("counter");
+  let current = 0;
+  slides.forEach((_, i) => { const d = document.createElement("button"); d.className = "dot" + (i === 0 ? " active" : ""); d.setAttribute("aria-label", `Go to slide ${i + 1}`); d.addEventListener("click", () => show(i)); dotsContainer.appendChild(d); });
+  const dots = [...document.querySelectorAll(".dot")];
+  function show(i) { current = Math.max(0, Math.min(slides.length - 1, i)); slides.forEach((s, idx) => { s.classList.toggle("active", idx === current); }); dots.forEach((d, idx) => { d.classList.toggle("active", idx === current); }); counter.textContent = `${String(current + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`; history.replaceState(null, "", `#${current + 1}`); }
+  function next() { show(current + 1); } function prev() { show(current - 1); }
+  document.getElementById("next").addEventListener("click", next); document.getElementById("prev").addEventListener("click", prev);
+  document.addEventListener("keydown", e => { if (["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)) { e.preventDefault(); next(); } else if (["ArrowLeft","ArrowUp","PageUp"].includes(e.key)) { e.preventDefault(); prev(); } else if (e.key === "Home") { e.preventDefault(); show(0); } else if (e.key === "End") { e.preventDefault(); show(slides.length - 1); } });
+  if (window.location.hash) { const n = parseInt(window.location.hash.slice(1), 10); if (n >= 1 && n <= slides.length) show(n - 1); }
+</script>
+</body>
+</html>

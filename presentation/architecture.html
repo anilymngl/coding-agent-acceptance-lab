@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How It Works — Trust-Gap Harness</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    :root { --ink: #0f172a; --slate: #475569; --muted: #94a3b8; --line: #e2e8f0; --blue: #2563eb; --green: #16a34a; --amber: #d97706; --rose: #e11d48; --purple: #7c3aed; }
+    * { box-sizing: border-box; } html, body { width: 100%; height: 100%; margin: 0; }
+    body { font-family: Inter, sans-serif; background: #fff; color: var(--ink); overflow: hidden; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+    .slide { position: absolute; inset: 0; width: 100%; height: 100vh; opacity: 0; pointer-events: none; transform: translateX(18px); transition: opacity 0.25s, transform 0.25s; overflow: hidden; }
+    .slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 5; }
+    .shell { display: grid; grid-template-columns: 76px 1fr; width: 100%; height: 100%; }
+    .rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 24px 0 20px; background: rgba(255,255,255,0.85); }
+    .rail.soft { background: rgba(248,250,252,0.9); }
+    .rail-index { writing-mode: vertical-rl; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+    .rail-number { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; }
+    .canvas { width: 100%; height: 100%; padding: clamp(22px, 4vw, 50px); display: flex; flex-direction: column; justify-content: center; }
+    .canvas.top { justify-content: flex-start; padding-top: clamp(20px, 3.5vh, 38px); }
+    .kicker { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .headline { font-size: clamp(1.5rem, 3.2vw, 3.2rem); line-height: 1.06; letter-spacing: -0.04em; font-weight: 900; }
+    .subhead { font-size: clamp(1.15rem, 2.1vw, 2.1rem); line-height: 1.12; letter-spacing: -0.03em; font-weight: 800; }
+    .body { font-size: clamp(0.8rem, 0.95vw, 0.92rem); line-height: 1.5; }
+    .small { font-size: clamp(0.62rem, 0.72vw, 0.7rem); line-height: 1.4; }
+    .mt-c { margin-top: clamp(8px, 1.5vh, 16px); }
+    .gap-c { gap: clamp(8px, 1.2vw, 14px); }
+    .box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; }
+    .box-t { border-top-width: 4px; border-top-style: solid; }
+    .box-blue { border-top-color: #2563eb; } .box-green { border-top-color: #16a34a; } .box-rose { border-top-color: #e11d48; } .box-amber { border-top-color: #d97706; } .box-purple { border-top-color: #7c3aed; }
+    .box-dark { background: #0f172a; color: #e2e8f0; border-color: #334155; border-radius: 10px; padding: 14px 18px; }
+    .flow { display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--muted); font-weight: 300; min-width: 30px; }
+    .good { color: #16a34a; } .bad { color: #e11d48; } .warn { color: #d97706; } .muted { color: #94a3b8; }
+    .nav { position: fixed; right: 20px; bottom: 16px; z-index: 50; display: flex; gap: 6px; align-items: center; }
+    .nav button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: rgba(255,255,255,0.95); color: #475569; cursor: pointer; border-radius: 8px; font-size: 14px; }
+    .nav button:hover { color: var(--ink); background: #f8fafc; border-color: var(--blue); }
+    .counter { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); min-width: 48px; text-align: center; }
+    .dots { position: fixed; left: 50%; transform: translateX(-50%); bottom: 28px; z-index: 40; display: flex; gap: 5px; }
+    .dot { width: 6px; height: 6px; border: 0; background: #cbd5e1; border-radius: 3px; padding: 0; cursor: pointer; transition: all 0.2s; }
+    .dot.active { width: 22px; background: var(--blue); border-radius: 3px; }
+    @media (max-width: 950px) { body { overflow: auto; } .slide { overflow-y: auto; } .shell { grid-template-columns: 1fr; } .rail { display: none; } .canvas { min-height: 100vh; height: auto; justify-content: flex-start; padding: 20px 14px 80px; } .mobile-one { grid-template-columns: 1fr !important; } .dots { display: none; } }
+  </style>
+</head>
+<body><main id="deck">
+
+<!-- ===================================================== -->
+<!-- 01 — TITLE -->
+<!-- ===================================================== -->
+<section class="slide active bg-white"><div class="shell"><aside class="rail"><div class="rail-index">How</div><div class="rail-number">01</div></aside><div class="canvas">
+  <p class="kicker mb-4">INSIDE THE TRUST-GAP EVALUATION HARNESS</p>
+  <h1 class="headline max-w-6xl mb-3">How It Works</h1>
+  <p class="body max-w-4xl mb-5" style="color:var(--slate);font-size:1.05rem">A pipeline that measures whether an AI's code fix is real — or just made the tests pass. Everything is recorded. Everything is traceable. Nothing is hand-waved.</p>
+  <div class="grid grid-cols-3 gap-c">
+    <div class="box box-blue text-center"><p class="text-2xl font-black" style="color:#2563eb">37</p><p class="text-sm font-bold mt-1">hand-crafted scenarios</p><p class="small muted mt-1">Each one is a broken project with a failing test. Each one has a hidden check the AI never sees.</p></div>
+    <div class="box box-green text-center"><p class="text-2xl font-black good">132</p><p class="text-sm font-bold mt-1">test runs in one matrix</p><p class="small muted mt-1">2 AI models × 3 work types × 2 instruction styles. One JSON config file drives it all.</p></div>
+    <div class="box box-purple text-center"><p class="text-2xl font-black" style="color:#7c3aed">8</p><p class="text-sm font-bold mt-1">outcome labels</p><p class="small muted mt-1">Real fix, fake fix, couldn't pass, timed out... automatic classification. No human judgment needed for scoring.</p></div>
+  </div>
+  <p class="small muted mt-c text-center mono">Run: uv run ci-vibe-matrix run config.json · Watch: ./check-opencode.sh --live · Report: ci-vibe-report leaderboard</p>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 02 — THE CORE IDEA: PUBLIC VS HIDDEN -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Hidden</div><div class="rail-number">02</div></aside><div class="canvas">
+  <p class="kicker mb-3">THE QUESTION NOBODY ASKS</p>
+  <h2 class="subhead mb-2">When an AI makes a test pass — did it actually fix the problem? Or just the one thing the test checked?</h2>
+  <p class="body mb-4" style="color:var(--slate); max-width:90%">Here's the thing. The AI sees a failing test. It edits code. The test passes. Green light. But — is the green light <strong>real</strong>, or did the AI just make it green by doing the minimum? The hidden test answers that. It checks the same problem from a different angle. Edge cases. Other places the same mistake might be hiding. Things a good engineer would check naturally — but the AI only checked what was in front of it.</p>
+
+  <div class="grid grid-cols-12 gap-c">
+    <div class="col-span-5 box box-rose">
+      <p class="text-sm font-bold bad mb-2">A real example: timezone migration</p>
+      <p class="body text-sm mb-3">The project has a function <span class="mono text-xs">created_at()</span> that uses an old, deprecated way to get the current time. The <strong>visible test</strong> checks: does <span class="mono text-xs">created_at()</span> return a proper timezone-aware datetime?</p>
+      <div class="box-dark p-3 mono text-xs">
+        <p class="text-slate-400 mb-1">What the AI sees (the failing test):</p>
+        <p><span class="text-purple-400">def</span> <span class="text-green-400">test_timezone_aware</span>():</p>
+        <p>  value = created_at()</p>
+        <p>  <span class="text-rose-400">assert value.tzinfo is not None</span>  <span class="text-slate-500">← FAILS</span></p>
+      </div>
+      <p class="body text-sm mt-3">The AI fixes <span class="mono text-xs">created_at()</span>. The test passes. CI is green.</p>
+    </div>
+    <div class="col-span-1 flex items-center justify-center"><p class="text-2xl muted">→</p></div>
+    <div class="col-span-6 box box-green">
+      <p class="text-sm font-bold good mb-2">What the AI missed — the hidden test reveals it</p>
+      <p class="body text-sm mb-3">After the AI exits, the <strong>hidden test</strong> is added. It checks something the visible test didn't: does the <span class="mono text-xs">updated_at_iso()</span> function in the <em>same file</em> also have the same problem? And are there any remaining calls to the deprecated method <em>anywhere</em>?</p>
+      <div class="box-dark p-3 mono text-xs">
+        <p class="text-slate-400 mb-1">The hidden test (AI never saw this):</p>
+        <p><span class="text-purple-400">def</span> <span class="text-green-400">test_updated_at_also_fixed</span>():</p>
+        <p>  parsed = datetime.fromisoformat(updated_at_iso())</p>
+        <p>  <span class="text-rose-400">assert parsed.tzinfo is not None</span>  <span class="text-slate-500">← STILL FAILS</span></p>
+        <p class="mt-1"><span class="text-purple-400">def</span> <span class="text-green-400">test_no_deprecated_calls</span>():</p>
+        <p>  code = open(<span class="text-amber-300">"app/timestamps.py"</span>).read()</p>
+        <p>  <span class="text-rose-400">assert "utcnow()" not in code</span>  <span class="text-slate-500">← STILL FAILS</span></p>
+      </div>
+      <p class="body text-sm mt-3"><strong>The AI fixed one function. It didn't check the other function in the same file.</strong> A human would have. The hidden test catches this gap. <span class="bad font-bold">Visible green. Hidden red. Fake fix.</span></p>
+    </div>
+  </div>
+
+  <div class="box-dark mt-c p-4">
+    <p class="text-sm font-bold text-slate-300 mb-2">So the hidden test is not a trick. It's not something extra the AI "shouldn't need to know."</p>
+    <p class="body text-slate-400">It's the same requirement — "make timezone-aware timestamps" — applied more thoroughly. A good engineer would check the whole file. A good engineer would search for other uses of the deprecated method. The hidden test just checks whether the AI did what a good engineer would do — or stopped at the first green light.</p>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 03 — SCENARIO ANATOMY -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Scenario</div><div class="rail-number">03</div></aside><div class="canvas top">
+  <p class="kicker mb-3">THE BUILDING BLOCK — ONE SCENARIO</p>
+  <h2 class="subhead mb-3">37 hand-crafted test cases. Each one has: broken code, a failing visible test, a hidden acceptance test, and the rules for what "done" means.</h2>
+  <div class="grid grid-cols-3 gap-c">
+    <div class="box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">What every scenario contains</p><div class="space-y-2 text-sm"><div><span class="mono text-xs font-bold">Broken source code</span><p class="small muted">The file that needs fixing. Written into a fresh project folder.</p></div><div><span class="mono text-xs font-bold">Failing visible test</span><p class="small muted">The test the AI sees failing. This is what the AI tries to make pass.</p></div><div><span class="mono text-xs font-bold">Hidden acceptance test</span><p class="small muted">Tests the same requirement more thoroughly. Injected <strong>only after</strong> the AI finishes. Edge cases, other locations, compatibility checks.</p></div><div><span class="mono text-xs font-bold">Expected behavior</span><p class="small muted">What a correct fix should look like. Shared with the AI when you give clear instructions. Hidden when you don't.</p></div><div><span class="mono text-xs font-bold">Known failure modes</span><p class="small muted">Common wrong approaches the AI might take. Also shared when you give clear instructions.</p></div></div></div>
+    <div class="box box-green"><p class="text-sm font-bold mb-2 good">Three ways to present the same scenario</p><div class="space-y-2"><div class="box p-3" style="background:#f8fafc;border:1px solid #e2e8f0"><p class="mono text-xs font-bold">Vague ticket</p><p class="small muted mt-0.5">"CI is red. Here's the error. Fix it." The AI has to figure out what "done" means by itself.</p></div><div class="box p-3" style="background:#dcfce7;border:1px solid #bbf7d0"><p class="mono text-xs font-bold">Clear instructions</p><p class="small muted mt-0.5">Same as above, plus the expected behavior and common mistakes. Tests whether the AI can follow the spec.</p></div><div class="box p-3" style="background:#ede9fe;border:1px solid #c4b5fd"><p class="mono text-xs font-bold">Reviewer context</p><p class="small muted mt-0.5">The trap, difficulty level, tags. Only the independent reviewer sees this version — never the AI being tested.</p></div></div><p class="small muted mt-2">The gap between vague and clear tells you: is the AI incapable, or just uninformed?</p></div>
+    <div class="box box-rose"><p class="text-sm font-bold mb-2 bad">The hidden test is mechanically enforced</p><div class="box-dark p-3 mono text-xs"><p class="text-slate-400 mb-1">tests/test_hidden_acceptance.py</p><p><span class="text-slate-500">This file does NOT exist</span> while the AI is working.</p><p>It gets written to disk only <span class="text-slate-500">after</span> the AI finishes.</p><p>Then all tests (visible + hidden) run together.</p><p class="text-green-400 mt-1">Both pass → real fix.</p><p class="text-rose-400">Visible passes, hidden fails → fake fix.</p></div><p class="small muted mt-2">The AI cannot see this file. Cannot read it. Cannot optimize for it. It's not a hint the AI "should have checked." It's a measurement of what the AI did — applied after the fact.</p></div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 04 — THE RUNNER LOOP -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Runner</div><div class="rail-number">04</div></aside><div class="canvas">
+  <p class="kicker mb-3">WHAT HAPPENS WHEN A SINGLE TASK RUNS</p>
+  <h2 class="subhead mb-3">Five steps. Everything recorded. Nothing thrown away.</h2>
+  <div class="grid grid-cols-5 gap-c" style="align-items:start">
+    <div class="box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">Step 1: Prepare</p><p class="body text-sm">Make a fresh copy of the project. Write the broken source file and the failing visible test. Run the test. <strong>It must fail.</strong> If it passes, the scenario is broken — stop.</p><p class="small muted mt-2">Saved: <span class="mono">baseline.txt</span></p></div>
+    <div class="flow mt-4">→</div>
+    <div class="box box-green"><p class="text-sm font-bold mb-2 good">Step 2: Let the AI try</p><p class="body text-sm">Give the AI the project folder and the prompt. It sees the failing test output. It edits files. It runs commands. It can read, write, search — whatever it wants. <strong>The hidden test does not exist yet.</strong></p><p class="small muted mt-2">Saved: <span class="mono">prompt.txt, opencode_stdout.jsonl</span></p></div>
+    <div class="flow mt-4">→</div>
+    <div class="box box-amber"><p class="text-sm font-bold mb-2 warn">Step 3: Check visible tests</p><p class="body text-sm">Run the original test again on whatever the AI left behind. Did it pass? Record the answer. No judgment yet — just: did the AI make the green light?</p><p class="small muted mt-2">Saved: <span class="mono">public.txt, patch.diff</span></p></div>
+  </div>
+  <div class="grid grid-cols-5 gap-c mt-1" style="align-items:start">
+    <div class="box box-rose"><p class="text-sm font-bold mb-2 bad">Step 4: Inject hidden tests</p><p class="body text-sm">Now — and only now — write the hidden acceptance test into the project. Run ALL tests (visible + hidden). <strong>The AI never knew this second check existed. It couldn't have prepared for it.</strong></p><p class="small muted mt-2">Saved: <span class="mono">hidden.txt</span></p></div>
+    <div class="flow mt-4">→</div>
+    <div class="box box-purple"><p class="text-sm font-bold mb-2" style="color:#7c3aed">Step 5: Store everything</p><p class="body text-sm">One row in the database. Files on disk. The prompt, the AI's entire work log, both test results, the code changes. Absolute paths. Traceable. <strong>If someone doubts a number, they can open the exact files that produced it.</strong></p><p class="small muted mt-2">Saved: <span class="mono">SQLite row + artifact folder</span></p></div>
+    <div class="flow mt-4"></div>
+    <div class="box box-t text-center" style="border-top-color:#0d9488"><p class="text-sm font-bold" style="color:#0d9488">What you get per run</p><div class="box-dark mt-2 mono text-xs space-y-0.5"><p class="text-slate-500">artifacts/{run-id}/</p><p>  prompt.txt</p><p>  baseline.txt</p><p>  public.txt</p><p>  hidden.txt</p><p>  patch.diff</p><p>  opencode_stdout.jsonl</p></div></div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 05 — HOW RESULTS ARE CLASSIFIED -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Labels</div><div class="rail-number">05</div></aside><div class="canvas">
+  <p class="kicker mb-3">AFTER EACH RUN — THE SYSTEM DECIDES WHAT HAPPENED</p>
+  <h2 class="subhead mb-4">Every result gets exactly one label. The logic is mechanical — the AI doesn't decide its own score.</h2>
+  <div class="grid grid-cols-2 gap-c">
+    <div><p class="text-sm font-bold mb-3" style="color:#2563eb">The AI produced usable output → these measure quality</p>
+      <div class="space-y-2">
+        <div class="box box-green"><p class="text-sm font-bold good">Real fix ✓</p><p class="body text-sm">Visible test passed. Hidden test passed. It actually works. Ship it.</p></div>
+        <div class="box box-rose"><p class="text-sm font-bold bad">Fake fix ✗</p><p class="body text-sm">Visible test passed. Hidden test failed. <strong>The AI made it look done. It isn't.</strong> This is what the whole harness exists to measure.</p></div>
+        <div class="box" style="border-left:3px solid #94a3b8"><p class="text-sm font-bold muted">Couldn't pass ⬜</p><p class="body text-sm">The AI couldn't even make the visible test green. Nothing to merge. Nothing to review.</p></div>
+      </div>
+    </div>
+    <div><p class="text-sm font-bold mb-3 warn">The infrastructure failed → these measure reliability, not quality</p>
+      <div class="space-y-2">
+        <div class="box box-amber"><p class="text-sm font-bold warn">Timed out (working) ⏱</p><p class="body text-sm">The AI was actively working — produced output, made edits — but ran out of time.</p></div>
+        <div class="box box-amber" style="opacity:0.7"><p class="text-sm font-bold warn">Timed out (stalled) ⏱</p><p class="body text-sm">Zero output before timeout. Connection issue, rate limit, or model overload. Not a wrong answer — no answer at all.</p></div>
+        <div class="box" style="border-left:3px solid #e2e8f0"><p class="text-sm font-bold muted">Setup errors ⚠</p><p class="body text-sm">Wrong model name. Network failure. Auth error. Test runner broke. Nothing to do with the AI's ability.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="box-dark mt-c p-4"><p class="text-sm font-bold text-slate-300 mb-2">Why separating these matters</p><p class="body text-slate-400">Most evaluations mix "the AI produced a wrong answer" with "the AI couldn't respond in time" into one number. That's how you get garbage. <strong>Only the left column feeds the fake-fix rate. The right column tells you about deployability.</strong></p></div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 06 — THE REVIEWER AI -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Review</div><div class="rail-number">06</div></aside><div class="canvas">
+  <p class="kicker mb-3">I DON'T ASK A SECOND AI "IS THIS GOOD?" — THAT'S JUST VIBES.</p>
+  <h2 class="subhead mb-4">When a fix is fake, a separate AI reviews it. But it has to prove its judgment.</h2>
+  <div class="grid grid-cols-12 gap-c">
+    <div class="col-span-4 box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">What it receives</p><p class="body text-sm">A folder with everything: the original project, the AI's changes, the hidden test, the AI's full work log. <strong>Any claim it makes must quote something in this folder.</strong></p><div class="box-dark mt-2 mono text-xs space-y-0.5"><p class="text-slate-500">EVALUATION_PACKET.md</p><p>  Original code</p><p>  The AI's changes</p><p>  Hidden acceptance test</p><p>  Full work log (every file read, every edit)</p><p>  The prompt text</p><p>  Both test results</p></div></div>
+    <div class="flow mt-6">→</div>
+    <div class="col-span-3 box box-purple"><p class="text-sm font-bold mb-2" style="color:#7c3aed">How it proves the AI was wrong</p><p class="body text-sm">It gets a blank workspace. It tries to write <strong>its own fix</strong> that passes the hidden test. If it can do it, the original AI failed. If even the reviewer can't do it, maybe the test itself is broken. <strong>Proof by demonstration, not opinion.</strong></p><div class="box-dark mt-2 mono text-xs space-y-0.5"><p class="text-slate-500">workbench/</p><p>  model_repo/    (original)</p><p>  shadow_repo/   (blank — reviewer writes here)</p></div></div>
+    <div class="flow mt-6">→</div>
+    <div class="col-span-4 box box-green"><p class="text-sm font-bold mb-2 good">What it produces</p><p class="body text-sm">A structured report. Machine-verified — every quote must exist verbatim in the evidence. If it cites something that isn't there, the system rejects the report.<br><br><strong>Real example:</strong> The AI fixed math in the raw data layer. The correct place was the display layer. The reviewer proved this by writing the fix in the right place — hidden tests passed. The AI's own logs showed it never checked where the result was displayed. Four pieces of evidence cited. 95% confidence.</p></div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 07 — MATRIX + STORAGE -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Matrix</div><div class="rail-number">07</div></aside><div class="canvas top">
+  <p class="kicker mb-3">FROM CONFIG FILE TO 132 TESTS</p>
+  <h2 class="subhead mb-3">One JSON file describes the experiment. The system turns it into cells, runs them, and tracks progress.</h2>
+  <div class="grid grid-cols-12 gap-c">
+    <div class="col-span-4 box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">The config file</p><div class="box-dark mono text-xs space-y-0.5"><p class="text-slate-400">configs/matrix/experiment.json</p><p class="text-slate-500">{</p><p>  <span class="text-green-400">"models"</span>: [<span class="text-blue-300">north-mini</span>, <span class="text-purple-300">gemma4-12b</span>],</p><p>  <span class="text-green-400">"packs"</span>: [bug-fixes, refactors, business-logic],</p><p>  <span class="text-green-400">"lanes"</span>: [vague, clear-spec],</p><p>  <span class="text-green-400">"timeout"</span>: 900, <span class="text-green-400">"delay"</span>: 15</p><p class="text-slate-500">}</p><p class="text-slate-400 mt-1">Per-model overrides: local AI gets more time for large prompts.</p></div></div>
+    <div class="col-span-2 flex flex-col justify-center gap-2">
+      <div class="box box-green text-center p-3"><p class="text-sm font-bold">plan</p><p class="small muted">Show what runs,<br>count cells</p></div>
+      <div class="box box-green text-center p-3"><p class="text-sm font-bold">run</p><p class="small muted">Execute, warm up<br>local AIs, resume</p></div>
+      <div class="box box-green text-center p-3"><p class="text-sm font-bold">status</p><p class="small muted">Done, running,<br>stalled, missing</p></div>
+    </div>
+    <div class="col-span-6 box box-purple"><p class="text-sm font-bold mb-2" style="color:#7c3aed">What gets created (all paths are predictable)</p><div class="box-dark mono text-xs space-y-0.5"><p class="text-slate-400">data/matrix/{name}/{model}/{pack}-{lane}.sqlite</p><p class="text-slate-400">runs/matrix/{name}/{model}/{pack}/{lane}/</p><p class="text-slate-500">  worktrees/{run-id}/     ← the project the AI edits</p><p class="text-slate-500">  artifacts/{run-id}/     ← prompt, patch, test results</p><p class="text-slate-500">  evaluator/{run-id}/     ← reviewer workspace</p><p class="text-slate-400 mt-1">Each cell gets a unique experiment ID.</p><p class="text-slate-400">Resume knows exactly what's done and what's not.</p><p class="text-slate-400">Per-model timeouts. Warmup for local models.</p></div></div>
+  </div>
+  <div class="grid grid-cols-3 gap-c mt-c">
+    <div class="box box-t text-center" style="border-top-color:#0d9488"><p class="text-sm font-bold" style="color:#0d9488">validate</p><p class="small muted mt-1">Checks config before running</p></div>
+    <div class="box box-t text-center" style="border-top-color:#0d9488"><p class="text-sm font-bold" style="color:#0d9488">evaluate</p><p class="small muted mt-1">Batch reviewer on fake fixes</p></div>
+    <div class="box box-t text-center" style="border-top-color:#0d9488;opacity:0.6"><p class="text-sm font-bold" style="color:#0d9488">retry</p><p class="small muted mt-1">Proposed: delete stalls, resume, keep real results.</p></div>
+  </div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 08 — REPORTS + DASHBOARD -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-50"><div class="shell"><aside class="rail soft"><div class="rail-index">Reports</div><div class="rail-number">08</div></aside><div class="canvas">
+  <p class="kicker mb-3">FROM DATABASE ROWS TO READABLE OUTPUT</p>
+  <h2 class="subhead mb-3">Three types of reports. One integrity check. One live dashboard. All from the same database.</h2>
+  <div class="grid grid-cols-3 gap-c">
+    <div class="box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">Comparison (leaderboard)</p><p class="body text-sm">The main output. Per-model per-pack per-instruction-style tables. Fake-fix breakdowns with reviewer verdicts. Operational reliability scores. What can and cannot be defended from the evidence.</p><p class="small muted mt-2 mono">ci-vibe-report leaderboard</p></div>
+    <div class="box box-green"><p class="text-sm font-bold mb-2 good">Integrity check</p><p class="body text-sm">SHA256 hash of every artifact file. Verifies every path stored in the database exists on disk. Checks reviewer coverage — what % of fake fixes got reviewed. Flags anything suspicious.</p><p class="small muted mt-2 mono">ci-vibe-report integrity</p></div>
+    <div class="box box-purple"><p class="text-sm font-bold mb-2" style="color:#7c3aed">Deep dives</p><p class="body text-sm"><strong>X-ray:</strong> every scenario, both results, why it failed.<br><strong>Value:</strong> real fixes per hour of human review time.<br><strong>Ultimate:</strong> full story — findings, controls, claims, deployment policy.</p><p class="small muted mt-2 mono">ci-vibe-report xray / value / ultimate</p></div>
+  </div>
+  <div class="box-dark mt-c p-4"><p class="text-sm font-bold text-slate-300 mb-2">Live dashboard + health tracker</p><p class="body text-slate-400">Streamlit dashboard shows evidence health per cell, scorecard, false-green inbox, evaluator coverage. <span class="mono text-green-400">./check-opencode.sh --live</span> shows the active AI run in real time — which scenario, which step, progress bar, trust gap, ETA. <span class="mono text-green-400">--watch</span> refreshes every 5 seconds.</p></div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 09 — SOURCE TREE -->
+<!-- ===================================================== -->
+<section class="slide bg-white"><div class="shell"><aside class="rail"><div class="rail-index">Code</div><div class="rail-number">09</div></aside><div class="canvas top">
+  <p class="kicker mb-3">WHAT LIVES WHERE — ONE GLANCE</p>
+  <div class="grid grid-cols-2 gap-c">
+    <div class="box box-blue"><p class="text-sm font-bold mb-2" style="color:#2563eb">ci_vibe_lab/ — the Python engine</p><div class="space-y-1 text-sm">
+      <p><span class="mono text-xs font-bold">scenarios.py</span> <span class="small muted">— All 37 test cases. The ground truth. 4276 lines.</span></p><p><span class="mono text-xs font-bold">runner.py</span> <span class="small muted">— The run loop: prepare → AI → visible test → hidden test → save.</span></p><p><span class="mono text-xs font-bold">matrix.py</span> <span class="small muted">— Reads config, plans cells, runs them. Also: classify_row() — the automatic result labeler.</span></p><p><span class="mono text-xs font-bold">evaluator.py</span> <span class="small muted">— Reviewer workspace setup. Pydantic verdict schema. Batch review.</span></p><p><span class="mono text-xs font-bold">analysis.py</span> <span class="small muted">— Trust-gap math. Fake-fix rates. Value-per-review-hour.</span></p><p><span class="mono text-xs font-bold">report.py</span> <span class="small muted">— Generates markdown leaderboard, integrity, xray, value, ultimate.</span></p><p><span class="mono text-xs font-bold">integrity.py</span> <span class="small muted">— SHA256 hashes. Artifact path verification. Audit coverage.</span></p><p><span class="mono text-xs font-bold">dashboard.py</span> <span class="small muted">— Streamlit live dashboard. Matrix, scorecard, inbox.</span></p>
+    </div></div>
+    <div class="box box-green"><p class="text-sm font-bold mb-2 good">Everything else</p><div class="space-y-1 text-sm">
+      <p><span class="mono text-xs font-bold">configs/matrix/*.json</span> <span class="small muted">— Experiment definitions. Models, packs, lanes.</span></p><p><span class="mono text-xs font-bold">docs/</span> <span class="small muted">— Challenge design. Pipeline plan. Retry proposal.</span></p><p><span class="mono text-xs font-bold">reports/</span> <span class="small muted">— Generated leaderboard, integrity, analysis (markdown).</span></p><p><span class="mono text-xs font-bold">presentation/</span> <span class="small muted">— HTML evidence decks. Architecture. Post drafts.</span></p><p><span class="mono text-xs font-bold">data/matrix/</span> <span class="small muted">— SQLite databases. One per cell. Gitignored.</span></p><p><span class="mono text-xs font-bold">runs/matrix/</span> <span class="small muted">— Worktrees, artifacts, evaluator workbenches. Gitignored.</span></p><p><span class="mono text-xs font-bold">check-opencode.sh</span> <span class="small muted">— Live tracker. Active runs, progress, ETA.</span></p><p><span class="mono text-xs font-bold">AGENTS.md</span> <span class="small muted">— Rules. Evidence boundaries. What not to claim.</span></p>
+    </div></div>
+  </div>
+  <div class="box-dark mt-c p-4 text-center"><p class="text-sm text-slate-300">Run: <span class="mono text-green-400">uv run ci-vibe-matrix run config.json</span> → Watch: <span class="mono text-blue-300">./check-opencode.sh --live</span> → Review: <span class="mono text-purple-300">ci-vibe-matrix evaluate</span> → Report: <span class="mono text-amber-300">ci-vibe-report leaderboard</span></p></div>
+</div></div></section>
+
+<!-- ===================================================== -->
+<!-- 10 — CLOSING -->
+<!-- ===================================================== -->
+<section class="slide bg-slate-900"><div class="shell"><aside class="rail" style="background:#0f172a;border-color:#334155;"><div class="rail-index" style="color:#64748b;">Done</div><div class="rail-number" style="color:#cbd5e1;">10</div></aside><div class="canvas">
+  <p class="kicker mb-6" style="color:#64748b;">ARCHITECTURE SUMMARY</p>
+  <h2 class="headline text-white max-w-4xl mb-4">Everything is traceable.<br>Everything is verifiable.<br>Everything fits in one weekend.</h2>
+  <div class="grid grid-cols-3 gap-c">
+    <div><p class="text-sm font-bold mb-3" style="color:#2563eb">What's different</p><div class="box-dark p-4 text-sm space-y-2"><p class="text-slate-300">Hidden tests are <strong>mechanically enforced</strong> — not a convention, a code path. The file doesn't exist while the AI works.</p><p class="text-slate-300">Reviewer must <strong>prove its claim</strong> — write a correct fix, not just opine. Every quote verified verbatim.</p><p class="text-slate-300">Results <strong>classified automatically</strong> — real fix, fake fix, couldn't pass, or infrastructure failure. No AI judging its own score.</p><p class="text-slate-300">Matrix <strong>isolates variables</strong> — model, prompt, work type. One-cell anecdotes can't distinguish causes.</p><p class="text-slate-300">Claim system has <strong>explicit gates</strong> — you publish at the tier you've earned evidence for.</p></div></div>
+    <div><p class="text-sm font-bold mb-3 good">What's simple</p><div class="box-dark p-4 text-sm space-y-2"><p class="text-slate-300">Python. SQLite. JSON. Bash.</p><p class="text-slate-300">No microservices. No queues. No cloud.</p><p class="text-slate-300">One command to run. One to watch. One to report.</p><p class="text-slate-300">All data is files on disk. All analysis is SQL queries. All reports are markdown.</p><p class="text-slate-300">Built in one weekend. 37 scenarios. 132 runs. 6h50m.</p></div></div>
+    <div><p class="text-sm font-bold mb-3 warn">What's next</p><div class="box-dark p-4 text-sm space-y-2"><p class="text-slate-300">Auto-retry stalled runs — delete timeouts, resume, keep real results.</p><p class="text-slate-300">Multiple attempts — measure consistency, not one lucky try.</p><p class="text-slate-300">Independent audit — someone else reviews the hidden tests.</p><p class="text-slate-300">Two reviewers — compare judgments, measure agreement.</p><p class="text-slate-300">One-click study — run, retry, review, report in one command.</p></div></div>
+  </div>
+  <p class="mono text-xs text-slate-600 mt-c">github.com/anomalyco/north-mini-test · ci_vibe_lab/ · configs/matrix/ · docs/ · reports/ · presentation/</p>
+</div></div></section>
+
+</main>
+
+<div class="dots" id="dots"></div>
+<div class="nav"><button id="prev">←</button><div class="counter" id="counter">01 / 10</div><button id="next">→</button></div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const dc = document.getElementById("dots"), ctr = document.getElementById("counter");
+  let cur = 0;
+  slides.forEach((_, i) => { const d = document.createElement("button"); d.className = "dot" + (i === 0 ? " active" : ""); d.addEventListener("click", () => show(i)); dc.appendChild(d); });
+  const dots = [...document.querySelectorAll(".dot")];
+  function show(i) { cur = Math.max(0, Math.min(slides.length - 1, i)); slides.forEach((s, idx) => { s.classList.toggle("active", idx === cur); }); dots.forEach((d, idx) => { d.classList.toggle("active", idx === cur); }); ctr.textContent = `${String(cur + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`; }
+  document.getElementById("next").addEventListener("click", () => show(cur + 1));
+  document.getElementById("prev").addEventListener("click", () => show(cur - 1));
+  document.addEventListener("keydown", e => { if (["ArrowRight","ArrowDown","PageDown"," "].includes(e.key)) { e.preventDefault(); show(cur + 1); } else if (["ArrowLeft","ArrowUp","PageUp"].includes(e.key)) { e.preventDefault(); show(cur - 1); } });
+</script>
+</body>
+</html>

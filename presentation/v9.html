@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal: The Trust Gap</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; font-family: 'JetBrains Mono', monospace; }
+    .terminal { width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .titlebar { height: 32px; background: #1a1a1a; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+    .titlebar .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .titlebar .dot.red { background: #ff5f56; }
+    .titlebar .dot.yellow { background: #ffbd2e; }
+    .titlebar .dot.green { background: #27c93f; }
+    .titlebar .title { color: #888; font-size: 12px; margin-left: 12px; }
+    .screen { flex: 1; padding: 24px 32px; overflow-y: auto; color: #e0e0e0; font-size: 14px; line-height: 1.6; display: none; }
+    .screen.active { display: block; }
+    .prompt { color: #27c93f; }
+    .cmd { color: #fff; }
+    .output { color: #ccc; margin: 8px 0; }
+    .dim { color: #666; }
+    .good { color: #27c93f; }
+    .bad { color: #ff5f56; }
+    .warn { color: #ffbd2e; }
+    .blue { color: #5b9cf6; }
+    .purple { color: #b48ead; }
+    .table { margin: 12px 0; border-collapse: collapse; }
+    .table td, .table th { padding: 4px 12px; text-align: left; border-bottom: 1px solid #222; }
+    .table th { color: #888; font-weight: 600; }
+    .bar { display: inline-block; height: 8px; border-radius: 2px; }
+    .bar-track { display: inline-block; width: 120px; height: 8px; background: #222; border-radius: 2px; position: relative; }
+    .bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px; }
+    .nav { position: fixed; bottom: 16px; right: 24px; display: flex; gap: 8px; align-items: center; z-index: 10; }
+    .nav button { background: #1a1a1a; border: 1px solid #333; color: #888; padding: 6px 12px; font-family: inherit; font-size: 12px; cursor: pointer; border-radius: 4px; }
+    .nav button:hover { border-color: #27c93f; color: #27c93f; }
+    .counter { color: #666; font-size: 12px; min-width: 48px; text-align: center; }
+    .cursor { display: inline-block; width: 8px; height: 16px; background: #27c93f; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    .typing { overflow: hidden; white-space: nowrap; border-right: 2px solid #27c93f; animation: typing 2s steps(40) forwards, blink 1s infinite; }
+    @keyframes typing { from { width: 0; } to { width: 100%; } }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="terminal">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <div class="title">trust-gap — bash — 120×40</div>
+  </div>
+
+  <!-- SCREEN 1: TITLE -->
+  <div class="screen active" id="s1">
+    <p class="dim">$ date</p>
+    <p class="output">Mon Jun 22 2026</p>
+    <p class="dim">$ whoami</p>
+    <p class="output">engineer</p>
+    <p class="dim">$ cat README.md</p>
+    <p class="output" style="margin-top: 16px;">
+      <span class="good" style="font-size: 24px; font-weight: 700;">THE TRUST GAP</span><br><br>
+      When a coding agent makes your CI green,<br>
+      how often is the bug actually fixed?<br><br>
+      <span class="dim">198 runs · 3 models · 33 scenarios · one harness</span><br><br>
+      <span class="blue">North Mini</span> · <span class="purple">Gemma 12B</span> · <span class="good">DeepSeek V4 Pro</span><br><br>
+      <span class="dim">press → to continue</span>
+    </p>
+  </div>
+
+  <!-- SCREEN 2: METHOD -->
+  <div class="screen" id="s2">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-run run --challenge decimal_money_rounding --prompt-mode sparse</p>
+    <p class="output dim">[setup] writing scenario to worktree...</p>
+    <p class="output dim">[baseline] running tests... FAIL</p>
+    <p class="output dim">[agent] running OpenCode... 24.3s</p>
+    <p class="output dim">[public] running tests... <span class="good">PASS</span></p>
+    <p class="output dim">[hidden] injecting hidden tests... running... <span class="bad">FAIL</span></p>
+    <p class="output" style="margin-top: 16px;">
+      <span class="bad">false_green</span> — CI passed, hidden acceptance failed<br><br>
+      <span class="dim">The agent used float math for money.</span><br>
+      <span class="dim">Test: 0.29 × 3 = 87¢ → returned 87. Green.</span><br>
+      <span class="dim">Hidden: 0.005 × 1 = 1¢ (half-up) → returned 0.</span><br>
+      <span class="dim">Silent billing error on every half-cent transaction.</span><br><br>
+      <span class="warn">The agent satisfied the visible assertion.</span><br>
+      <span class="warn">It did not infer the rule the assertion was testing.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 3: MODELS -->
+  <div class="screen" id="s3">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-matrix status configs/matrix/north-mini-vs-gemma4-12b.json</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="dim">| Model          | Architecture          | Speed   |</span><br>
+      <span class="dim">|----------------|-----------------------|---------|</span><br>
+      <span class="blue">| North Mini     | Cohere MoE 30B/3B     | ~25s    |</span><br>
+      <span class="purple">| Gemma 12B      | Google local Ollama   | ~240s   |</span><br>
+      <span class="good">| DeepSeek V4 Pro| Frontier API          | ~37s    |</span><br><br>
+      <span class="dim">All three tested through the same OpenCode CLI.</span><br>
+      <span class="dim">Same harness. Same prompts. Same hidden tests.</span><br><br>
+      <span class="warn">Different engines. Same structural pattern.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 4: CI FORENSICS -->
+  <div class="screen" id="s4">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-report leaderboard --pack ci_forensics</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="dim" style="font-size: 12px;">CI FORENSICS — 12 mechanical bugs</span><br>
+      <span class="dim" style="font-size: 12px;">Dependency changes. Stale configs. Import errors.</span><br><br>
+      <table class="table" style="font-size: 13px;">
+        <tr><th>Model</th><th>Sparse</th><th>Contract-visible</th></tr>
+        <tr>
+          <td class="blue">North Mini</td>
+          <td>12/12 pub · 8/12 hid<br><span class="bad">33% false-green</span></td>
+          <td>12/12 pub · 11/12 hid<br><span class="good">8% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="purple">Gemma 12B</td>
+          <td>5/12 pub · 3/12 hid<br><span class="bad">40% false-green</span></td>
+          <td>7/12 pub · 6/12 hid<br><span class="good">14% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="good">DeepSeek</td>
+          <td>12/12 pub · 9/12 hid<br><span class="warn">25% false-green</span></td>
+          <td>12/12 pub · 12/12 hid<br><span class="good">0% false-green</span></td>
+        </tr>
+      </table><br>
+      <span class="good">DeepSeek cv: 12/12 real fixes. Zero false-greens.</span><br>
+      <span class="dim">Mechanical work is safe to delegate with clear specs.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 5: MAINTENANCE -->
+  <div class="screen" id="s5">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-report leaderboard --pack maintenance_value</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="dim" style="font-size: 12px;">MAINTENANCE — 10 refactoring tasks</span><br>
+      <span class="dim" style="font-size: 12px;">Logger migrations. Field renames. Generated artifacts.</span><br><br>
+      <table class="table" style="font-size: 13px;">
+        <tr><th>Model</th><th>Sparse</th><th>Contract-visible</th></tr>
+        <tr>
+          <td class="blue">North Mini</td>
+          <td>10/10 pub · 8/10 hid<br><span class="warn">20% false-green</span></td>
+          <td>9/10 pub · 9/10 hid<br><span class="good">0% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="purple">Gemma 12B</td>
+          <td>9/10 pub · 7/10 hid<br><span class="warn">22% false-green</span></td>
+          <td>7/10 pub · 6/10 hid<br><span class="good">14% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="good">DeepSeek</td>
+          <td>10/10 pub · 7/10 hid<br><span class="warn">30% false-green</span></td>
+          <td>10/10 pub · 10/10 hid<br><span class="good">0% false-green</span></td>
+        </tr>
+      </table><br>
+      <span class="good">North Mini + DeepSeek cv: zero false-greens.</span><br>
+      <span class="dim">Delegable with hidden acceptance gate.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 6: PRODUCT WORKFLOWS -->
+  <div class="screen" id="s6">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-report leaderboard --pack product_workflows</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="dim" style="font-size: 12px;">PRODUCT WORKFLOWS — 11 business-logic tasks</span><br>
+      <span class="dim" style="font-size: 12px;">Billing. Discounts. Inventory. SLAs.</span><br><br>
+      <table class="table" style="font-size: 13px;">
+        <tr><th>Model</th><th>Sparse</th><th>Contract-visible</th></tr>
+        <tr>
+          <td class="blue">North Mini</td>
+          <td>9/11 pub · 1/11 hid<br><span class="bad">89% false-green</span></td>
+          <td>9/11 pub · 6/11 hid<br><span class="warn">33% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="purple">Gemma 12B</td>
+          <td>6/11 pub · 2/11 hid<br><span class="bad">67% false-green</span></td>
+          <td>8/11 pub · 7/11 hid<br><span class="good">12% false-green</span></td>
+        </tr>
+        <tr>
+          <td class="good">DeepSeek</td>
+          <td>11/11 pub · 3/11 hid<br><span class="bad">73% false-green</span></td>
+          <td>11/11 pub · 10/11 hid<br><span class="good">9% false-green</span></td>
+        </tr>
+      </table><br>
+      <span class="bad">All three models: 67–89% false-green under sparse.</span><br>
+      <span class="good">With clear specs: 9–33%. But 9% on money logic is not zero.</span><br>
+      <span class="warn">bulk_invite_dedupe survives even DeepSeek cv.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 7: PATTERN -->
+  <div class="screen" id="s7">
+    <p class="prompt">$ </p><p class="cmd">ci-vibe-evaluate run --target-model all --root-cause-analysis</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="dim" style="font-size: 12px;">ANALYZING FALSE-GREENS ACROSS ALL MODELS...</span><br><br>
+      <span class="bad">decimal_money_rounding</span><br>
+      <span class="dim">  float math for money. Silent billing error.</span><br><br>
+      <span class="bad">audit_log_redaction</span><br>
+      <span class="dim">  Top-level key redacted. Nested secrets not recursed.</span><br><br>
+      <span class="bad">metric_semantic_mismatch</span><br>
+      <span class="dim">  Right math. Wrong layer. Normalized in raw API.</span><br><br>
+      <span class="bad">inventory_reservation_idempotency</span><br>
+      <span class="dim">  Stock decrements on failed reservation. Negative inventory.</span><br><br>
+      <span class="warn">The consistent failure direction:</span><br>
+      <span class="warn">Agent satisfies the assertion. Does not infer the rule.</span>
+    </p>
+    <p class="output dim" style="margin-top: 16px;">press → to continue</p>
+  </div>
+
+  <!-- SCREEN 8: DEPLOY -->
+  <div class="screen" id="s8">
+    <p class="prompt">$ </p><p class="cmd">cat DEPLOYMENT_POLICY.md</p>
+    <p class="output" style="margin-top: 12px;">
+      <span class="good" style="font-weight: 700;">GREEN — merge on CI green</span><br>
+      <span class="dim">Mechanical work. Migrations. Fixtures. Docs.</span><br>
+      <span class="dim">All three models: 0–14% false-green with clear specs.</span><br><br>
+      <span class="warn" style="font-weight: 700;">AMBER — gate on hidden acceptance</span><br>
+      <span class="dim">Adapters. Validators. Edge cases.</span><br>
+      <span class="dim">Every model produced false-greens under sparse.</span><br><br>
+      <span class="bad" style="font-weight: 700;">RED — human review or frontier model with multiple attempts</span><br>
+      <span class="dim">Billing. Discounts. Inventory. SLAs.</span><br>
+      <span class="dim">73–89% false-green under sparse. 9–33% with clear specs.</span><br><br>
+      <span class="dim">────────────────────────────────────────</span><br><br>
+      <span style="font-weight: 700;">The model is replaceable.</span><br>
+      <span style="font-weight: 700;">The trust gate is the enduring investment.</span><br><br>
+      <span class="dim">github.com/anomalyco/north-mini-test</span><br>
+      <span class="dim">198 runs · 3 models · 33 scenarios · pass@1</span><br>
+      <span class="dim">Not a benchmark. Not a leaderboard. A behavior microscope.</span>
+    </p>
+  </div>
+</div>
+
+<div class="nav">
+  <button id="prev">&larr; prev</button>
+  <div class="counter" id="counter">1 / 8</div>
+  <button id="next">next &rarr;</button>
+</div>
+
+<script>
+  const screens = [...document.querySelectorAll('.screen')];
+  const counter = document.getElementById('counter');
+  let cur = 0;
+  function show(i) {
+    cur = Math.max(0, Math.min(screens.length - 1, i));
+    screens.forEach((s, idx) => s.classList.toggle('active', idx === cur));
+    counter.textContent = `${cur + 1} / ${screens.length}`;
+  }
+  document.getElementById('next').addEventListener('click', () => show(cur + 1));
+  document.getElementById('prev').addEventListener('click', () => show(cur - 1));
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+  });
+</script>
+</body>
+</html>

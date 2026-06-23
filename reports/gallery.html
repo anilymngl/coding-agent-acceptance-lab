@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Trust Gap — Evidence Gallery</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#1a1a1a;background:#fff;line-height:1.5}
+.container{max-width:1100px;margin:0 auto;padding:40px 24px 80px}
+h1{font-size:1.8rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px}
+h2{font-size:1.2rem;font-weight:700;margin-top:40px;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid #eee}
+.dim{color:#888;font-size:0.8rem}
+.mono{font-family:'SF Mono','JetBrains Mono','Fira Code',monospace;font-size:0.85em}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.82rem}
+th{text-align:left;padding:5px 7px;border-bottom:2px solid #333;font-weight:600;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:5px 7px;border-bottom:1px solid #eee}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.fg{color:#c0392b;font-weight:600}.hp{color:#27ae60;font-weight:600}
+.chart-container{position:relative;margin:16px 0;background:#fff;border:1px solid #eee;border-radius:8px;padding:16px}
+canvas{max-height:400px}
+.tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.68rem;font-weight:600;margin-right:2px}
+.tag.hidden_pass{background:#e8fde8;color:#27ae60}.tag.false_green{background:#fde8e8;color:#c0392b}.tag.public_red{background:#f0f0f0;color:#666}
+.controls{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+select{padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:0.82rem;background:#fff}
+.heatmap-grid{display:grid;gap:1px;margin:12px 0;font-size:0.72rem}
+.heatmap-cell{padding:4px 6px;text-align:center;border-radius:3px;font-weight:600}
+.heatmap-cell.hp{background:#d4edda;color:#155724}.heatmap-cell.fg{background:#f8d7da;color:#721c24}.heatmap-cell.pr{background:#e2e3e5;color:#383d41}
+</style>
+</head>
+<body>
+<div class="container">
+
+<p class="dim mono" style="margin-bottom:8px">EVIDENCE GALLERY</p>
+<h1>The Trust Gap</h1>
+<p class="dim" id="summary"></p>
+
+<!-- Chart 1: False-green rate by model × pack -->
+<h2>False-Green Rate by Model and Pack (Sparse)</h2>
+<div class="chart-container"><canvas id="chart-fg-sparse"></canvas></div>
+
+<!-- Chart 2: Contract-visible effect -->
+<h2>Contract-Visible Effect</h2>
+<div class="chart-container"><canvas id="chart-cv-effect"></canvas></div>
+
+<!-- Chart 3: Laguna pass@k -->
+<h2>Laguna XS.2 Pass@k Variance</h2>
+<div class="chart-container"><canvas id="chart-laguna-passk"></canvas></div>
+
+<!-- Chart 4: Speed comparison -->
+<h2>Speed Comparison (Avg Seconds)</h2>
+<div class="chart-container"><canvas id="chart-speed"></canvas></div>
+
+<!-- Chart 5: Evaluator root causes -->
+<h2>Evaluator Root-Cause Taxonomy</h2>
+<div class="chart-container" style="max-width:400px"><canvas id="chart-causes"></canvas></div>
+
+<!-- Scorecard table -->
+<h2>Full Scorecard</h2>
+<div class="controls">
+<select id="filter-pack"><option value="">All packs</option></select>
+<select id="filter-lane"><option value="">All lanes</option></select>
+<select id="filter-model"><option value="">All models</option></select>
+</div>
+<div id="scorecard-table"></div>
+
+<!-- Scenario heatmap -->
+<h2>Scenario × Model Heatmap (Sparse)</h2>
+<div id="heatmap"></div>
+
+</div>
+
+<script>
+const SCORECARD = JSON.parse(atob("W3sibW9kZWwiOiAiTm9ydGggTWluaSIsICJtb2RlbF9pZCI6ICJvcGVuY29kZS9ub3J0aC1taW5pLWNvZGUtZnJlZSIsICJwYWNrIjogImNpX2ZvcmVuc2ljcyIsICJsYW5lIjogImNvbnRyYWN0X3Zpc2libGUiLCAidG90YWwiOiAzNiwgInB1Yl9wYXNzIjogMzYsICJoaWRfcGFzcyI6IDM0LCAiZmFsc2VfZ3JlZW4iOiAyLCAiZmdfcmF0ZSI6IDUuNiwgInB1Yl9yYXRlIjogMTAwLjAsICJoaWRfcmF0ZSI6IDk0LjQsICJhdmdfZHVyYXRpb24iOiAyNi45fSwgeyJtb2RlbCI6ICJOb3J0aCBNaW5pIiwgIm1vZGVsX2lkIjogIm9wZW5jb2RlL25vcnRoLW1pbmktY29kZS1mcmVlIiwgInBhY2siOiAiY2lfZm9yZW5zaWNzIiwgImxhbmUiOiAic3BhcnNlIiwgInRvdGFsIjogMzYsICJwdWJfcGFzcyI6IDM2LCAiaGlkX3Bhc3MiOiAyNSwgImZhbHNlX2dyZWVuIjogMTEsICJmZ19yYXRlIjogMzAuNiwgInB1Yl9yYXRlIjogMTAwLjAsICJoaWRfcmF0ZSI6IDY5LjQsICJhdmdfZHVyYXRpb24iOiAxNy40fSwgeyJtb2RlbCI6ICJOb3J0aCBNaW5pIiwgIm1vZGVsX2lkIjogIm9wZW5jb2RlL25vcnRoLW1pbmktY29kZS1mcmVlIiwgInBhY2siOiAibWFpbnRlbmFuY2VfdmFsdWUiLCAibGFuZSI6ICJzcGFyc2UiLCAidG90YWwiOiAyLCAicHViX3Bhc3MiOiAyLCAiaGlkX3Bhc3MiOiAwLCAiZmFsc2VfZ3JlZW4iOiAyLCAiZmdfcmF0ZSI6IDEwMC4wLCAicHViX3JhdGUiOiAxMDAuMCwgImhpZF9yYXRlIjogMC4wLCAiYXZnX2R1cmF0aW9uIjogMTYuMH0sIHsibW9kZWwiOiAiTGFndW5hIFhTLjIiLCAibW9kZWxfaWQiOiAib3BlbnJvdXRlci9wb29sc2lkZS9sYWd1bmEteHMuMjpmcmVlIiwgInBhY2siOiAiY2lfZm9yZW5zaWNzIiwgImxhbmUiOiAiY29udHJhY3RfdmlzaWJsZSIsICJ0b3RhbCI6IDM2LCAicHViX3Bhc3MiOiAzNiwgImhpZF9wYXNzIjogMzQsICJmYWxzZV9ncmVlbiI6IDIsICJmZ19yYXRlIjogNS42LCAicHViX3JhdGUiOiAxMDAuMCwgImhpZF9yYXRlIjogOTQuNCwgImF2Z19kdXJhdGlvbiI6IDk4LjB9LCB7Im1vZGVsIjogIkxhZ3VuYSBYUy4yIiwgIm1vZGVsX2lkIjogIm9wZW5yb3V0ZXIvcG9vbHNpZGUvbGFndW5hLXhzLjI6ZnJlZSIsICJwYWNrIjogImNpX2ZvcmVuc2ljcyIsICJsYW5lIjogInNwYXJzZSIsICJ0b3RhbCI6IDM2LCAicHViX3Bhc3MiOiAzNiwgImhpZF9wYXNzIjogMjYsICJmYWxzZV9ncmVlbiI6IDEwLCAiZmdfcmF0ZSI6IDI3LjgsICJwdWJfcmF0ZSI6IDEwMC4wLCAiaGlkX3JhdGUiOiA3Mi4yLCAiYXZnX2R1cmF0aW9uIjogNDMuMn0sIHsibW9kZWwiOiAiTGFndW5hIFhTLjIiLCAibW9kZWxfaWQiOiAib3BlbnJvdXRlci9wb29sc2lkZS9sYWd1bmEteHMuMjpmcmVlIiwgInBhY2siOiAibWFpbnRlbmFuY2VfdmFsdWUiLCAibGFuZSI6ICJjb250cmFjdF92aXNpYmxlIiwgInRvdGFsIjogMzAsICJwdWJfcGFzcyI6IDMwLCAiaGlkX3Bhc3MiOiAzMCwgImZhbHNlX2dyZWVuIjogMCwgImZnX3JhdGUiOiAwLjAsICJwdWJfcmF0ZSI6IDEwMC4wLCAiaGlkX3JhdGUiOiAxMDAuMCwgImF2Z19kdXJhdGlvbiI6IDYyLjV9LCB7Im1vZGVsIjogIkxhZ3VuYSBYUy4yIiwgIm1vZGVsX2lkIjogIm9wZW5yb3V0ZXIvcG9vbHNpZGUvbGFndW5hLXhzLjI6ZnJlZSIsICJwYWNrIjogIm1haW50ZW5hbmNlX3ZhbHVlIiwgImxhbmUiOiAic3BhcnNlIiwgInRvdGFsIjogMzAsICJwdWJfcGFzcyI6IDMwLCAiaGlkX3Bhc3MiOiAyMiwgImZhbHNlX2dyZWVuIjogOCwgImZnX3JhdGUiOiAyNi43LCAicHViX3JhdGUiOiAxMDAuMCwgImhpZF9yYXRlIjogNzMuMywgImF2Z19kdXJhdGlvbiI6IDQ3Ljl9LCB7Im1vZGVsIjogIkxhZ3VuYSBYUy4yIiwgIm1vZGVsX2lkIjogIm9wZW5yb3V0ZXIvcG9vbHNpZGUvbGFndW5hLXhzLjI6ZnJlZSIsICJwYWNrIjogInByb2R1Y3Rfd29ya2Zsb3dzIiwgImxhbmUiOiAic3BhcnNlIiwgInRvdGFsIjogMzMsICJwdWJfcGFzcyI6IDMzLCAiaGlkX3Bhc3MiOiA5LCAiZmFsc2VfZ3JlZW4iOiAyNCwgImZnX3JhdGUiOiA3Mi43LCAicHViX3JhdGUiOiAxMDAuMCwgImhpZF9yYXRlIjogMjcuMywgImF2Z19kdXJhdGlvbiI6IDQ5LjB9XQ=="));
+const PASSK = JSON.parse(atob("W3sicGFzcyI6ICJAMSIsICJwdWIiOiAxMiwgImhpZCI6IDgsICJmZyI6IDQsICJmZ19yYXRlIjogMzMuM30sIHsicGFzcyI6ICJAMiIsICJwdWIiOiAxMiwgImhpZCI6IDksICJmZyI6IDMsICJmZ19yYXRlIjogMjUuMH0sIHsicGFzcyI6ICJAMyIsICJwdWIiOiAxMiwgImhpZCI6IDksICJmZyI6IDMsICJmZ19yYXRlIjogMjUuMH0sIHsicGFzcyI6ICJiZXN0LTMiLCAicHViIjogMTIsICJoaWQiOiA5LCAiZmciOiAzLCAiZmdfcmF0ZSI6IDI1LjB9XQ=="));
+const REVIEWS = JSON.parse(atob("W3sicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogImVkZ2VfY2FzZV9nYXAiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAiaW5jb21wbGV0ZV9kb21haW5fcG9saWN5IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogImluY29tcGxldGVfZG9tYWluX3BvbGljeSIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogMn0sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJpbmNvbXBsZXRlX2RvbWFpbl9wb2xpY3kiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDJ9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMS4wLCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogImVkZ2VfY2FzZV9nYXAiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAiZWRnZV9jYXNlX2dhcCIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogImVkZ2VfY2FzZV9nYXAiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC43LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuNywgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjcsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC43LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuNywgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjcsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC43LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuNywgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjcsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC43LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuNywgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAyfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAiaW5jb21wbGV0ZV9kb21haW5fcG9saWN5IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NywgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk4LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAyfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM30sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk3LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAyfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogImVkZ2VfY2FzZV9nYXAiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NiwgInNldmVyaXR5IjogImhpZ2giLCAicGF0Y2hfcXVhbGl0eSI6IDJ9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogImhpZ2giLCAicGF0Y2hfcXVhbGl0eSI6IDJ9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogMn0sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAzfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIndyb25nX2ZpeF9zdHJhdGVneSIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogMn0sIHsicm9vdF9jYXVzZV9jYXRlZ29yeSI6ICJtaXNzZWRfaGlkZGVuX2NvbnRyYWN0IiwgImNvbmZpZGVuY2UiOiAwLjk1LCAic2V2ZXJpdHkiOiAibWVkaXVtIiwgInBhdGNoX3F1YWxpdHkiOiAyfSwgeyJyb290X2NhdXNlX2NhdGVnb3J5IjogIm1pc3NlZF9oaWRkZW5fY29udHJhY3QiLCAiY29uZmlkZW5jZSI6IDAuOTUsICJzZXZlcml0eSI6ICJtZWRpdW0iLCAicGF0Y2hfcXVhbGl0eSI6IDN9LCB7InJvb3RfY2F1c2VfY2F0ZWdvcnkiOiAibWlzc2VkX2hpZGRlbl9jb250cmFjdCIsICJjb25maWRlbmNlIjogMC45NSwgInNldmVyaXR5IjogIm1lZGl1bSIsICJwYXRjaF9xdWFsaXR5IjogM31d"));
+const HEATMAP = JSON.parse(atob("eyJjaV9mb3JlbnNpY3M6YXN5bmNfZXhwb3J0X3JhY2UiOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIiwgIk5vcnRoIE1pbmkiOiAiaGlkZGVuX3Bhc3MifSwgImNpX2ZvcmVuc2ljczpjb25maWdfZGVlcF9tZXJnZSI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MiLCAiTm9ydGggTWluaSI6ICJoaWRkZW5fcGFzcyJ9LCAiY2lfZm9yZW5zaWNzOmNzdl9oZWFkZXJfY29udHJhY3QiOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIiwgIk5vcnRoIE1pbmkiOiAiZmFsc2VfZ3JlZW4ifSwgImNpX2ZvcmVuc2ljczpkZWNpbWFsX21vbmV5X3JvdW5kaW5nIjogeyJMYWd1bmEgWFMuMiI6ICJmYWxzZV9ncmVlbiIsICJOb3J0aCBNaW5pIjogImZhbHNlX2dyZWVuIn0sICJjaV9mb3JlbnNpY3M6ZGVwZW5kZW5jeV9hcGlfY2hhbmdlIjogeyJMYWd1bmEgWFMuMiI6ICJoaWRkZW5fcGFzcyIsICJOb3J0aCBNaW5pIjogImZhbHNlX2dyZWVuIn0sICJjaV9mb3JlbnNpY3M6ZW52X2Jvb2xfcGFyc2VyIjogeyJMYWd1bmEgWFMuMiI6ICJmYWxzZV9ncmVlbiIsICJOb3J0aCBNaW5pIjogImZhbHNlX2dyZWVuIn0sICJjaV9mb3JlbnNpY3M6aWRlbXBvdGVuY3lfa2V5X3JlZ3Jlc3Npb24iOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIiwgIk5vcnRoIE1pbmkiOiAiaGlkZGVuX3Bhc3MifSwgImNpX2ZvcmVuc2ljczptdXRhYmxlX2RlZmF1bHRfbGVhayI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MiLCAiTm9ydGggTWluaSI6ICJoaWRkZW5fcGFzcyJ9LCAiY2lfZm9yZW5zaWNzOnBhZ2luYXRpb25fY3Vyc29yX2RyaWZ0IjogeyJMYWd1bmEgWFMuMiI6ICJoaWRkZW5fcGFzcyIsICJOb3J0aCBNaW5pIjogImhpZGRlbl9wYXNzIn0sICJjaV9mb3JlbnNpY3M6c3RhbGVfZ2VuZXJhdGVkX3NjaGVtYSI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MiLCAiTm9ydGggTWluaSI6ICJoaWRkZW5fcGFzcyJ9LCAiY2lfZm9yZW5zaWNzOnRlbmFudF9jYWNoZV9sZWFrIjogeyJMYWd1bmEgWFMuMiI6ICJoaWRkZW5fcGFzcyIsICJOb3J0aCBNaW5pIjogImhpZGRlbl9wYXNzIn0sICJjaV9mb3JlbnNpY3M6dGltZXpvbmVfY2lfb25seSI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MiLCAiTm9ydGggTWluaSI6ICJoaWRkZW5fcGFzcyJ9LCAibWFpbnRlbmFuY2VfdmFsdWU6YWRhcHRlcl9maWVsZF9yZW5hbWUiOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIiwgIk5vcnRoIE1pbmkiOiAiZmFsc2VfZ3JlZW4ifSwgIm1haW50ZW5hbmNlX3ZhbHVlOmJhdGNoX3NwbGl0dGVyX3V0aWxpdHkiOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIiwgIk5vcnRoIE1pbmkiOiAiZmFsc2VfZ3JlZW4ifSwgIm1haW50ZW5hbmNlX3ZhbHVlOmRvY3NfY2xpX3N5bmMiOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIn0sICJtYWludGVuYW5jZV92YWx1ZTpleHBsaWNpdF92YWxpZGF0aW9uX21hdHJpeCI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MifSwgIm1haW50ZW5hbmNlX3ZhbHVlOmZpeHR1cmVfc2NoZW1hX21pZ3JhdGlvbiI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MifSwgIm1haW50ZW5hbmNlX3ZhbHVlOmdlbmVyYXRlZF9vcGVuYXBpX3JlZnJlc2giOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIn0sICJtYWludGVuYW5jZV92YWx1ZTppbXBvcnRfaHlnaWVuZV9maXgiOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIn0sICJtYWludGVuYW5jZV92YWx1ZTpsb2dnZXJfd2Fybl9taWdyYXRpb24iOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIn0sICJtYWludGVuYW5jZV92YWx1ZTpyZWdyZXNzaW9uX3Rlc3RfZ2FwIjogeyJMYWd1bmEgWFMuMiI6ICJoaWRkZW5fcGFzcyJ9LCAibWFpbnRlbmFuY2VfdmFsdWU6dXRjbm93X3RpbWV6b25lX21pZ3JhdGlvbiI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MifSwgInByb2R1Y3Rfd29ya2Zsb3dzOmF1ZGl0X2xvZ19yZWRhY3Rpb24iOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIn0sICJwcm9kdWN0X3dvcmtmbG93czpiaWxsaW5nX3Byb3JhdGlvbiI6IHsiTGFndW5hIFhTLjIiOiAiZmFsc2VfZ3JlZW4ifSwgInByb2R1Y3Rfd29ya2Zsb3dzOmJ1bGtfaW52aXRlX2RlZHVwZSI6IHsiTGFndW5hIFhTLjIiOiAiZmFsc2VfZ3JlZW4ifSwgInByb2R1Y3Rfd29ya2Zsb3dzOmNhcnRfZGlzY291bnRfc3RhY2siOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIn0sICJwcm9kdWN0X3dvcmtmbG93czpmZWF0dXJlX3JvbGxvdXRfYnVja2V0IjogeyJMYWd1bmEgWFMuMiI6ICJmYWxzZV9ncmVlbiJ9LCAicHJvZHVjdF93b3JrZmxvd3M6aW52ZW50b3J5X3Jlc2VydmF0aW9uX2lkZW1wb3RlbmN5IjogeyJMYWd1bmEgWFMuMiI6ICJmYWxzZV9ncmVlbiJ9LCAicHJvZHVjdF93b3JrZmxvd3M6bWFya2Rvd25fc2x1Z19jb2xsaXNpb24iOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIn0sICJwcm9kdWN0X3dvcmtmbG93czpzZWFyY2hfcmFua2luZ19zdGFiaWxpdHkiOiB7IkxhZ3VuYSBYUy4yIjogImZhbHNlX2dyZWVuIn0sICJwcm9kdWN0X3dvcmtmbG93czpzaWxlbnRfZXhjZXB0aW9uX3N3YWxsb3dlciI6IHsiTGFndW5hIFhTLjIiOiAiaGlkZGVuX3Bhc3MifSwgInByb2R1Y3Rfd29ya2Zsb3dzOnN1cHBvcnRfc2xhX2J1c2luZXNzX2hvdXJzIjogeyJMYWd1bmEgWFMuMiI6ICJmYWxzZV9ncmVlbiJ9LCAicHJvZHVjdF93b3JrZmxvd3M6d2ViaG9va19zaWduYXR1cmVfcmF3X2JvZHkiOiB7IkxhZ3VuYSBYUy4yIjogImhpZGRlbl9wYXNzIn19"));
+
+const COLORS = {
+  'North Mini':'#2563eb','Gemma 4B':'#7c3aed','Gemma 12B':'#7c3aed',
+  'Gemma 31B':'#7c3aed','Laguna XS.2':'#6b7280','DeepSeek V4':'#059669','GLM 5.2':'#d97706'
+};
+function getColor(m){return COLORS[m]||'#999'}
+
+document.getElementById('summary').textContent =
+  SCORECARD.length + ' scorecard entries, ' + PASSK.length + ' pass@k data points, ' +
+  REVIEWS.length + ' evaluator reviews.';
+
+// Chart 1: FG rate by model × pack (sparse only)
+(function(){
+  const sparse = SCORECARD.filter(s => s.lane === 'sparse');
+  const packs = [...new Set(sparse.map(s=>s.pack))].sort();
+  const models = [...new Set(sparse.map(s=>s.model))].sort();
+  new Chart(document.getElementById('chart-fg-sparse'), {
+    type: 'bar',
+    data: {
+      labels: packs,
+      datasets: models.map(m => ({
+        label: m,
+        data: packs.map(p => { const s = sparse.find(x=>x.model===m&&x.pack===p); return s?s.fg_rate:0; }),
+        backgroundColor: getColor(m),
+        borderRadius: 3,
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: {title:{display:true,text:'False-green rate (%) — sparse prompts'}},
+      scales: {y:{beginAtZero:true,title:{display:true,text:'False-green %'}}}
+    }
+  });
+})();
+
+// Chart 2: CV effect
+(function(){
+  const models = [...new Set(SCORECARD.map(s=>s.model))].sort();
+  const packs = [...new Set(SCORECARD.map(s=>s.pack))].sort();
+  const datasets = [];
+  models.forEach(m => {
+    const sparseRates = packs.map(p => { const s=SCORECARD.find(x=>x.model===m&&x.pack===p&&x.lane==='sparse'); return s?s.fg_rate:null; });
+    const cvRates = packs.map(p => { const s=SCORECARD.find(x=>x.model===m&&x.pack===p&&x.lane==='contract_visible'); return s?s.fg_rate:null; });
+    datasets.push({label:m+' sparse',data:sparseRates,borderColor:getColor(m),backgroundColor:getColor(m)+'33',fill:false,tension:0.3,pointRadius:5});
+    datasets.push({label:m+' cv',data:cvRates,borderColor:getColor(m),backgroundColor:getColor(m)+'33',fill:false,tension:0.3,pointRadius:5,borderDash:[5,5]});
+  });
+  new Chart(document.getElementById('chart-cv-effect'), {
+    type: 'line',
+    data: {labels: packs, datasets},
+    options: {
+      responsive: true,
+      plugins: {title:{display:true,text:'False-green rate: sparse vs contract-visible'}},
+      scales: {y:{beginAtZero:true,title:{display:true,text:'False-green %'}}}
+    }
+  });
+})();
+
+// Chart 3: Laguna pass@k
+(function(){
+  new Chart(document.getElementById('chart-laguna-passk'), {
+    type: 'bar',
+    data: {
+      labels: PASSK.map(p=>p.pass),
+      datasets: [
+        {label:'Hidden pass',data:PASSK.map(p=>p.hid),backgroundColor:'#27ae60',borderRadius:3},
+        {label:'False-green',data:PASSK.map(p=>p.fg),backgroundColor:'#c0392b',borderRadius:3},
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {title:{display:true,text:'Laguna XS.2 ci_forensics sparse — pass@k'}},
+      scales: {y:{beginAtZero:true,max:12,title:{display:true,text:'Scenarios (of 12)'}}}
+    }
+  });
+})();
+
+// Chart 4: Speed
+(function(){
+  const sparse = SCORECARD.filter(s => s.lane === 'sparse');
+  const models = [...new Set(sparse.map(s=>s.model))].sort();
+  const packs = [...new Set(sparse.map(s=>s.pack))].sort();
+  new Chart(document.getElementById('chart-speed'), {
+    type: 'bar',
+    data: {
+      labels: models,
+      datasets: packs.map((p,i) => ({
+        label: p,
+        data: models.map(m => { const s=sparse.find(x=>x.model===m&&x.pack===p); return s?s.avg_duration:0; }),
+        borderRadius: 3,
+      }))
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {title:{display:true,text:'Average seconds per scenario (sparse)'}},
+      scales: {x:{beginAtZero:true,title:{display:true,text:'Seconds'}}}
+    }
+  });
+})();
+
+// Chart 5: Root causes
+(function(){
+  const causes = {};
+  REVIEWS.forEach(r => { causes[r.root_cause_category] = (causes[r.root_cause_category]||0)+1; });
+  const labels = Object.keys(causes).sort((a,b)=>causes[b]-causes[a]);
+  new Chart(document.getElementById('chart-causes'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{data:labels.map(l=>causes[l]),backgroundColor:['#c0392b','#d97706','#2563eb','#7c3aed','#059669','#6b7280']}]
+    },
+    options: {responsive:true,plugins:{title:{display:true,text:'Evaluator root-cause categories'}}}
+  });
+})();
+
+// Scorecard table
+function renderScorecard(){
+  const fp=document.getElementById('filter-pack').value;
+  const fl=document.getElementById('filter-lane').value;
+  const fm=document.getElementById('filter-model').value;
+  let data=SCORECARD;
+  if(fp)data=data.filter(s=>s.pack===fp);
+  if(fl)data=data.filter(s=>s.lane===fl);
+  if(fm)data=data.filter(s=>s.model===fm);
+  let h='<table><thead><tr><th>Model</th><th>Pack</th><th>Lane</th><th class="num">Total</th><th class="num">Pub</th><th class="num">Hid</th><th class="num">FG</th><th class="num">FG%</th><th class="num">Speed</th></tr></thead><tbody>';
+  data.forEach(s=>{
+    const cls=s.fg_rate>25?'fg':(s.fg_rate===0?'hp':'');
+    h+='<tr><td>'+s.model+'</td><td>'+s.pack+'</td><td>'+s.lane+'</td><td class="num">'+s.total+'</td><td class="num">'+s.pub_pass+'</td><td class="num">'+s.hid_pass+'</td><td class="num '+cls+'">'+s.false_green+'</td><td class="num '+cls+'">'+s.fg_rate+'%</td><td class="num">'+s.avg_duration+'s</td></tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById('scorecard-table').innerHTML=h;
+}
+
+function populateFilters(){
+  const packs=[...new Set(SCORECARD.map(s=>s.pack))].sort();
+  const lanes=[...new Set(SCORECARD.map(s=>s.lane))].sort();
+  const models=[...new Set(SCORECARD.map(s=>s.model))].sort();
+  const fp=document.getElementById('filter-pack');
+  packs.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;fp.appendChild(o);});
+  const fl=document.getElementById('filter-lane');
+  lanes.forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;fl.appendChild(o);});
+  const fm=document.getElementById('filter-model');
+  models.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;fm.appendChild(o);});
+}
+
+// Heatmap
+function renderHeatmap(){
+  const scenarios=Object.keys(HEATMAP).sort();
+  const models=[...new Set(Object.values(HEATMAP).flatMap(m=>Object.keys(m)))].sort();
+  let h='<div style="overflow-x:auto"><table><thead><tr><th>Scenario</th>';
+  models.forEach(m=>{h+='<th>'+m+'</th>';});
+  h+='</tr></thead><tbody>';
+  scenarios.forEach(s=>{
+    h+='<tr><td style="font-size:0.72rem;white-space:nowrap">'+s+'</td>';
+    models.forEach(m=>{
+      const v=HEATMAP[s]&&HEATMAP[s][m];
+      if(v==='hidden_pass')h+='<td class="heatmap-cell hp">✓</td>';
+      else if(v==='false_green')h+='<td class="heatmap-cell fg">✗</td>';
+      else if(v==='public_red')h+='<td class="heatmap-cell pr">—</td>';
+      else h+='<td></td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  document.getElementById('heatmap').innerHTML=h;
+}
+
+populateFilters();
+renderScorecard();
+renderHeatmap();
+['filter-pack','filter-lane','filter-model'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',renderScorecard);
+});
+</script>
+</body>
+</html>

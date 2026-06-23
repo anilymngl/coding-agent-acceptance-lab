@@ -1,0 +1,2078 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>North Mini Test — Evidence Console</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    :root {
+      --ink: #0f172a;
+      --slate: #475569;
+      --muted: #94a3b8;
+      --line: #dbe3ed;
+      --paper: #ffffff;
+      --paper-soft: #f8fafc;
+
+      --blue: #2563eb;
+      --green: #16a34a;
+      --amber: #d97706;
+      --rose: #e11d48;
+      --purple: #7c3aed;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: Inter, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    .mono {
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100vh;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(18px);
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+      overflow: hidden;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+      z-index: 5;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      width: 100%;
+      height: 100%;
+    }
+
+    .rail {
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 24px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .rail.soft {
+      background: rgba(248,250,252,0.88);
+    }
+
+    .rail-index {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .rail-number {
+      font-family: "JetBrains Mono", monospace;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .canvas {
+      width: 100%;
+      height: 100%;
+      padding: clamp(32px, 5vw, 72px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .canvas.top {
+      justify-content: flex-start;
+      padding-top: clamp(36px, 6vh, 74px);
+    }
+
+    .kicker {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .display {
+      font-size: clamp(2.7rem, 6vw, 6.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+      font-weight: 900;
+    }
+
+    .headline {
+      font-size: clamp(2rem, 4.2vw, 4.3rem);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+      font-weight: 900;
+    }
+
+    .subhead {
+      font-size: clamp(1.5rem, 2.7vw, 2.8rem);
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      font-weight: 800;
+    }
+
+    .lead {
+      font-size: clamp(1.05rem, 1.6vw, 1.4rem);
+      line-height: 1.55;
+      color: var(--slate);
+    }
+
+    .body {
+      font-size: clamp(0.92rem, 1.15vw, 1.05rem);
+      line-height: 1.55;
+    }
+
+    .small {
+      font-size: clamp(0.68rem, 0.82vw, 0.78rem);
+      line-height: 1.45;
+    }
+
+    .rule {
+      width: 100%;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .metric {
+      border-left: 4px solid var(--line);
+      padding-left: 18px;
+    }
+
+    .metric.good {
+      border-left-color: var(--green);
+    }
+
+    .metric.info {
+      border-left-color: var(--blue);
+    }
+
+    .metric.warn {
+      border-left-color: var(--amber);
+    }
+
+    .metric.bad {
+      border-left-color: var(--rose);
+    }
+
+    .metric.special {
+      border-left-color: var(--purple);
+    }
+
+    .metric-value {
+      font-size: clamp(2rem, 4vw, 4.2rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      font-weight: 900;
+    }
+
+    .metric-label {
+      margin-top: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .blue { color: var(--blue); }
+    .green { color: var(--green); }
+    .amber { color: var(--amber); }
+    .rose { color: var(--rose); }
+    .purple { color: var(--purple); }
+    .muted { color: var(--muted); }
+    .slate { color: var(--slate); }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+
+    .panel-soft {
+      background: var(--paper-soft);
+      border: 1px solid var(--line);
+    }
+
+    .panel-dark {
+      background: #0f172a;
+      color: white;
+    }
+
+    .status-pass {
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .status-fg {
+      background: #fff1f2;
+      color: #9f1239;
+    }
+
+    .status-red {
+      background: #f8fafc;
+      color: #64748b;
+    }
+
+    .status-stall {
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .status-run {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .matrix-table th {
+      text-align: left;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-family: "JetBrains Mono", monospace;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .matrix-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #edf2f7;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .matrix-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .bar {
+      height: 8px;
+      width: 100%;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr 42px 1fr 42px 1fr;
+      align-items: stretch;
+    }
+
+    .flow-node {
+      min-height: 142px;
+      padding: 20px;
+      border-top: 4px solid var(--line);
+    }
+
+    .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .quote {
+      border-left: 6px solid var(--blue);
+      padding-left: 24px;
+    }
+
+    .scenario-line {
+      display: grid;
+      grid-template-columns: 240px 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .scenario-line:last-child {
+      border-bottom: 0;
+    }
+
+    .nav {
+      position: fixed;
+      right: 22px;
+      bottom: 18px;
+      z-index: 50;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .nav button {
+      width: 42px;
+      height: 42px;
+      border: 1px solid #cbd5e1;
+      background: rgba(255,255,255,0.96);
+      color: #475569;
+      cursor: pointer;
+    }
+
+    .nav button:hover {
+      color: var(--ink);
+      background: #f8fafc;
+    }
+
+    .counter {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      color: var(--muted);
+      min-width: 54px;
+      text-align: center;
+    }
+
+    .dots {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 33px;
+      z-index: 40;
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border: 0;
+      background: #cbd5e1;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      width: 24px;
+      background: var(--blue);
+    }
+
+    @media (max-width: 950px) {
+      body {
+        overflow: auto;
+      }
+
+      .slide {
+        overflow-y: auto;
+      }
+
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .rail {
+        display: none;
+      }
+
+      .canvas {
+        min-height: 100vh;
+        height: auto;
+        justify-content: flex-start;
+        padding: 36px 24px 90px;
+      }
+
+      .mobile-one {
+        grid-template-columns: 1fr !important;
+      }
+
+      .mobile-stack {
+        flex-direction: column !important;
+      }
+
+      .flow-row {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        min-height: 40px;
+        transform: rotate(90deg);
+      }
+
+      .scenario-line {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .matrix-wrap {
+        overflow-x: auto;
+      }
+
+      .dots {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<main id="deck">
+
+  <!-- ===================================================== -->
+  <!-- 01 -->
+  <!-- ===================================================== -->
+
+  <section class="slide active bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Evidence console</div>
+        <div class="rail-number">01</div>
+      </aside>
+
+      <div class="canvas">
+
+        <div class="max-w-7xl">
+          <p class="kicker mb-8">
+            NORTH MINI TEST · MATRIX IN PROGRESS
+          </p>
+
+          <h1 class="display">
+            Green CI<br>
+            is only the first signal.
+          </h1>
+
+          <div class="grid grid-cols-12 gap-8 mt-12 mobile-one">
+
+            <div class="col-span-7">
+              <p class="lead max-w-3xl">
+                This evaluation measures the gap between
+                <strong>looking fixed</strong> and
+                <strong>being fixed</strong>.
+              </p>
+            </div>
+
+            <div class="col-span-5 grid grid-cols-2 gap-7">
+              <div class="metric good">
+                <div class="metric-value">9</div>
+                <div class="metric-label">cells complete</div>
+              </div>
+
+              <div class="metric info">
+                <div class="metric-value">1</div>
+                <div class="metric-label">running</div>
+              </div>
+
+              <div class="metric warn">
+                <div class="metric-value">2</div>
+                <div class="metric-label">stalled</div>
+              </div>
+
+              <div class="metric special">
+                <div class="metric-value">3</div>
+                <div class="metric-label">causes isolated</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 02 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Instrument</div>
+        <div class="rail-number">02</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">WHAT THE SYSTEM ACTUALLY DOES</p>
+
+        <h2 class="headline max-w-5xl">
+          The benchmark is an evidence pipeline.
+        </h2>
+
+        <div class="flow-row mt-12">
+
+          <div class="flow-node panel border-t-blue-500">
+            <p class="kicker blue">Matrix</p>
+            <p class="text-xl font-extrabold mt-4">
+              Select the experiment
+            </p>
+            <p class="body slate mt-3">
+              Model × work type × prompt lane.
+            </p>
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="flow-node panel">
+            <p class="kicker">Runner</p>
+            <p class="text-xl font-extrabold mt-4">
+              Build a clean repo
+            </p>
+            <p class="body slate mt-3">
+              Baseline must start red.
+            </p>
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="flow-node panel border-t-green-500">
+            <p class="kicker green">Agent</p>
+            <p class="text-xl font-extrabold mt-4">
+              Attempt the repair
+            </p>
+            <p class="body slate mt-3">
+              Only public tests are visible.
+            </p>
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="flow-node panel border-t-rose-500">
+            <p class="kicker rose">Hidden gate</p>
+            <p class="text-xl font-extrabold mt-4">
+              Reveal the real contract
+            </p>
+            <p class="body slate mt-3">
+              Injected after the model exits.
+            </p>
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="flow-node panel border-t-purple-500">
+            <p class="kicker purple">Evidence</p>
+            <p class="text-xl font-extrabold mt-4">
+              Store the full envelope
+            </p>
+            <p class="body slate mt-3">
+              Patch, logs, tests, SQLite, review.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="panel-dark mt-10 p-6">
+          <p class="mono text-sm text-slate-300">
+            experiment.json
+            → disposable repo
+            → OpenCode trajectory
+            → public result
+            → hidden result
+            → evaluator review
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 03 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Causal design</div>
+        <div class="rail-number">03</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          THE MATRIX IS NOT A LEADERBOARD
+        </p>
+
+        <h2 class="headline max-w-5xl">
+          It separates three different causes.
+        </h2>
+
+        <div class="grid grid-cols-3 gap-12 mt-14 mobile-one">
+
+          <div>
+            <p class="text-7xl font-black blue">01</p>
+            <div class="rule my-5"></div>
+            <p class="text-2xl font-extrabold">
+              Model effect
+            </p>
+            <p class="body slate mt-3">
+              North Mini versus Gemma 4 12B.
+            </p>
+            <p class="small muted mt-4">
+              Different models, same work.
+            </p>
+          </div>
+
+          <div>
+            <p class="text-7xl font-black purple">02</p>
+            <div class="rule my-5"></div>
+            <p class="text-2xl font-extrabold">
+              Prompt effect
+            </p>
+            <p class="body slate mt-3">
+              Sparse versus contract-visible.
+            </p>
+            <p class="small muted mt-4">
+              Infer the rule or implement the rule.
+            </p>
+          </div>
+
+          <div>
+            <p class="text-7xl font-black green">03</p>
+            <div class="rule my-5"></div>
+            <p class="text-2xl font-extrabold">
+              Work-type effect
+            </p>
+            <p class="body slate mt-3">
+              CI repair, maintenance, product logic.
+            </p>
+            <p class="small muted mt-4">
+              Low semantic density to high.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="quote mt-14 max-w-5xl">
+          <p class="text-2xl font-bold">
+            The purpose is not to crown a winner.
+            It is to find the operating envelope.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 04 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Current state</div>
+        <div class="rail-number">04</div>
+      </aside>
+
+      <div class="canvas top">
+
+        <div class="flex items-end justify-between gap-8 mobile-stack">
+          <div>
+            <p class="kicker mb-5">
+              SCORECARD · 9 COMPLETE · 1 RUNNING
+            </p>
+
+            <h2 class="subhead">
+              The matrix so far
+            </h2>
+          </div>
+
+          <div class="flex gap-7">
+            <div class="metric good">
+              <div class="text-3xl font-black">66</div>
+              <div class="metric-label">North Mini completed</div>
+            </div>
+
+            <div class="metric special">
+              <div class="text-3xl font-black">49</div>
+              <div class="metric-label">Gemma completed</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="matrix-wrap panel mt-9">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Pack</th>
+                <th>Lane</th>
+                <th>Done</th>
+                <th>Public</th>
+                <th>Hidden</th>
+                <th>False-green</th>
+                <th>Gap</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody class="mono">
+
+              <tr>
+                <td>north-mini</td>
+                <td>ci_forensics</td>
+                <td>sparse</td>
+                <td>12</td>
+                <td>12</td>
+                <td>8</td>
+                <td class="rose font-bold">4</td>
+                <td class="rose font-bold">33%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>north-mini</td>
+                <td>ci_forensics</td>
+                <td>contract</td>
+                <td>12</td>
+                <td>12</td>
+                <td class="green font-bold">11</td>
+                <td>1</td>
+                <td class="green font-bold">8%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>north-mini</td>
+                <td>maintenance</td>
+                <td>sparse</td>
+                <td>10</td>
+                <td>10</td>
+                <td>8</td>
+                <td>2</td>
+                <td class="amber font-bold">20%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>north-mini</td>
+                <td>maintenance</td>
+                <td>contract</td>
+                <td>10</td>
+                <td>9</td>
+                <td class="green font-bold">9</td>
+                <td>0</td>
+                <td class="green font-bold">0%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>north-mini</td>
+                <td>product</td>
+                <td>sparse</td>
+                <td>6/11</td>
+                <td>6</td>
+                <td class="rose font-bold">0</td>
+                <td class="rose font-bold">6</td>
+                <td class="rose font-bold">100%</td>
+                <td><span class="status-stall px-2 py-1">partial</span></td>
+              </tr>
+
+              <tr>
+                <td>north-mini</td>
+                <td>product</td>
+                <td>contract</td>
+                <td>0/11</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="status-stall px-2 py-1">stalled</span></td>
+              </tr>
+
+              <tr>
+                <td>gemma4-12b</td>
+                <td>ci_forensics</td>
+                <td>sparse</td>
+                <td>12</td>
+                <td>5</td>
+                <td>3</td>
+                <td>2</td>
+                <td class="amber font-bold">16%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>gemma4-12b</td>
+                <td>ci_forensics</td>
+                <td>contract</td>
+                <td>12</td>
+                <td>7</td>
+                <td>6</td>
+                <td>1</td>
+                <td class="green font-bold">8%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>gemma4-12b</td>
+                <td>maintenance</td>
+                <td>sparse</td>
+                <td>10</td>
+                <td>9</td>
+                <td class="green font-bold">7</td>
+                <td>2</td>
+                <td class="amber font-bold">20%</td>
+                <td><span class="status-pass px-2 py-1">done</span></td>
+              </tr>
+
+              <tr>
+                <td>gemma4-12b</td>
+                <td>maintenance</td>
+                <td>contract</td>
+                <td>3/10</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td>—</td>
+                <td><span class="status-run px-2 py-1">running</span></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <p class="small muted mt-4">
+          Public = visible CI pass. Hidden = actual contract pass.
+          Runtime failures are not counted as semantic failures.
+        </p>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 05 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">North Mini</div>
+        <div class="rail-number">05</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          THE CLEANEST SIGNAL
+        </p>
+
+        <h2 class="headline max-w-6xl">
+          North Mini does not need
+          “more prompting.”
+        </h2>
+
+        <p class="headline blue max-w-6xl mt-2">
+          It needs the full contract.
+        </p>
+
+        <div class="grid grid-cols-2 gap-16 mt-14 mobile-one">
+
+          <div>
+            <div class="flex items-end justify-between">
+              <div>
+                <p class="mono font-bold">ci_forensics</p>
+                <p class="small muted mt-1">12 tasks</p>
+              </div>
+
+              <p class="text-5xl font-black">
+                <span class="rose">33</span>
+                <span class="muted text-2xl">→</span>
+                <span class="green">8%</span>
+              </p>
+            </div>
+
+            <div class="mt-7">
+              <p class="small muted mb-2">Sparse hidden pass · 8/12</p>
+              <div class="bar">
+                <div class="bar-fill bg-amber-500" style="width:67%"></div>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <p class="small muted mb-2">Contract-visible hidden pass · 11/12</p>
+              <div class="bar">
+                <div class="bar-fill bg-green-500" style="width:92%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-end justify-between">
+              <div>
+                <p class="mono font-bold">maintenance_value</p>
+                <p class="small muted mt-1">10 tasks</p>
+              </div>
+
+              <p class="text-5xl font-black">
+                <span class="amber">20</span>
+                <span class="muted text-2xl">→</span>
+                <span class="green">0%</span>
+              </p>
+            </div>
+
+            <div class="mt-7">
+              <p class="small muted mb-2">Sparse hidden pass · 8/10</p>
+              <div class="bar">
+                <div class="bar-fill bg-green-500" style="width:80%"></div>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <p class="small muted mb-2">Contract-visible · every public-green was hidden-green</p>
+              <div class="bar">
+                <div class="bar-fill bg-green-500" style="width:100%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="quote mt-14 max-w-6xl">
+          <p class="text-2xl font-extrabold">
+            Plain language:
+            North Mini is better at implementing the rule
+            than discovering the whole rule.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 06 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Comparison</div>
+        <div class="rail-number">06</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          SAME IMPROVEMENT · DIFFERENT FAILURE MODE
+        </p>
+
+        <h2 class="headline max-w-6xl">
+          The contract helps both models.
+        </h2>
+
+        <p class="subhead slate mt-3">
+          But it repairs different weaknesses.
+        </p>
+
+        <div class="grid grid-cols-2 gap-0 mt-12 panel mobile-one">
+
+          <div class="p-9 border-r border-slate-200">
+            <p class="kicker blue">
+              NORTH MINI
+            </p>
+
+            <p class="text-3xl font-black mt-5">
+              Already gets CI green.
+            </p>
+
+            <p class="lead mt-5">
+              The extra contract converts
+              plausible patches into complete fixes.
+            </p>
+
+            <div class="panel-soft p-5 mt-8 mono text-sm">
+              public-green / hidden-red
+              <br><span class="blue">↓</span><br>
+              public-green / hidden-green
+            </div>
+
+            <p class="small muted mt-5">
+              Main weakness: stopping before the whole rule is covered.
+            </p>
+          </div>
+
+          <div class="p-9">
+            <p class="kicker purple">
+              GEMMA 4 12B
+            </p>
+
+            <p class="text-3xl font-black mt-5">
+              Often cannot close public CI.
+            </p>
+
+            <p class="lead mt-5">
+              The extra contract helps it construct
+              a working implementation at all.
+            </p>
+
+            <div class="panel-soft p-5 mt-8 mono text-sm">
+              public-red
+              <br><span class="purple">↓</span><br>
+              public-green
+            </div>
+
+            <p class="small muted mt-5">
+              Main weakness: execution consistency and tool-loop reliability.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 07 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Value zone</div>
+        <div class="rail-number">07</div>
+      </aside>
+
+      <div class="canvas">
+
+        <div class="grid grid-cols-12 gap-12 mobile-one">
+
+          <div class="col-span-5">
+            <p class="kicker mb-5">
+              MAINTENANCE VALUE
+            </p>
+
+            <h2 class="headline">
+              Boring work is the strongest use case.
+            </h2>
+
+            <p class="lead mt-7">
+              Small, explicit maintenance tasks produced
+              the most useful results for both models.
+            </p>
+          </div>
+
+          <div class="col-span-7 grid grid-cols-2 gap-10">
+
+            <div class="metric good">
+              <div class="metric-value green">8/10</div>
+              <div class="metric-label">
+                North Mini sparse
+              </div>
+            </div>
+
+            <div class="metric good">
+              <div class="metric-value green">9/9</div>
+              <div class="metric-label">
+                North Mini contract-visible public-greens
+              </div>
+            </div>
+
+            <div class="metric special">
+              <div class="metric-value purple">7/10</div>
+              <div class="metric-label">
+                Gemma sparse
+              </div>
+            </div>
+
+            <div class="metric info">
+              <div class="metric-value blue">1/3</div>
+              <div class="metric-label">
+                Gemma contract-visible so far
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="rule my-12"></div>
+
+        <div class="grid grid-cols-5 gap-5 mobile-one">
+          <div>
+            <p class="mono text-sm font-bold">generated artifacts</p>
+            <p class="small muted mt-2">regenerate, verify, stop</p>
+          </div>
+
+          <div>
+            <p class="mono text-sm font-bold">API migrations</p>
+            <p class="small muted mt-2">mechanical, searchable, bounded</p>
+          </div>
+
+          <div>
+            <p class="mono text-sm font-bold">fixture updates</p>
+            <p class="small muted mt-2">repetitive and testable</p>
+          </div>
+
+          <div>
+            <p class="mono text-sm font-bold">docs sync</p>
+            <p class="small muted mt-2">low production risk</p>
+          </div>
+
+          <div>
+            <p class="mono text-sm font-bold">pure utilities</p>
+            <p class="small muted mt-2">good only when fully specified</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 08 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Hard cases</div>
+        <div class="rail-number">08</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          THREE SCENARIOS KEPT SURVIVING THE MODELS
+        </p>
+
+        <h2 class="headline">
+          The stubborn trio.
+        </h2>
+
+        <div class="mt-10">
+
+          <div class="scenario-line">
+            <div>
+              <p class="mono font-bold rose">
+                env_bool_parser
+              </p>
+            </div>
+
+            <p class="body slate">
+              Models fix the obvious values,
+              then miss whitespace, blanks, or the full false-value contract.
+            </p>
+
+            <span class="status-fg px-3 py-2 mono text-xs">
+              still hard
+            </span>
+          </div>
+
+          <div class="scenario-line">
+            <div>
+              <p class="mono font-bold rose">
+                adapter_field_rename
+              </p>
+            </div>
+
+            <p class="body slate">
+              A simple-looking rename hides compatibility,
+              precedence, and optional-field behavior.
+            </p>
+
+            <span class="status-fg px-3 py-2 mono text-xs">
+              still hard
+            </span>
+          </div>
+
+          <div class="scenario-line">
+            <div>
+              <p class="mono font-bold amber">
+                batch_splitter_utility
+              </p>
+            </div>
+
+            <p class="body slate">
+              Happy path is easy.
+              Exact boundaries, empty input, and invalid sizes are not.
+            </p>
+
+            <span class="status-pass px-3 py-2 mono text-xs">
+              just cracked
+            </span>
+          </div>
+
+        </div>
+
+        <div class="grid grid-cols-12 gap-8 mt-10 mobile-one">
+
+          <div class="col-span-8 quote">
+            <p class="text-2xl font-bold">
+              Contract-visible produced the first Gemma 12B hidden pass
+              on <span class="mono">batch_splitter_utility</span>.
+            </p>
+          </div>
+
+          <div class="col-span-4">
+            <p class="body slate">
+              That matters: one “universal model failure”
+              was actually a missing-specification problem.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 09 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Variance</div>
+        <div class="rail-number">09</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          PASS@1 IS A SAMPLE
+        </p>
+
+        <h2 class="headline max-w-5xl">
+          Same model. Same pack.
+          Different story.
+        </h2>
+
+        <div class="grid grid-cols-12 gap-12 mt-12 mobile-one">
+
+          <div class="col-span-4">
+            <p class="text-8xl font-black">
+              4<span class="muted">/10</span>
+            </p>
+            <p class="mono text-sm mt-3">
+              prior Gemma maintenance run
+            </p>
+          </div>
+
+          <div class="col-span-1 flex items-center justify-center">
+            <p class="text-5xl muted">→</p>
+          </div>
+
+          <div class="col-span-4">
+            <p class="text-8xl font-black green">
+              7<span class="muted">/10</span>
+            </p>
+            <p class="mono text-sm mt-3">
+              current Gemma maintenance run
+            </p>
+          </div>
+
+          <div class="col-span-3">
+            <div class="metric warn">
+              <div class="text-4xl font-black amber">+30 pts</div>
+              <div class="metric-label">
+                hidden pass swing
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 mt-12 mobile-one">
+
+          <div class="panel-soft p-5">
+            <p class="mono text-sm font-bold">
+              explicit_validation_matrix
+            </p>
+            <p class="green font-bold mt-3">
+              fail → pass
+            </p>
+          </div>
+
+          <div class="panel-soft p-5">
+            <p class="mono text-sm font-bold">
+              generated_openapi_refresh
+            </p>
+            <p class="green font-bold mt-3">
+              fail → pass
+            </p>
+          </div>
+
+          <div class="panel-soft p-5">
+            <p class="mono text-sm font-bold">
+              import_hygiene_fix
+            </p>
+            <p class="green font-bold mt-3">
+              fail → pass
+            </p>
+          </div>
+
+        </div>
+
+        <p class="text-xl font-bold mt-10">
+          A single run can describe an attempt.
+          It cannot define a model.
+        </p>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 10 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Product pack</div>
+        <div class="rail-number">10</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          PRODUCT WORKFLOWS
+        </p>
+
+        <div class="grid grid-cols-12 gap-12 mobile-one">
+
+          <div class="col-span-6">
+            <h2 class="display rose">
+              0 / 6
+            </h2>
+
+            <p class="subhead mt-4">
+              completed sparse runs passed hidden acceptance
+            </p>
+
+            <p class="lead mt-7">
+              That is a serious warning.
+              Every completed patch looked green
+              and still missed the real product rule.
+            </p>
+          </div>
+
+          <div class="col-span-6 grid grid-cols-2 gap-8">
+
+            <div class="metric warn">
+              <div class="metric-value amber">5</div>
+              <div class="metric-label">
+                sparse timeouts
+              </div>
+            </div>
+
+            <div class="metric warn">
+              <div class="metric-value amber">11</div>
+              <div class="metric-label">
+                contract-visible timeouts
+              </div>
+            </div>
+
+            <div class="col-span-2 panel-dark p-6">
+              <p class="mono text-sm text-slate-300">
+                no_output_timeout
+                ≠
+                failed product reasoning
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="rule my-12"></div>
+
+        <div class="grid grid-cols-2 gap-12 mobile-one">
+
+          <div>
+            <p class="kicker rose">
+              WHAT IS ALREADY REAL
+            </p>
+
+            <p class="body mt-4">
+              The six completed runs are all false-greens.
+              Product logic is clearly harder than maintenance work.
+            </p>
+          </div>
+
+          <div>
+            <p class="kicker amber">
+              WHAT IS STILL UNKNOWN
+            </p>
+
+            <p class="body mt-4">
+              The pack is incomplete.
+              Larger first-output windows are required
+              before assigning a final model score.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 11 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Model profiles</div>
+        <div class="rail-number">11</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          WHAT THE MODELS LOOK LIKE INSIDE THIS SYSTEM
+        </p>
+
+        <div class="grid grid-cols-2 gap-0 panel mobile-one">
+
+          <div class="p-10 border-r border-slate-200">
+            <p class="kicker blue">
+              NORTH MINI + OPENCODE
+            </p>
+
+            <h2 class="subhead mt-5">
+              Fast closure.<br>
+              Weak semantic finish.
+            </h2>
+
+            <div class="rule my-7"></div>
+
+            <ul class="space-y-4 body">
+              <li>
+                <strong>Tool loop:</strong>
+                strong
+              </li>
+
+              <li>
+                <strong>Public CI:</strong>
+                very strong
+              </li>
+
+              <li>
+                <strong>Contract inference:</strong>
+                inconsistent
+              </li>
+
+              <li>
+                <strong>Explicit maintenance:</strong>
+                strong
+              </li>
+
+              <li>
+                <strong>Product semantics:</strong>
+                currently weak
+              </li>
+            </ul>
+
+            <p class="small muted mt-8">
+              Home-field agent surface.
+            </p>
+          </div>
+
+          <div class="p-10">
+            <p class="kicker purple">
+              GEMMA 4 12B + OLLAMA + OPENCODE
+            </p>
+
+            <h2 class="subhead mt-5">
+              Capable patches.<br>
+              Uneven execution.
+            </h2>
+
+            <div class="rule my-7"></div>
+
+            <ul class="space-y-4 body">
+              <li>
+                <strong>Tool loop:</strong>
+                less reliable
+              </li>
+
+              <li>
+                <strong>Public CI:</strong>
+                mixed
+              </li>
+
+              <li>
+                <strong>Contract visibility:</strong>
+                clearly helpful
+              </li>
+
+              <li>
+                <strong>Explicit maintenance:</strong>
+                promising
+              </li>
+
+              <li>
+                <strong>Run-to-run stability:</strong>
+                weak
+              </li>
+            </ul>
+
+            <p class="small muted mt-8">
+              Local, slower, less native tool surface.
+            </p>
+          </div>
+
+        </div>
+
+        <p class="text-xl font-bold mt-9">
+          This is a system comparison:
+          model + inference stack + harness + timeout policy.
+        </p>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 12 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Accounting</div>
+        <div class="rail-number">12</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          DO NOT MIX THESE TWO FAILURES
+        </p>
+
+        <h2 class="headline max-w-6xl">
+          Semantic reliability
+          and operational reliability
+          are separate products.
+        </h2>
+
+        <div class="grid grid-cols-2 gap-12 mt-12 mobile-one">
+
+          <div>
+            <p class="kicker blue">
+              SEMANTIC OUTCOMES
+            </p>
+
+            <div class="mt-6 space-y-4">
+              <div class="flex justify-between panel p-5">
+                <span class="font-bold">Hidden pass</span>
+                <span class="green mono">solved</span>
+              </div>
+
+              <div class="flex justify-between panel p-5">
+                <span class="font-bold">False-green</span>
+                <span class="rose mono">misleading</span>
+              </div>
+
+              <div class="flex justify-between panel p-5">
+                <span class="font-bold">Public-red</span>
+                <span class="muted mono">not solved</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p class="kicker amber">
+              OPERATIONAL OUTCOMES
+            </p>
+
+            <div class="panel-dark p-7 mt-6">
+              <div class="mono text-sm text-slate-300 space-y-4">
+                <p>no_output_timeout</p>
+                <p>agent_timeout</p>
+                <p>provider_or_config_error</p>
+                <p>runner_error</p>
+              </div>
+            </div>
+
+            <p class="body slate mt-6">
+              These rows measure deployability and infrastructure fit.
+              They do not prove the patch would have been wrong.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 13 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-white">
+    <div class="shell">
+
+      <aside class="rail">
+        <div class="rail-index">Claims</div>
+        <div class="rail-number">13</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          THE CURRENT EVIDENCE BOUNDARY
+        </p>
+
+        <div class="grid grid-cols-2 gap-14 mobile-one">
+
+          <div>
+            <h2 class="subhead green">
+              We can defend
+            </h2>
+
+            <div class="rule my-7"></div>
+
+            <ul class="space-y-5 body">
+              <li>
+                North Mini is strong at bounded CI repair.
+              </li>
+
+              <li>
+                Explicit contracts sharply reduce its false-greens.
+              </li>
+
+              <li>
+                Maintenance is a plausible low-cost operating zone.
+              </li>
+
+              <li>
+                Gemma 4 12B can also create useful maintenance patches.
+              </li>
+
+              <li>
+                Hidden acceptance materially changes the merge decision.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="subhead rose">
+              We cannot defend yet
+            </h2>
+
+            <div class="rule my-7"></div>
+
+            <ul class="space-y-5 body">
+              <li>
+                North Mini is globally better than Gemma 4 12B.
+              </li>
+
+              <li>
+                Product workflows are fully measured.
+              </li>
+
+              <li>
+                Pass@1 is a stable model characteristic.
+              </li>
+
+              <li>
+                Contract-visible success proves deep understanding.
+              </li>
+
+              <li>
+                Every shared failure is definitely a model failure.
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 14 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-50">
+    <div class="shell">
+
+      <aside class="rail soft">
+        <div class="rail-index">Deployment</div>
+        <div class="rail-number">14</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-5">
+          THE SYSTEM THIS EVIDENCE POINTS TO
+        </p>
+
+        <h2 class="headline max-w-6xl">
+          Use the cheap model as a worker.
+          Use the eval layer as the authority.
+        </h2>
+
+        <div class="grid grid-cols-5 gap-0 panel mt-12 mobile-one">
+
+          <div class="p-6 border-r border-slate-200">
+            <p class="kicker blue">
+              01
+            </p>
+
+            <p class="font-extrabold text-xl mt-4">
+              Define contract
+            </p>
+
+            <p class="small muted mt-3">
+              Make acceptance explicit.
+            </p>
+          </div>
+
+          <div class="p-6 border-r border-slate-200">
+            <p class="kicker green">
+              02
+            </p>
+
+            <p class="font-extrabold text-xl mt-4">
+              Generate patch
+            </p>
+
+            <p class="small muted mt-3">
+              Let the model work cheaply.
+            </p>
+          </div>
+
+          <div class="p-6 border-r border-slate-200">
+            <p class="kicker rose">
+              03
+            </p>
+
+            <p class="font-extrabold text-xl mt-4">
+              Hidden gate
+            </p>
+
+            <p class="small muted mt-3">
+              Test the real contract.
+            </p>
+          </div>
+
+          <div class="p-6 border-r border-slate-200">
+            <p class="kicker purple">
+              04
+            </p>
+
+            <p class="font-extrabold text-xl mt-4">
+              Escalate
+            </p>
+
+            <p class="small muted mt-3">
+              Only failures reach a stronger model or human.
+            </p>
+          </div>
+
+          <div class="p-6">
+            <p class="kicker amber">
+              05
+            </p>
+
+            <p class="font-extrabold text-xl mt-4">
+              Learn
+            </p>
+
+            <p class="small muted mt-3">
+              Feed failure classes back into task routing.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="panel-dark mt-10 p-7">
+          <p class="mono text-sm text-slate-300">
+            explicit work
+            → cheap agent
+            → deterministic acceptance
+            → selective escalation
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <!-- 15 -->
+  <!-- ===================================================== -->
+
+  <section class="slide bg-slate-900">
+    <div class="shell">
+
+      <aside class="rail" style="background:#0f172a;border-color:#334155;">
+        <div class="rail-index" style="color:#64748b;">Conclusion</div>
+        <div class="rail-number" style="color:#cbd5e1;">15</div>
+      </aside>
+
+      <div class="canvas">
+
+        <p class="kicker mb-8" style="color:#64748b;">
+          CURRENT PRACTICAL CONCLUSION
+        </p>
+
+        <h2 class="display text-white max-w-6xl">
+          The model is not the product.
+        </h2>
+
+        <p class="display mt-3 text-green-400 max-w-6xl">
+          The trust gate is.
+        </p>
+
+        <div class="grid grid-cols-12 gap-10 mt-14 mobile-one">
+
+          <div class="col-span-7">
+            <p class="lead text-slate-300 max-w-3xl">
+              North Mini looks valuable when the work is explicit,
+              local, and mechanically verifiable.
+            </p>
+
+            <p class="lead text-slate-300 max-w-3xl mt-5">
+              Gemma 4 12B can reach similar maintenance value,
+              but with more execution variance.
+            </p>
+          </div>
+
+          <div class="col-span-5 border-l border-slate-700 pl-8">
+            <p class="mono text-sm text-slate-400">
+              clear contract
+              <br>↓<br>
+              cheap execution
+              <br>↓<br>
+              hidden acceptance
+              <br>↓<br>
+              selective escalation
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="dots" id="dots"></div>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">←</button>
+  <div class="counter" id="counter">01 / 15</div>
+  <button id="next" aria-label="Next slide">→</button>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const dotsContainer = document.getElementById("dots");
+  const counter = document.getElementById("counter");
+
+  let current = 0;
+
+  slides.forEach((_, index) => {
+    const dot = document.createElement("button");
+
+    dot.className = "dot" + (index === 0 ? " active" : "");
+    dot.setAttribute("aria-label", `Go to slide ${index + 1}`);
+    dot.addEventListener("click", () => show(index));
+
+    dotsContainer.appendChild(dot);
+  });
+
+  const dots = [...document.querySelectorAll(".dot")];
+
+  function show(index) {
+    current = Math.max(
+      0,
+      Math.min(slides.length - 1, index)
+    );
+
+    slides.forEach((slide, slideIndex) => {
+      slide.classList.toggle(
+        "active",
+        slideIndex === current
+      );
+    });
+
+    dots.forEach((dot, dotIndex) => {
+      dot.classList.toggle(
+        "active",
+        dotIndex === current
+      );
+    });
+
+    counter.textContent =
+      `${String(current + 1).padStart(2, "0")} / ` +
+      `${String(slides.length).padStart(2, "0")}`;
+
+    history.replaceState(
+      null,
+      "",
+      `#${current + 1}`
+    );
+  }
+
+  function next() {
+    show(current + 1);
+  }
+
+  function previous() {
+    show(current - 1);
+  }
+
+  document
+    .getElementById("next")
+    .addEventListener("click", next);
+
+  document
+    .getElementById("prev")
+    .addEventListener("click", previous);
+
+  document.addEventListener("keydown", event => {
+    const nextKeys = [
+      "ArrowRight",
+      "ArrowDown",
+      "PageDown",
+      " "
+    ];
+
+    const previousKeys = [
+      "ArrowLeft",
+      "ArrowUp",
+      "PageUp"
+    ];
+
+    if (nextKeys.includes(event.key)) {
+      event.preventDefault();
+      next();
+    }
+
+    if (previousKeys.includes(event.key)) {
+      event.preventDefault();
+      previous();
+    }
+
+    if (event.key === "Home") {
+      show(0);
+    }
+
+    if (event.key === "End") {
+      show(slides.length - 1);
+    }
+  });
+
+  let touchStartX = null;
+
+  document.addEventListener(
+    "touchstart",
+    event => {
+      touchStartX =
+        event.changedTouches[0].screenX;
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    "touchend",
+    event => {
+      if (touchStartX === null) {
+        return;
+      }
+
+      const deltaX =
+        event.changedTouches[0].screenX -
+        touchStartX;
+
+      if (Math.abs(deltaX) > 50) {
+        deltaX < 0
+          ? next()
+          : previous();
+      }
+
+      touchStartX = null;
+    },
+    { passive: true }
+  );
+
+  const initial =
+    Number(
+      window.location.hash.replace("#", "")
+    ) - 1;
+
+  if (
+    Number.isFinite(initial) &&
+    initial >= 0 &&
+    initial < slides.length
+  ) {
+    show(initial);
+  }
+</script>
+
+</body>
+</html>
+```

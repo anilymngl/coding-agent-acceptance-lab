@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario Catalog — All 33 Challenges</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; padding: 40px 20px 60px; }
+  .wrap { max-width: 1300px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 2px; }
+  .sub { color: #666; font-size: 12px; margin-bottom: 28px; }
+  .mono { font-family: 'SF Mono', Menlo, monospace; }
+  .nav-links { margin-bottom: 20px; font-size: 11px; }
+  .nav-links a { color: #2563eb; text-decoration: none; margin-right: 14px; font-weight: 600; }
+  .nav-links span { color: #999; margin-right: 8px; }
+  .pack-section { margin-bottom: 32px; }
+  .pack-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 10px; }
+  .pack-desc { font-size: 11px; color: #888; margin-bottom: 14px; margin-top: -6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 8px; }
+  .card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; }
+  .card .title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .card .mono-title { font-size: 10px; color: #888; margin-bottom: 6px; }
+  .card .trap { font-size: 11px; color: #555; line-height: 1.45; margin-bottom: 10px; }
+  .card .results { display: flex; gap: 6px; flex-wrap: wrap; }
+  .card .res { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .card .res.green { background: #dcfce7; color: #166534; }
+  .card .res.rose { background: #ffe4e6; color: #9f1239; }
+  .card .res.gray { background: #f1f5f9; color: #94a3b8; }
+  .card .meta { display: flex; gap: 8px; align-items: center; }
+  .card .diff { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: 700; letter-spacing: 0.03em; }
+  .diff.easy { background: #dcfce7; color: #166534; } .diff.medium { background: #fef3c7; color: #92400e; } .diff.hard { background: #ffe4e6; color: #9f1239; }
+  .cat { font-size: 9px; color: #999; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Scenario Catalog</h1>
+  <p class="sub">All 33 challenges. What the trap is. What the hidden test actually checks. Difficulty and category.</p>
+  <div class="nav-links">
+    <span>Research suite:</span>
+    <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="paper_v2.html" style="color:#2563eb;text-decoration:none">Paper</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">Harness</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <span style="color:#333;font-weight:700">Catalog</span>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="evidence-index.html" style="color:#2563eb;text-decoration:none">Evidence</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none">Evaluator</a>
+  </div>
+
+<div class="pack-section">
+  <div class="pack-label">ci_forensics — 12 scenarios · mechanical, dependency, config</div>
+  <div class="grid" id="cf"></div>
+</div>
+
+<div class="pack-section">
+  <div class="pack-label">maintenance_value — 10 scenarios · refactoring, migration, hygiene</div>
+  <div class="grid" id="mv"></div>
+</div>
+
+<div class="pack-section">
+  <div class="pack-label">product_workflows — 11 scenarios · billing, inventory, SLAs, security</div>
+  <div class="grid" id="pw"></div>
+</div>
+
+<p style="font-size:10px;color:#999;margin-top:12px">
+  <span class="diff easy" style="margin:0 4px">easy</span>
+  <span class="diff medium" style="margin:0 4px">medium</span>
+  <span class="diff hard" style="margin:0 4px">hard</span> difficulty. See <a href="evidence-index.html">Evidence Index</a> for per-model results.</p>
+</div>
+
+<script>
+const scenarios = [
+  {p:'ci_forensics',sc:'async_export_race',title:'Async Export Race',trap:'The thread sleep makes the failure look timing-dependent, but the contract is that export_rows returns only after the file is ready.',diff:'medium',cat:'race-condition'},
+  {p:'ci_forensics',sc:'config_deep_merge',title:'Config Deep Merge',trap:'dict.update() replaces nested dicts. Agents often hardcode the visible test or write another shallow merge.',diff:'medium',cat:'data-structure'},
+  {p:'ci_forensics',sc:'csv_header_contract',title:'CSV Header Contract',trap:'The visible failure can be fixed by rearranging sorted keys for one row, but hidden tests check extra fields and empty exports.',diff:'medium',cat:'data-contract'},
+  {p:'ci_forensics',sc:'decimal_money_rounding',title:'Decimal Money Rounding',trap:'The visible case can be patched with round(total * 100), but hidden tests require explicit half-up cent rounding.',diff:'medium',cat:'money'},
+  {p:'ci_forensics',sc:'dependency_api_change',title:'Dependency API Change',trap:'The obvious failing file is billing.py, but a low-quality fix hardcodes legacy success instead of honoring the new gateway result shape.',diff:'easy',cat:'dependency'},
+  {p:'ci_forensics',sc:'env_bool_parser',title:'Boolean Env Parser',trap:'The obvious visible fix is value == \'false\', but hidden tests expect a small robust boolean parser.',diff:'easy',cat:'config'},
+  {p:'ci_forensics',sc:'idempotency_key_regression',title:'Idempotency Key Regression',trap:'A weak fix may append a random value, which avoids collision but destroys idempotency.',diff:'easy',cat:'idempotency'},
+  {p:'ci_forensics',sc:'mutable_default_leak',title:'Mutable Default Leak',trap:'The second test fails because of the first test. Lazy models add .clear() inside the test instead of fixing the function.',diff:'easy',cat:'state-leak'},
+  {p:'ci_forensics',sc:'pagination_cursor_drift',title:'Pagination Cursor Drift',trap:'A weak fix may hardcode the known pages or append missing IDs instead of following the cursor contract.',diff:'medium',cat:'pagination'},
+  {p:'ci_forensics',sc:'stale_generated_schema',title:'Stale Generated Schema',trap:'The missing field is visible in schema.json, but hand-editing can produce formatting or generator mismatch.',diff:'easy',cat:'generated'},
+  {p:'ci_forensics',sc:'tenant_cache_leak',title:'Tenant Cache Leak',trap:'A weak fix clears the cache on every call or removes caching instead of using the correct composite key.',diff:'medium',cat:'isolation'},
+  {p:'ci_forensics',sc:'timezone_ci_only',title:'CI-Only Timezone',trap:'The test can look like a bad expectation, but the product rule is account-local invoice dates.',diff:'medium',cat:'env-drift'},
+  {p:'maintenance_value',sc:'adapter_field_rename',title:'Adapter Field Rename',trap:'A weak fix handles only new fields and breaks old payloads or fabricates optional values.',diff:'easy',cat:'adapter'},
+  {p:'maintenance_value',sc:'batch_splitter_utility',title:'Batch Splitter Utility',trap:'A weak fix handles only the visible non-empty split and misses empty input or invalid sizes.',diff:'easy',cat:'utility'},
+  {p:'maintenance_value',sc:'docs_cli_sync',title:'Docs CLI Sync',trap:'A weak fix changes code to re-accept the old flag or only adds the new flag while leaving stale docs.',diff:'easy',cat:'docs'},
+  {p:'maintenance_value',sc:'explicit_validation_matrix',title:'Explicit Validation Matrix',trap:'A weak fix special-cases the visible blank id but misses mode and page-size rules.',diff:'medium',cat:'validation'},
+  {p:'maintenance_value',sc:'fixture_schema_migration',title:'Fixture Schema Migration',trap:'A weak fix makes the loader accept stale fixtures instead of migrating test data.',diff:'easy',cat:'fixture'},
+  {p:'maintenance_value',sc:'generated_openapi_refresh',title:'Generated OpenAPI Refresh',trap:'A weak fix hand-edits only the visible missing route or rewrites unrelated generated files.',diff:'easy',cat:'generated'},
+  {p:'maintenance_value',sc:'import_hygiene_fix',title:'Import Hygiene Fix',trap:'A weak fix mutates sys.path or masks ImportError instead of using a package-relative import.',diff:'easy',cat:'hygiene'},
+  {p:'maintenance_value',sc:'logger_warn_migration',title:'Logger Warn Migration',trap:'A weak fix updates only the public file or renames the intentional compatibility API.',diff:'easy',cat:'migration'},
+  {p:'maintenance_value',sc:'regression_test_gap',title:'Regression Test Gap',trap:'A weak fix changes production code or adds a test name without asserting the actual zero-quantity bug.',diff:'easy',cat:'test-gen'},
+  {p:'maintenance_value',sc:'utcnow_timezone_migration',title:'UTCNow Timezone Migration',trap:'A weak fix patches the visible helper only and leaves another utcnow call behind.',diff:'easy',cat:'migration'},
+  {p:'product_workflows',sc:'audit_log_redaction',title:'Audit Log Redaction',trap:'A shallow password-only replacement passes public CI but misses nested dicts, lists, and other common secret keys.',diff:'medium',cat:'security'},
+  {p:'product_workflows',sc:'billing_proration',title:'Billing Proration',trap:'A simple prorate formula can pass the visible half-month case while hidden checks rounding, clamps, and downgrade charges.',diff:'medium',cat:'billing'},
+  {p:'product_workflows',sc:'bulk_invite_dedupe',title:'Bulk Invite Dedupe',trap:'The public test can be fixed by exact-string dedupe, but hidden checks case/space normalization and invalid invite rows.',diff:'easy',cat:'workflow'},
+  {p:'product_workflows',sc:'cart_discount_stack',title:'Cart Discount Stack',trap:'Adding percent support for the visible case is not enough; hidden tests check mixed discount order, zero floor, and input stability.',diff:'medium',cat:'checkout'},
+  {p:'product_workflows',sc:'feature_rollout_bucket',title:'Feature Rollout Bucket',trap:'The visible expected bucket can be hardcoded or length-based for one user; hidden tests check more users and rollout boundaries.',diff:'medium',cat:'feature'},
+  {p:'product_workflows',sc:'inventory_reservation_idempotency',title:'Inventory Reservation Idempotency',trap:'The public test can be fixed by remembering keys, but hidden checks insufficient stock does not mutate state.',diff:'medium',cat:'inventory'},
+  {p:'product_workflows',sc:'markdown_slug_collision',title:'Markdown Slug Collision',trap:'Adding \'-2\' for the second exact duplicate passes public CI but misses punctuation normalization and repeated collisions.',diff:'easy',cat:'docs'},
+  {p:'product_workflows',sc:'search_ranking_stability',title:'Search Ranking Stability',trap:'Filtering all matches passes some simple cases; hidden checks relevance score and deterministic recency order.',diff:'medium',cat:'search'},
+  {p:'product_workflows',sc:'silent_exception_swallower',title:'Silent Swallower',trap:'The visible test fails on the last item. Wrapping the whole loop in try/except passes the visible test but aborts early.',diff:'easy',cat:'error'},
+  {p:'product_workflows',sc:'support_sla_business_hours',title:'Support SLA Business Hours',trap:'A visible Friday-after-hours failure can be special-cased; hidden tests check weekends, before-hours starts, and multi-day carry.',diff:'hard',cat:'SLA'},
+  {p:'product_workflows',sc:'webhook_signature_raw_body',title:'Webhook Signature Raw Body',trap:'Parsing or reserializing JSON can appear to work for one payload, but hidden tests require signing the exact bytes received.',diff:'easy',cat:'webhook'},
+];
+function renderPack(pack,elId){
+  document.getElementById(elId).innerHTML = scenarios.filter(s=>s.p===pack).map(s=>{
+    return `<div class="card">
+      <div class="title">${s.title}</div>
+      <div class="mono-title mono">${s.sc}</div>
+      <div class="trap">${s.trap}</div>
+      <div class="meta"><span class="diff ${s.diff}">${s.diff}</span><span class="cat">${s.cat}</span></div>
+    </div>`;
+  }).join('');
+}
+renderPack('ci_forensics','cf');
+renderPack('maintenance_value','mv');
+renderPack('product_workflows','pw');
+</script>
+</body>
+</html>

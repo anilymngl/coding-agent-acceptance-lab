@@ -1,0 +1,34 @@
+{
+  "matrix_id": "north-mini-openrouter-completion",
+  "description": "North Mini via OpenRouter — product_workflows only (both lanes). Gateway switch from OpenCode Zen.",
+  "output_root": "data/matrix/north-mini-openrouter-completion",
+  "runs_root": "runs/matrix/north-mini-openrouter-completion",
+  "defaults": {
+    "agent": "build",
+    "auto_approve": true,
+    "timeout": 900,
+    "first_output_timeout": 600,
+    "delay_seconds": 15,
+    "backoff_multiplier": 2.0,
+    "backoff_ceiling": 300,
+    "inter_cell_delay": 10,
+    "runs": 3,
+    "warmup": false
+  },
+  "models": [
+    {
+      "alias": "north-mini",
+      "id": "openrouter/cohere/north-mini-code:free",
+      "runtime": "opencode",
+      "timeout": 900,
+      "first_output_timeout": 600,
+      "notes": "North Mini Code free tier via OpenRouter (gateway switch from OpenCode Zen)."
+    }
+  ],
+  "packs": {
+    "product_workflows": {
+      "runs": 3,
+      "prompt_modes": ["sparse", "contract_visible"]
+    }
+  }
+}

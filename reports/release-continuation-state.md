@@ -8,7 +8,7 @@ Date: 2026-06-25
 - Current `HEAD`: `b809763a97945319dc3646e04a0726706e985ab2`
 - Current `origin/main`: `b809763a97945319dc3646e04a0726706e985ab2`
 - Remote: `origin https://github.com/anilymngl/north-mini-test.git`
-- Worktree root: `/Users/anilyamangil/Projects/north-mini-test`
+- Worktree root: local repository checkout path redacted from the public release branch.
 
 ## Branch State
 
@@ -19,6 +19,13 @@ Date: 2026-06-25
 - `release/open-source-v1` does not exist on `origin` at discovery time.
 - `42f21b8` is contained by local `audit/final-public-release`, local `main`, local `publishables-v2-matrix-update`, `origin/main`, and `origin/publishables-v2-matrix-update`.
 - `6b777f4` is contained by local `audit/final-public-release`, local `main`, and `origin/main`.
+
+## Preservation Branches
+
+- `dev/pre-open-source-main-2026-06-25`: `b809763a97945319dc3646e04a0726706e985ab2`
+- `dev/final-public-release-audit-2026-06-25`: `87319ed04df9c5f2b7658c9643666fcdbd2ad077`
+- Both preservation branches were pushed to `origin`.
+- No annotated snapshot tags were created.
 
 ## Audit Change Status
 

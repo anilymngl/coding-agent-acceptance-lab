@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: Coding Agent Acceptance Lab
+message: "If you use this repository or its public research data, please cite it using this metadata."
+type: software
+authors:
+  - family-names: Yamangil
+    given-names: Anil
+repository-code: "https://github.com/anilymngl/coding-agent-acceptance-lab"
+date-released: "2026-06-25"
+license: MIT
+abstract: "A coding-agent evaluation harness and public research dataset for measuring false-green CI repairs against hidden acceptance tests."

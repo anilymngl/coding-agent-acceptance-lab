@@ -3,155 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trust Gap Research — Acceptance Reliability in Coding-Agent CI Repair</title>
+<title>A coding agent can make CI green without fixing the bug — Trust Gap Research</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; }
   .page { max-width: 1000px; margin: 0 auto; padding: 64px 24px 80px; }
   h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 10px; }
-  .thesis { font-size: 15px; font-weight: 500; color: #475569; line-height: 1.5; margin-bottom: 28px; }
+  .thesis { font-size: 15px; font-weight: 500; color: #475569; line-height: 1.5; margin-bottom: 10px; }
+  .scope { font-size: 11px; color: #94a3b8; margin-bottom: 28px; line-height: 1.4; }
   .mono { font-family: 'SF Mono', Menlo, monospace; }
   .divider { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
   .section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 12px; }
-  
+
   .tag { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: 700; letter-spacing: 0.03em; margin-right: 4px; vertical-align: middle; }
   .tag.g { background: #dcfce7; color: #166534; } .tag.r { background: #ffe4e6; color: #9f1239; }
   .tag.a { background: #fef3c7; color: #92400e; } .tag.b { background: #dbeafe; color: #1d4ed8; }
-  
+
   .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .stat { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; text-align: center; min-width: 70px; }
   .stat .val { font-size: 17px; font-weight: 800; }
   .stat .lbl { font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
   .stat.green .val { color: #16a34a; } .stat.rose .val { color: #e11d48; } .stat.blue .val { color: #2563eb; }
-  
+
   .foot { font-size: 10px; color: #bbb; text-align: center; margin-top: 40px; }
-  .findings { margin-bottom: 16px; }
-  .findings p { font-size: 12px; color: #555; line-height: 1.6; margin-bottom: 6px; padding-left: 16px; text-indent: -16px; }
 
-  /* Grid routes styling */
-  .grid-three-routes { display: flex; gap: 20px; margin-top: 24px; }
-  .route-column { flex: 1; display: flex; flex-direction: column; gap: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
-  .route-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .route-icon { font-size: 20px; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-  .icon-read { background: #dbeafe; color: #1d4ed8; }
-  .icon-measure { background: #f1f5f9; color: #475569; }
-  .icon-investigate { background: #ede9fe; color: #6d28d9; }
-  .route-header h2 { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; color: #0f172a; }
-  .route-desc { font-size: 11px; color: #64748b; line-height: 1.45; margin-bottom: 10px; }
-  .route-card { display: block; border: 1px solid #f1f5f9; background: #fafafa; border-radius: 8px; padding: 12px 14px; text-decoration: none; color: inherit; transition: border-color 0.15s, background-color 0.15s; }
-  .route-card:hover { border-color: #2563eb; background: white; }
-  .route-card .ctitle { font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
-  .route-card .cdesc { font-size: 10px; color: #64748b; line-height: 1.4; }
-  .route-card .cfile { font-size: 8px; color: #94a3b8; margin-top: 6px; }
+  /* Findings */
+  .finding { margin-bottom: 30px; }
+  .finding h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .finding .desc { font-size: 12px; color: #555; line-height: 1.6; margin-bottom: 6px; }
+  .finding .dry-line { font-size: 11px; color: #94a3b8; font-style: italic; }
 
-  @media (max-width: 860px) {
-    .grid-three-routes { flex-direction: column; }
+  /* Nav */
+  .nav-links { margin-bottom: 24px; font-size: 11px; }
+  .nav-links a { color: #2563eb; text-decoration: none; margin-right: 14px; font-weight: 600; }
+  .nav-links span { color: #999; margin-right: 8px; }
+
+  /* Routes */
+  .routes { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; }
+  .route { display: flex; align-items: baseline; gap: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 20px; text-decoration: none; color: inherit; transition: border-color 0.15s, background-color 0.15s; }
+  .route:hover { border-color: #2563eb; background: white; }
+  .route .rnum { font-size: 10px; font-weight: 700; color: #94a3b8; width: 20px; flex-shrink: 0; }
+  .route .rbody { flex: 1; }
+  .route .rtitle { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 1px; }
+  .route .rdesc { font-size: 10px; color: #64748b; line-height: 1.4; }
+  .route .rdesc strong { color: #475569; }
+  .route .rarrow { color: #94a3b8; font-size: 14px; margin-left: auto; flex-shrink: 0; }
+
+  @media (max-width: 640px) {
+    .route { flex-wrap: wrap; }
+    .route .rarrow { margin-left: 0; }
   }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <h1>Acceptance Reliability & the Trust Gap in Coding-Agent CI Repair</h1>
-  <p class="thesis">Measuring the fidelity of agentic software patches against hidden software contracts. Across Study A (multi-model breadth) and Study B (depth study), we evaluate when coding agents successfully pass public test suites but introduce regressions under hidden acceptance suites, and how explicit contracts collapse this trust gap.</p>
+  <h1>A coding agent can make CI green without fixing the bug.</h1>
+  <p class="thesis">This project measures how often that happens, why the wrong patch looked reasonable, and what changes when the agent can actually see the contract.</p>
+  <p class="scope">Four-system breadth study. Two-system, 391-attempt depth study. Thirty-three authored scenarios with visible tests and hidden acceptance.</p>
 
   <div class="stats">
-    <div class="stat"><div class="val">4</div><div class="lbl">configurations</div></div>
-    <div class="stat"><div class="val">33</div><div class="lbl">scenarios</div></div>
-    <div class="stat blue"><div class="val">3</div><div class="lbl">packs</div></div>
-    <div class="stat"><div class="val">2</div><div class="lbl">prompt lanes</div></div>
+    <div class="stat"><div class="val">4</div><div class="lbl">Study A configurations</div></div>
+    <div class="stat"><div class="val">2</div><div class="lbl">depth-study systems</div></div>
+    <div class="stat blue"><div class="val">33</div><div class="lbl">scenarios</div></div>
     <div class="stat green"><div class="val">391</div><div class="lbl">retained attempts</div></div>
     <div class="stat rose"><div class="val">101</div><div class="lbl">false-greens</div></div>
+    <div class="stat blue"><div class="val">10</div><div class="lbl">evaluator reviews</div></div>
   </div>
 
-  <div class="nav-links" style="margin-bottom:24px;font-size:11px">
+  <div class="nav-links" style="margin-bottom:32px;font-size:11px">
     <span style="color:#333;font-weight:700">Home</span>
-    <a href="paper.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Paper</a>
-    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Harness</a>
-    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Catalog</a>
-    <a href="evidence-index.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Evidence</a>
-    <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Evaluator</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="paper.html">Paper</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="harness-built-target.html">System</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="scenario-catalog.html">Scenarios</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="evidence-index.html">Evidence</a>
+    <span style="color:#999;margin:0 8px">|</span>
+    <a href="evaluator-findings.html">Evaluator</a>
   </div>
 
-  <div class="findings">
-    <p><span class="tag b">Observed</span> Both depth models converge to identical 9/12 hidden pass on ci_forensics sparse under any-of-observed aggregation. Two scenarios unconquered by both. Different third Achilles' heel per model.</p>
-    <p><span class="tag b">Observed</span> Contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. The remaining failures were concentrated in product workflows, particularly North Mini/OpenRouter. Every Laguna maintenance and product scenario had at least one successful contract-visible attempt.</p>
-    <p><span class="tag r">Observed</span> Product workflows sparse: 76.2% false-green attempt-level rate. 7 of 11 scenarios completely unconquered by both models at pass@3.</p>
-    <p><span class="tag b">Observed</span> Independent retries are not monotonically better — North Mini lost a solved scenario on its second attempt, and resampling from a wrong distribution can yield worse outcomes.</p>
-    <p><span class="tag b">Observed</span> Laguna leads by 3 scenario-cell successes overall (54/66 vs 51/66 scenario-cell successes under any-of-observed aggregation). The gap is entirely in product_workflows sparse (4 vs 2) and cv (11 vs 10).</p>
-    <p><span class="tag a">Recommendation</span> Partition CI repair by task type. Mechanical: delegate with clear specs. Business logic: human review.</p>
+  <p class="section-title">What we learned</p>
+
+  <div class="finding">
+    <h3>Green is only the first gate</h3>
+    <p class="desc">Public tests tell us the patch satisfied the visible assertions. Across the study, 101 public-green attempts still failed the broader authored contract.</p>
   </div>
 
-  <div class="divider"></div>
+  <div class="finding">
+    <h3>The contract mattered more than another roll of the dice</h3>
+    <p class="desc">Contract-visible prompting reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage, but they did not make the agents steadily wiser. A later attempt sometimes lost behavior an earlier attempt had already recovered.</p>
+    <p class="dry-line">Three attempts are not three layers of wisdom.</p>
+  </div>
 
-  <p class="section-title">Research Routes</p>
-  
-  <div class="grid-three-routes">
-    <!-- Route 1: Read the findings -->
-    <div class="route-column">
-      <div class="route-header">
-        <div class="route-icon icon-read">📖</div>
-        <h2>Read the Findings</h2>
-      </div>
-      <p class="route-desc">Consolidated research paper detailing Study A (breadth) and Study B (depth), along with the scenario catalog.</p>
-      
-      <a class="route-card" href="paper.html">
-        <div class="ctitle">Research Paper (Consolidated)</div>
-        <div class="cdesc">Full academic paper. Recomputes Study A (breadth) and Study B (depth), detailing the stable-attractor interpretation.</div>
-        <div class="cfile mono">paper.html</div>
-      </a>
-      
-      <a class="route-card" href="scenario-catalog.html">
-        <div class="ctitle">Scenario Catalog</div>
-        <div class="cdesc">All 33 scenarios as cards. Trap description, difficulty, and category for each curated bug scenario.</div>
-        <div class="cfile mono">scenario-catalog.html</div>
-      </a>
-    </div>
-
-    <!-- Route 2: See how it was measured -->
-    <div class="route-column">
-      <div class="route-header">
-        <div class="route-icon icon-measure">⚙️</div>
-        <h2>See How It Was Measured</h2>
-      </div>
-      <p class="route-desc">The evaluation system architecture, run lifecycle, and detailed evidence index of the 132 scenario-model cells.</p>
-      
-      <a class="route-card" href="harness-built-target.html">
-        <div class="ctitle">Evaluation System (Harness)</div>
-        <div class="cdesc">Pipeline steps, component mapping, and target development state.</div>
-        <div class="cfile mono">harness-built-target.html</div>
-      </a>
-      
-      <a class="route-card" href="evidence-index.html">
-        <div class="ctitle">Raw Evidence Matrix</div>
-        <div class="cdesc">132 aggregated scenario × model × lane cells. Count-based cell classification and filters.</div>
-        <div class="cfile mono">evidence-index.html</div>
-      </a>
-    </div>
-
-    <!-- Route 3: See how failures were investigated -->
-    <div class="route-column">
-      <div class="route-header">
-        <div class="route-icon icon-investigate">🔬</div>
-        <h2>See How Failures Were Investigated</h2>
-      </div>
-      <p class="route-desc">The evaluator workbench methodology: how we reproduce, diagnose, and demonstrate shadow fixes for false-greens.</p>
-      
-      <a class="route-card" href="evaluator-findings.html">
-        <div class="ctitle">Evaluator Findings</div>
-        <div class="cdesc">Root cause taxonomy, patch quality metrics, and 10 detailed reviews of false-green runs.</div>
-        <div class="cfile mono">evaluator-findings.html</div>
-      </a>
-    </div>
+  <div class="finding">
+    <h3>Product logic remained the dangerous edge</h3>
+    <p class="desc">Mechanical repairs and routine refactors became much more reliable when the contract was explicit. Billing, inventory, security, ranking and SLA workflows remained harder because the visible failure usually exposed only one edge of a larger policy.</p>
   </div>
 
   <div class="divider"></div>
 
-  <p class="section-title">Evidence Context</p>
-  <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px">The canonical paper consolidates both stages of this research: <strong>Study A (breadth study)</strong> testing 4 model configurations at Pass@1 (~600 runs total), and <strong>Study B (depth study)</strong> running a Pass@3 head-to-head comparison between North Mini and Laguna XS.2 (391 attempts total). Historical snapshots are retained under `archive/` for provenance. See the main paper for details.</p>
+  <p class="section-title">Inspect the research</p>
+
+  <div class="routes">
+    <a class="route" href="paper.html">
+      <span class="rnum">01</span>
+      <div class="rbody">
+        <div class="rtitle">Read the argument</div>
+        <div class="rdesc">The complete argument: representative cases, breadth and depth studies, prompt effects, retry instability, supporting Gemma experiments, evaluator methodology and engineering implications.</div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+
+    <a class="route" href="scenario-catalog.html">
+      <span class="rnum">02</span>
+      <div class="rbody">
+        <div class="rtitle">Inspect a scenario</div>
+        <div class="rdesc">Open any of the 33 tasks and inspect what the agent saw, what fix looked tempting, what the authored contract required, what hidden acceptance checked and how the evaluated systems behaved.</div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+
+    <a class="route" href="harness-built-target.html">
+      <span class="rnum">03</span>
+      <div class="rbody">
+        <div class="rtitle">Inspect the evaluation system</div>
+        <div class="rdesc">Follow one attempt from a fresh repository through agent execution, visible tests, hidden acceptance, artifact capture and persistence. <strong>The model is allowed to be creative. The evidence pipeline is not.</strong></div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+
+    <a class="route" href="evidence-index.html">
+      <span class="rnum">04</span>
+      <div class="rbody">
+        <div class="rtitle">Audit the evidence</div>
+        <div class="rdesc">The paper makes the argument. This page lets you check the cells. Filter the 132 scenario &times; system &times; prompt-lane cells and inspect the recorded public and hidden outcomes.</div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+
+    <a class="route" href="evaluator-findings.html">
+      <span class="rnum">05</span>
+      <div class="rbody">
+        <div class="rtitle">Inspect the evaluator workbench</div>
+        <div class="rdesc"><strong>&ldquo;A second model agreed&rdquo; is not a validation method.</strong> The workbench reconstructs the failed run, constrains the evaluator with retained evidence, and validates the resulting review before it is admitted as evidence.</div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="section-title">Evidence boundary</p>
+  <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px">The primary depth study contains 391 retained attempts across two deployed systems, two prompt lanes and 33 scenarios. The breadth study and local Gemma experiments use different configurations and scopes. They are reported separately rather than pooled into one model leaderboard. The hidden tests encode the authored benchmark contract. They are stronger than the visible tests, not universal proof of production correctness.</p>
 
   <div class="foot">
-    <span class="mono">github.com/anilymngl/north-mini-test</span> &middot; June 2026 &middot; Tier 1 evidence — behavior microscope
+    <span class="mono">publishables/</span> &middot; Internal comparative evidence &middot; No external audit &middot; June 2026
   </div>
 
 </div>

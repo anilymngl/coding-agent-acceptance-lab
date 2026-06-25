@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Measuring Acceptance Reliability in Coding-Agent CI Repair</title>
+  <title>Measuring Acceptance Reliability in Coding-Agent CI Repair (Preserved Academic Draft)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; scroll-behavior: smooth; }
@@ -132,15 +132,21 @@
 <body>
 <div class="paper">
 
+  <div style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #f59e0b;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:0.78rem;color:#92400e;line-height:1.5">
+    <strong>This is the preserved academic draft.</strong> The current version with practitioner voice is <a href="paper.html" style="color:#d97706;font-weight:700">paper.html</a>. Both contain the same evidence, tables, and data. This version uses the original academic register throughout.
+  </div>
+
   <h1>Measuring Acceptance Reliability in Coding-Agent CI Repair</h1>
   <p class="subtitle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 1.1rem; font-weight: 500; color: #444; margin-top: 4px; margin-bottom: 12px; line-height: 1.4;">Multi-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios</p>
   <p class="author">Anil Yamangil</p>
-  <p class="affil">Independent Research &middot; June 2026 &middot; Canonical Technical Report &middot; <a href="index.html" style="color:#888">research suite</a> &middot; <a href="paper_academic.html" style="color:#94a3b8;font-size:0.9em">(academic draft)</a></p>
+  <p class="affil">Independent Research &middot; June 2026 &middot; Preserved Academic Draft &middot; <a href="index.html" style="color:#888">research suite</a> &middot; <a href="paper.html" style="color:#888">current version</a></p>
 
   <div class="sans" style="font-size:10px; margin-bottom:20px">
     <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
     <span style="color:#999;margin:0 10px">|</span>
-    <span style="color:#333;font-weight:700">Paper</span>
+    <span style="color:#333;font-weight:700">Paper (academic draft)</span>
+    <span style="color:#999;margin:0 10px">|</span>
+    <a href="paper.html" style="color:#2563eb;text-decoration:none">Current version</a>
     <span style="color:#999;margin:0 10px">|</span>
     <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">System</a>
     <span style="color:#999;margin:0 10px">|</span>
@@ -158,19 +164,17 @@
   </div>
 
   <div class="sans reading-map" style="font-size:0.78rem;color:#555;margin-bottom:20px;line-height:1.8">
-    <strong style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:#888">What's inside</strong><br>
-    <a href="#fig-flowchart" style="color:#2563eb">Green is a checkpoint, not proof</a> &middot;
+    <strong style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:#888">Reading map</strong><br>
+    <a href="#fig-flowchart" style="color:#2563eb">How green can lie</a> &middot;
     <a href="#representative-cases" style="color:#2563eb">What agents were asked to fix</a> &middot;
-    <a href="#fig-slopegraph" style="color:#2563eb">The contract effect</a> &middot;
+    <a href="#fig-slopegraph" style="color:#2563eb">Prompt effect</a> &middot;
     <a href="#fig-two-surfaces" style="color:#2563eb">Two failure surfaces</a> &middot;
     <a href="#executable-diagnosis" style="color:#2563eb">Evaluator workbench</a> &middot;
-    <a href="#toc-limits" style="color:#2563eb">Where the claims stop</a>
+    <a href="#toc-limits" style="color:#2563eb">Limitations</a>
   </div>
 
   <h2>1. Plain-Language Summary</h2>
-  <p>A green CI check looks like an answer. In these experiments, it was often only evidence that the agent had learned what the visible test wanted. The agents were not usually producing nonsense. The more interesting failure was the opposite: they produced fixes that were local, plausible, and incomplete.</p>
-  <p>When an AI coding assistant completes a software bug fix and gets your CI tests to pass, how confident can you be that the underlying bug is actually fixed? This report shows that public test suites are often too sparse to define correctness. AI agents easily optimize for whatever visible assertions they can see, producing a green CI check while violating hidden requirements — a <strong>false-green</strong>. This trust gap pattern recurred across evaluated systems and was more sensitive to task pack and contract exposure than to model identity in several matched cells. Exposing explicit contracts directly in the prompt (contract-visible) collapses false-greens on mechanical and refactoring tasks. For complex business logic, explicit contracts recover most scenarios, but per-attempt reliability remains weaker, meaning human verification or hidden acceptance gates remain essential.</p>
-  <p>What changed the outcome most was not a better model. It was giving the agent the actual contract.</p>
+  <p>When an AI coding assistant completes a software bug fix and gets your continuous integration (CI) tests to pass, how confident can you be that the underlying bug is actually fixed? This report shows that public test suites are often too sparse to define correctness. AI agents easily optimize for whatever visible assertions they can see, producing a green CI check while violating hidden requirements (a <strong>false-green</strong>). This trust gap pattern recurred across evaluated systems and was more sensitive to task pack and contract exposure than to model identity in several matched cells. However, exposing explicit contracts directly in the prompt (contract-visible) collapses false-greens on mechanical and refactoring tasks. For complex business logic, explicit contracts recover most scenarios, but per-attempt reliability remains weaker, meaning human verification or hidden acceptance gates remain essential.</p>
 
   <h2>2. Research Question and Terminology</h2>
   <p>Standard benchmarks evaluate whether an agent can produce code that passes unit tests. Our study audits the correctness of those fixes when they satisfy visible assertions. We define four core metrics to examine this reliability:</p>
@@ -358,7 +362,7 @@
       <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">A checked-in generated schema artifact is missing a new field.</div></div>
       <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Edit the generated JSON artifact by hand.</div></div>
       <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Verify the source-of-truth field list, run the schema generator, and commit only the regenerated artifact.</div></div>
-      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">The patch fixes today's artifact and leaves tomorrow's generator broken. The next legitimate rebuild quietly deletes the repair.</div></div>
+      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Hand-editing generated output fixes today's diff while leaving the build process broken for every future change.</div></div>
     </div>
 
     <div class="case-card">
@@ -429,7 +433,7 @@
       <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">Retrying the same reservation key consumes stock twice.</div></div>
       <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Cache completed keys and return early on duplicate requests.</div></div>
       <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Repeated keys return the original result, distinct keys respect available stock, and failed reservations do not mutate inventory.</div></div>
-      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Retries are normal distributed-system behavior, not unusual input. Remembering the retry key is only half the job. If a failed reservation has already mutated inventory, the system is still wrong — just in a less visible way.</div></div>
+      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Retries are normal distributed-system behavior, not unusual input. Failure atomicity is also part of the contract — fixing the visible retry bug is not enough.</div></div>
     </div>
 
     <div class="case-card">
@@ -795,8 +799,7 @@
   </div>
 
   <h2>12. Failure Case Analysis</h2>
-  <p>Some wrong answers are not random. They are stable attractors — the model lands on the same incomplete strategy from independent restarts because the visible test signal pulls in a consistent direction.</p>
-  <p>In `decimal_money_rounding`, Laguna generated byte-identical wrong patches on attempts 1 and 2, converting variables to `Decimal` but leaving `int(total * 100)` in place, which truncates half-cents instead of rounding. The model satisfies the visible assertions but fails the hidden half-cent test. The evaluator agent (DeepSeek V4 Pro) confirmed that the model optimistically declared success because its code satisfied the visible test suite. Three independent attempts, three identical wrong answers. The public test was strong enough to guide the type change but too weak to guide the rounding method. The walkthrough in Section 5.4 illustrates this same case across prompt lanes.</p>
+  <p>Certain scenarios present stable failure attractors. In `decimal_money_rounding`, Laguna generated byte-identical wrong patches on attempts 1 and 2, converting variables to `Decimal` but leaving `int(total * 100)` in place, which truncates half-cents instead of rounding. The model satisfies the visible assertions but fails the hidden half-cent test. The evaluator agent (DeepSeek V4 Pro) confirmed that the model optimistically declared success because its code satisfied the visible test suite. We conclude that when visible tests are sparse, agents converge to stable, incomplete attractors. The walkthrough in Section 5.4 illustrates this same case across prompt lanes.</p>
 
   <h2>13. Supporting Study</h2>
 
@@ -927,18 +930,15 @@
 
   <h2 id="executable-diagnosis">14. From Classification to Executable Diagnosis</h2>
 
-  <p>&ldquo;A second model agreed&rdquo; is not a validation method. The evaluator only becomes useful when its judgment is constrained by a reconstructed repository, retained test evidence, an authored contract, and deterministic validation.</p>
-
   <p>A false-green run tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain the violated contract or demonstrate a correct alternative. For selected false-greens in the Laguna <code>ci_forensics</code> sparse lane, we deployed a separate evaluator agent with a disposable engineering workbench containing three repositories and an evidence packet: the original seed repository, the patched model repository used for inspection and reproduction, a clean shadow repository where an alternative fix can be tested, and a packet containing the authored contract, patch, and recorded test evidence.</p>
 
-  <p>The harness does the boring authoritative work: rebuild the repository, apply the captured patch, inject the hidden tests, and preserve the packet. The evaluator does the uncertain work: inspect, reason, diagnose, and optionally test another implementation. Then deterministic checks decide whether the review is admissible. The evaluator is not merely asked whether it agrees that the patch is wrong. It must inspect the failed state, identify the violated contract, and support its judgment with concrete evidence. The workbench also allows it to test an alternative fix in the clean shadow repository when that would strengthen the diagnosis.</p>
+  <p>The evaluator is not merely asked whether it agrees that the patch is wrong. It must inspect the failed state, identify the violated contract, and support its judgment with concrete evidence. The workbench also allows it to test an alternative fix in the clean shadow repository when that would strengthen the diagnosis.</p>
 
-  <p>Ten false-green attempts were reviewed by a DeepSeek V4 Pro evaluator. All ten reviews diagnosed authored-contract violations with evidence-validated verdicts. The evaluator identified three recurring root-cause categories: <strong>missed hidden contracts</strong> (the agent followed the visible test signal but never encountered the hidden requirement), <strong>incomplete domain policies</strong> (the agent updated a visible API surface but left downstream propagation unchanged), and <strong>edge-case gaps</strong> (the agent handled the specific case shown in the failing test but did not generalize). The shadow-fix mechanism — where the evaluator edits a clean repository and runs the same hidden tests — is available as a workbench capability but its outcomes have not yet been structured into the review schema.</p>
+  <p>Ten false-green attempts were reviewed by a DeepSeek V4 Pro evaluator. All ten reviews diagnosed authored-contract violations with evidence-validated verdicts. The evaluator identified three recurring root-cause categories: <strong>missed hidden contracts</strong> (the agent followed the visible test signal but never encountered the hidden requirement), <strong>incomplete domain policies</strong> (the agent updated a visible API surface but left downstream propagation unchanged), and <strong>edge-case gaps</strong> (the agent handled the specific case shown in the failing test but did not generalize). The shadow-fix mechanism — where the evaluator edits a clean repository and runs the same hidden tests — is available as a workbench capability but its outcomes have not yet been structured into the review schema. The workbench allows the evaluator to demonstrate a correct implementation when needed; it does not currently record structured pass/fail data for that demonstration.</p>
 
-  <p>A validated review means the verdict is structurally valid, consistent with the stored run, and supported by exact evidence from the packet. It does not mean the evaluator has discovered the one true explanation. Together, classification and workbench diagnosis make the trust gap inspectable rather than merely countable.</p>
+  <p>This layer of the evaluation pipeline closes a gap in the main study itself. A classification system can flag public-green ticks as incomplete. An evaluator workbench can turn those flags into concrete, auditable engineering artifacts — a written diagnosis, a reproduction trace, an evidence quote, and where appropriate, a shadow patch. Together they make the trust gap inspectable rather than merely countable.</p>
 
   <h2 id="toc-limits">15. Threats to Validity</h2>
-  <p style="font-style:italic;color:#555">The results are useful, but they are not cleaner than the system that produced them. These are the boundaries that matter.</p>
   <ul>
     <li><strong>Benchmark author bias:</strong> Hidden tests, templates, and baseline suites were written by the same team, which may introduce systematic omissions.</li>
     <li><strong>Incomplete evaluator coverage:</strong> Only 10 of <span data-metric="study_b.false_greens">101</span> false-green attempts have been audited by the evaluator model. <span data-metric="study_b.unreviewed_false_greens">91</span> false-greens remain unreviewed.</li>
@@ -947,7 +947,7 @@
     <li><strong>Local runtime confounding:</strong> Gemma experiments mix model capacity with local hardware, Ollama behavior, timeout policy and first-output boundaries. Public-red outcomes in those experiments do not isolate a single cause.</li>
     <li><strong>Scenario-family dependence:</strong> All 33 scenarios come from one authored benchmark suite. Generalizing to other task families, languages or domains requires additional evidence.</li>
     <li><strong>Hidden tests are operational definitions:</strong> They encode the authors' contract, not universal production truth. A passing hidden test means the patch satisfies those specific assertions.</li>
-    <li><strong>Gateway confounding:</strong> North Mini product workflows change gateway and task pack together. We cannot tell how much of the difference belongs to either variable.</li>
+    <li><strong>Gateway confounding:</strong> North Mini product workflows change gateway and task pack together. Route effects and pack difficulty cannot be isolated.</li>
     <li><strong>Attempt independence:</strong> Separate runs lack memory, but model, provider and sampling configuration may not be fully controlled or observable.</li>
     <li><strong>Artifact provenance:</strong> Historical diffs may omit untracked files. Integrity hashes are computed after the run completes, not compared against real-time digests. Incomplete runs skipped by matrix resume are assumed complete.</li>
   </ul>
@@ -968,7 +968,7 @@
 
   <p><strong>Deployment should be partitioned by task type, not governed by one global score.</strong> <code>ci_forensics</code> scenarios had false-green rates below 6% under contract-visible prompts for both systems. <code>product_workflows</code> remained at 32.3% for North Mini even with the contract exposed. A deployment strategy that treats all CI failures as equivalent will be simultaneously overconfident on mechanical tasks and underprepared for policy-critical ones.</p>
 
-  <p>The practical unit of evaluation is not the model name. It is the model, the prompt, the runtime, the repository, the acceptance boundary, and the evidence left behind when something fails. Remove any one of those and the benchmark becomes easier to market — and harder to trust.</p>
+  <p>The practical unit of evaluation is not the model. It is the deployed system, the information it receives, the acceptance boundary it must cross, and the evidence preserved when it fails. Measuring acceptance reliability requires measuring all four.</p>
 
   <h2>17. Data and Reproduction Manifest</h2>
   <p>The reproduction files are structured in the research suite. The intermediate data files are located at:</p>

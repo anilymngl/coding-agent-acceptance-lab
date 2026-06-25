@@ -247,9 +247,9 @@
     <span>|</span>
     <a href="paper.html">Paper</a>
     <span>|</span>
-    <a href="harness-built-target.html">Harness</a>
+    <a href="harness-built-target.html">System</a>
     <span>|</span>
-    <a href="scenario-catalog.html">Catalog</a>
+    <a href="scenario-catalog.html">Scenarios</a>
     <span>|</span>
     <a href="evidence-index.html">Evidence</a>
     <span>|</span>
@@ -257,7 +257,7 @@
   </div>
 
   <div class="one-liner">
-    The evaluator is not asked, “Do you agree that this patch is wrong?” It is asked to rebuild the failure, explain the violated contract, and demonstrate a better fix in a clean repository.
+    <strong>&ldquo;A second model agreed&rdquo; is not a validation method.</strong> The evaluator only becomes useful when its judgment is constrained by a reconstructed repository, retained test evidence, an authored contract, and deterministic validation.
   </div>
 
   <!-- Flow section -->
@@ -286,7 +286,7 @@
           <div class="flow-item">Inspect code & test failures</div>
           <div class="flow-item">Hypothesize root cause</div>
           <div class="flow-item">Diagnose violated contract</div>
-          <div class="flow-item">Demonstrate shadow fix on clean seed</div>
+          <div class="flow-item">Optional: test an alternative in shadow repo</div>
         </div>
       </div>
       
@@ -306,15 +306,15 @@
     </div>
     
     <div class="flow-intellectual-point">
-      💡 <strong>Intellectual point:</strong> Agentic judgment is enclosed by deterministic preparation and deterministic validation. Rather than treating an LLM reviewer as a subjective opinion, the harness provides a reproducible workbench environment to prove or disprove failures.
+      <strong>Why this works:</strong> Agentic judgment is enclosed by deterministic preparation and deterministic validation. The evaluator is not a free-range reviewer. It operates inside a reproducible workbench with constrained evidence. The system does not ask &ldquo;do you agree this patch is wrong?&rdquo; It asks the evaluator to rebuild the failure, diagnose the violated contract, and support the diagnosis with evidence from the packet.
     </div>
   </div>
 
   <!-- Copy section -->
   <div class="copy-section">
-    <h2>The evaluator is given a workbench, not just a diff</h2>
-    <p>A false-green tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain why the patch failed.</p>
-    <p>For selected false-greens, we give a separate evaluator agent a disposable engineering workbench.</p>
+    <h2>The harness does the boring authoritative work. The evaluator does the uncertain work.</h2>
+    <p>The runner rebuilds the repository, applies the captured patch, injects the hidden tests, and preserves the packet. The evaluator inspects, reasons, diagnoses, and optionally tests an alternative implementation. Then deterministic checks decide whether the review is admissible — not whether it is correct, but whether it is structurally valid, consistent with the stored run, and supported by exact evidence from the packet.</p>
+    <p>A false-green tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain why the patch failed. For selected false-greens, we give a separate evaluator agent a disposable engineering workbench.</p>
   </div>
 
   <!-- Cards Section -->
@@ -329,7 +329,7 @@
     </div>
     <div class="repo-card">
       <div class="card-title">SHADOW REPO</div>
-      <div class="card-desc">Clean seed + hidden tests.<br><small>Evaluator may edit this to demonstrate a valid fix.</small></div>
+      <div class="card-desc">Clean seed + hidden tests.<br><small>OPTIONAL &middot; OUTCOME NOT STRUCTURED &middot; Evaluator may edit this to demonstrate a valid fix.</small></div>
     </div>
     <div class="repo-card">
       <div class="card-title">EVIDENCE PACKET</div>
@@ -346,11 +346,11 @@
     <h2>2. Diagnose the missed contract</h2>
     <p>The evaluator inspects the code, test output, and authored acceptance contract. It must identify the specific mismatch between the patch and the required behavior. The diagnosis must point to concrete evidence from the workbench. A verdict without an observable code path, test failure, or contract mismatch is not enough.</p>
 
-    <h2>3. Build a shadow fix</h2>
-    <p>The evaluator then edits a clean shadow repository and attempts a different implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it shows that the authored contract is implementable in the supplied repository and supports the evaluator&rsquo;s diagnosis of a concrete gap in the original patch.</p>
+    <h2>3. Build a shadow fix (Optional)</h2>
+    <p>The evaluator may edit a clean shadow repository and attempt an alternative implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it shows that the authored contract is implementable in the supplied repository and supports the evaluator&rsquo;s diagnosis of a concrete gap in the original patch. Note that shadow-fix outcomes are currently not structured in the results database.</p>
 
     <h2>What this establishes</h2>
-    <p>A validated evaluator review supports a narrow claim:</p>
+    <p>A validated review means the verdict is structurally valid, consistent with the stored run, and supported by exact evidence from the packet. It does not mean the evaluator has discovered the one true explanation. The narrow claim it supports:</p>
     <ul>
       <li>Under the authored benchmark contract, the original agent patch was incomplete or incorrect, and the evaluator demonstrated an alternative implementation that satisfied the same acceptance tests.</li>
     </ul>
@@ -361,9 +361,9 @@
       <li>the hidden tests are complete;</li>
       <li>the scenario is fair or representative;</li>
       <li>the benchmark contract matches every real-world requirement;</li>
-      <li>the evaluator’s root-cause category is uniquely correct.</li>
+      <li>the evaluator&rsquo;s root-cause category is uniquely correct.</li>
     </ul>
-    <p>The workbench makes the diagnosis executable and auditable. It does not turn one evaluator model into an external scientific authority.</p>
+    <p>The workbench makes the diagnosis executable and auditable. It does not turn one evaluator model into an external scientific authority. <strong>Another model's opinion is not evidence. The workbench is what makes the diagnosis inspectable.</strong></p>
   </div>
 
   <!-- Summary stats -->
@@ -371,7 +371,7 @@
     <div class="sum-stat"><div class="val" id="val-reviews">10</div><div class="lbl">evaluator-agent reviews</div></div>
     <div class="sum-stat green"><div class="val" id="val-violation">10/10</div><div class="lbl">diagnosed authored-contract violations</div></div>
     <div class="sum-stat green"><div class="val" id="val-validated">10/10</div><div class="lbl">evidence-validated verdicts</div></div>
-    <div class="sum-stat"><div class="val" id="val-shadow">--</div><div class="lbl">shadow-fix outcomes not yet structured</div></div>
+    <div class="sum-stat amber"><div class="val" id="val-shadow">OPTIONAL</div><div class="lbl">OUTCOME NOT STRUCTURED</div></div>
     <div class="sum-stat amber"><div class="val">91</div><div class="lbl">not yet reviewed</div></div>
   </div>
 
@@ -379,7 +379,7 @@
   <div class="reviews" id="reviews"></div>
 
   <div class="note">
-    <strong>What's missing:</strong> 91 false-greens remain unreviewed (pass@2, pass@3, maintenance_value, product_workflows, North Mini). Only one evaluator model used — no inter-evaluator agreement data. Reviews cover only Laguna ci_forensics sparse pass@1. Generalizing to other packs or models requires additional review.
+    <strong>What's missing:</strong> 91 false-greens remain unreviewed (pass@2, pass@3, maintenance_value, product_workflows, North Mini). Only one evaluator model used — no inter-evaluator agreement data. Reviews cover only Laguna ci_forensics sparse pass@1. Each missing control limits a claim the project can safely make. Generalizing to other packs or models requires additional review.
   </div>
 </div>
 

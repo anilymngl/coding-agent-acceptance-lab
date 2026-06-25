@@ -361,6 +361,11 @@ def verify_html_integrity(cells):
                             cat_src = f.read()
                         if f"sc:'{fragment}'" in cat_src or f'sc:"{fragment}"' in cat_src:
                             is_valid_dynamic = True
+                    elif target_file == "evidence-index.html":
+                        with open(os.path.join(PUBLISHABLES_DIR, "evidence-index.html"), "r", encoding="utf-8") as f:
+                            ev_src = f.read()
+                        if f'sc:"{fragment}"' in ev_src or f"sc:'{fragment}'" in ev_src:
+                            is_valid_dynamic = True
                             
                     if not is_valid_dynamic:
                         print(f"Error: Link '{href}' in {source_file} points to missing anchor ID '{fragment}' in target {target_file}")
@@ -398,8 +403,9 @@ def verify_html_integrity(cells):
     with open(os.path.join(PUBLISHABLES_DIR, "paper.html"), "r", encoding="utf-8") as f:
         paper_content = f.read()
     for sc in required_scenarios:
-        if 'href="scenario-catalog.html' not in paper_content or ">" + sc + "<" not in paper_content:
-            print(f"Error: Scenario '{sc}' link to scenario-catalog.html is missing or malformed in paper.html")
+        expected_link = f'href="scenario-catalog.html#{sc}"'
+        if expected_link not in paper_content:
+            print(f"Error: Scenario '{sc}' link to scenario-catalog.html is missing or malformed in paper.html (expected: {expected_link})")
             sys.exit(1)
     print(f"All {len(required_scenarios)} scenario case cards linked to catalog!")
 
@@ -436,12 +442,95 @@ def verify_stale_claims(parsed_files):
         
     print("Stale-claim check passed successfully!")
 
+def verify_scenario_catalog(parsed_files):
+    print("--- Verifying Scenario Catalog ---")
+    
+    from ci_vibe_lab.scenarios import SCENARIOS
+    
+    catalog_file = "scenario-catalog.html"
+    if catalog_file not in parsed_files:
+        print(f"Error: {catalog_file} was not parsed.")
+        sys.exit(1)
+        
+    parser = parsed_files[catalog_file]
+    
+    catalog_path = os.path.join(PUBLISHABLES_DIR, catalog_file)
+    with open(catalog_path, "r", encoding="utf-8") as f:
+        catalog_html = f.read()
+        
+    sc_ids_in_catalog = [sid for sid in parser.ids if sid in SCENARIOS]
+    if len(sc_ids_in_catalog) != 33:
+        print(f"Error: Expected exactly 33 scenario IDs in {catalog_file}, found {len(sc_ids_in_catalog)}: {sc_ids_in_catalog}")
+        sys.exit(1)
+        
+    for sc_id, sc in SCENARIOS.items():
+        if sc_id not in parser.ids:
+            print(f"Error: Scenario ID '{sc_id}' is missing from {catalog_file} IDs")
+            sys.exit(1)
+            
+        if sc.title not in catalog_html:
+            print(f"Error: Scenario title '{sc.title}' not found in {catalog_file}")
+            sys.exit(1)
+            
+        if not sc.trap:
+            print(f"Error: Scenario '{sc_id}' has an empty trap in registry!")
+            sys.exit(1)
+        if sc.trap not in catalog_html:
+            print(f"Error: Trap '{sc.trap}' not found for scenario '{sc_id}' in {catalog_file}")
+            sys.exit(1)
+            
+        if not sc.expected_behavior:
+            print(f"Error: Scenario '{sc_id}' has empty expected behavior in registry!")
+            sys.exit(1)
+        for item in sc.expected_behavior:
+            if not item:
+                print(f"Error: Scenario '{sc_id}' has an empty expected behavior item!")
+                sys.exit(1)
+            if item not in catalog_html:
+                print(f"Error: Expected behavior item '{item}' not found for '{sc_id}' in {catalog_file}")
+                sys.exit(1)
+                
+        if not sc.success_signals:
+            print(f"Error: Scenario '{sc_id}' has empty success signals in registry!")
+            sys.exit(1)
+        for item in sc.success_signals:
+            if not item:
+                print(f"Error: Scenario '{sc_id}' has an empty success signal item!")
+                sys.exit(1)
+            if item not in catalog_html:
+                print(f"Error: Success signal '{item}' not found for '{sc_id}' in {catalog_file}")
+                sys.exit(1)
+                
+        if not sc.failure_modes:
+            print(f"Error: Scenario '{sc_id}' has empty failure modes in registry!")
+            sys.exit(1)
+        for item in sc.failure_modes:
+            if not item:
+                print(f"Error: Scenario '{sc_id}' has an empty failure mode item!")
+                sys.exit(1)
+            if item not in catalog_html:
+                print(f"Error: Failure mode '{item}' not found for '{sc_id}' in {catalog_file}")
+                sys.exit(1)
+                
+        pattern = f'id="{sc_id}"[^>]*data-pack="{sc.pack}"[^>]*data-difficulty="{sc.difficulty}"[^>]*data-category="{sc.category}"'
+        if not re.search(pattern, catalog_html):
+            print(f"Error: article element for '{sc_id}' does not have the expected pack/difficulty/category metadata in {catalog_file}")
+            sys.exit(1)
+            
+        expected_evidence_link = f'href="evidence-index.html#{sc_id}"'
+        if expected_evidence_link not in catalog_html:
+            print(f"Error: Evidence matrix link '{expected_evidence_link}' not found for '{sc_id}' in {catalog_file}")
+            sys.exit(1)
+            
+    print("Scenario catalog integrity verified successfully against registry!")
+
 def main():
     print("Starting Publishables Verification Suite...")
     cells = verify_dataset_integrity()
     verify_metric_integrity(cells)
     parsed_files = verify_html_integrity(cells)
     verify_stale_claims(parsed_files)
+    verify_scenario_catalog(parsed_files)
     print("\nSUCCESS: All verification checks passed!")
 
 if __name__ == "__main__":

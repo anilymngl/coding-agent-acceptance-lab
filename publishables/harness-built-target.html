@@ -104,9 +104,9 @@
     <span style="color:#999;margin:0 10px">|</span>
     <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
     <span style="color:#999;margin:0 10px">|</span>
-    <span style="color:#333;font-weight:700">Evaluation System</span>
+    <span style="color:#333;font-weight:700">System</span>
     <span style="color:#999;margin:0 10px">|</span>
-    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
+    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Scenarios</a>
     <span style="color:#999;margin:0 10px">|</span>
     <a href="evidence-index.html" style="color:#2563eb;text-decoration:none">Evidence</a>
     <span style="color:#999;margin:0 10px">|</span>
@@ -116,9 +116,9 @@
   <!-- ======== RESEARCH PAPER CALLOUT ======== -->
   <div style="background:white; border:1px solid #e5e7eb; border-left:4px solid #2563eb; border-radius:10px; padding:18px 22px; margin-bottom:32px; display:flex; align-items:center; gap:18px; flex-wrap:wrap">
     <div style="flex:1; min-width:240px">
-      <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#999; margin-bottom:4px">Research Paper</div>
+      <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#999; margin-bottom:4px">Read the argument</div>
       <div style="font-size:15px; font-weight:700; margin-bottom:4px">Measuring Acceptance Reliability in Coding-Agent CI Repair</div>
-      <div style="font-size:11px; color:#666">Four-configuration breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios. Structural trust-gap analysis, retry variance, and spec recovery.</div>
+      <div style="font-size:11px; color:#666">Four-configuration breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios. Structural trust-gap analysis, retry variance, and what changes when the agent can see the contract.</div>
     </div>
     <a href="paper.html" style="display:inline-block; background:#2563eb; color:white; font-size:12px; font-weight:700; padding:10px 20px; border-radius:8px; text-decoration:none; white-space:nowrap">Open paper &rarr;</a>
   </div>
@@ -142,7 +142,7 @@
     .pconn .pln { width: 100%; height: 1.5px; background: #d1d5db; position: relative; }
     .pconn .pln::after { content: ''; position: absolute; right: -1px; top: -3px; width: 0; height: 0; border-left: 6px solid #d1d5db; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
   </style>
-  <p class="section-title" id="run-lifecycle">Pipeline — How one run works</p>
+  <p class="section-title" id="run-lifecycle">Where the evidence comes from</p>
   <div class="pflow">
     <div class="pblock"><div class="pstep"><div class="num">1</div><div class="ptitle">Write Scenario</div><div class="pdesc">Fresh worktree from templates</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep"><div class="num">2</div><div class="ptitle">Baseline Test</div><div class="pdesc">Confirm red CI (recorded, not enforced)</div></div></div><div class="pconn"><div class="pln"></div></div>
@@ -157,7 +157,7 @@
   </div>
 
   <!-- ======== DATA FLOW DIAGRAM ======== -->
-  <p class="section-title">Data Flow — How components connect</p>
+  <p class="section-title">Data flow — What talks to what</p>
   <div class="flow-diagram">
     <!-- Row 1: Orchestrator → Runner -->
     <div class="flow-row">
@@ -213,7 +213,10 @@
   </div>
 
   <!-- ======== COMPONENT DETAIL CARDS ======== -->
-  <p class="section-title" id="component-map">Components — What each file does</p>
+  <p class="section-title" id="component-map">Components — Who owns what</p>
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:#1e3a8a;font-weight:600;line-height:1.5">
+    <strong>The model is allowed to be creative. The evidence pipeline is not.</strong> The runner owns isolation, tests own classification, the database owns retained records, the evaluator owns interpretation, and the verifier owns publication invariants.
+  </div>
   <div class="comp-grid">
 
     <!-- scenarios.py -->
@@ -339,7 +342,7 @@
   </div>
 
   <!-- ======== STATS ======== -->
-  <p class="section-title">Observed — evidence from real use</p>
+  <p class="section-title">What the system records — and what it still cannot prove</p>
   <div class="stats-row">
     <div class="stat"><div class="val">33</div><div class="lbl">scenarios</div></div>
     <div class="stat blue"><div class="val">4</div><div class="lbl">model families</div></div>
@@ -351,7 +354,10 @@
   </div>
 
   <!-- ======== NOT BUILT + TARGET ======== -->
-  <p class="section-title" id="known-limitations">Not Built <span class="t r">6 gaps</span> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Target <span class="t a">5 items</span></p>
+  <p class="section-title" id="known-limitations">What the system still cannot prove <span class="t r">6 gaps</span> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Target <span class="t a">5 items</span></p>
+  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#92400e;line-height:1.45">
+    <strong>These are not roadmap decorations.</strong> Each missing control limits a claim the project can safely make.
+  </div>
   <div style="display:flex; gap:24px; flex-wrap:wrap">
     <div style="flex:1; min-width:300px">
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">External audit workflow</strong><br><span style="font-size:10px;color:#666">No third-party verification of hidden tests, evaluator verdicts, or artifacts. Tier 1 only.</span></div>

@@ -90,7 +90,7 @@
 <div class="paper">
 
   <h1>Measuring Acceptance Reliability in Coding-Agent CI Repair</h1>
-  <p class="subtitle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 1.1rem; font-weight: 500; color: #444; margin-top: 4px; margin-bottom: 12px; line-height: 1.4;">Five-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios</p>
+  <p class="subtitle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 1.1rem; font-weight: 500; color: #444; margin-top: 4px; margin-bottom: 12px; line-height: 1.4;">Multi-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios</p>
   <p class="author">Anil Yamangil</p>
   <p class="affil">Independent Research &middot; June 2026 &middot; Canonical Technical Report &middot; <a href="index.html" style="color:#888">research suite</a></p>
 
@@ -110,7 +110,7 @@
 
   <div class="abstract">
     <h2>Abstract</h2>
-    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate five model configurations across four model families (Cohere North Mini, Google Gemma 4, Poolside Laguna XS.2, DeepSeek V4 Pro) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors, tool-call distributions, and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
+    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
     <div class="sans" style="font-size:0.75rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, false-green, hidden acceptance, Pass@3, evaluation harness, contract-visible</div>
   </div>
 
@@ -257,12 +257,12 @@
     <div class="fig-headline">Breadth identifies the pattern. Depth measures its stability.</div>
     <svg viewBox="0 0 680 210" role="img" aria-labelledby="fig2-title fig2-desc">
       <title id="fig2-title">Two-stage study design</title>
-      <desc id="fig2-desc">Study A breadth: 5 model configurations, 3 scenario packs, 1 attempt each. Study B depth: 2 deployed systems, 33 scenarios, 2 prompt lanes, 3 independent attempts, 396 planned / 391 retained.</desc>
+      <desc id="fig2-desc">Study A breadth: 4 model configurations, 3 scenario packs, 1 attempt each. Study B depth: 2 deployed systems, 33 scenarios, 2 prompt lanes, 3 independent attempts, 396 planned / 391 retained.</desc>
 
       <!-- Study A panel -->
       <rect x="14" y="12" width="292" height="166" rx="6" fill="#faf5ff" stroke="#e9d5ff"/>
       <text x="160" y="38" font-family="system-ui,sans-serif" font-size="13" fill="#6d28d9" text-anchor="middle" font-weight="700">STUDY A — BREADTH</text>
-      <text x="54" y="66" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">5 model configurations</text>
+      <text x="54" y="66" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">4 model configurations</text>
       <text x="54" y="88" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">3 scenario packs</text>
       <text x="54" y="110" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">Pass@1</text>
       <text x="54" y="132" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">Broader comparison</text>
@@ -292,7 +292,7 @@
 
   <span class="fgl design" style="margin-bottom:12px">CASE SELECTION — REPRESENTATIVE, NOT EXHAUSTIVE</span>
 
-  <p>A false-green is not a random mistake. Each benchmark scenario contains a deliberate "trap": a visible symptom that points toward a locally plausible fix, and a broader authored contract that the fix must also satisfy. The nine cases below represent one scenario from each trap category per pack. The full catalog of 33 scenarios is maintained in the <a href="scenario-catalog.html">scenario catalog</a>.</p>
+  <p>A false-green is not a random mistake. Each benchmark scenario contains a deliberate "trap": a visible symptom that points toward a locally plausible fix, and a broader authored contract that the fix must also satisfy. The nine cases below represent three recurring trap patterns from each pack. The full catalog of 33 scenarios is maintained in the <a href="scenario-catalog.html">scenario catalog</a>.</p>
 
   <h3>5.1 CI Forensics — Debugging Traps</h3>
 
@@ -302,7 +302,7 @@
       <div class="cc-subtitle">Source of truth</div>
       <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">A checked-in generated schema artifact is missing a new field.</div></div>
       <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Edit the generated JSON artifact by hand.</div></div>
-      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Update the source schema definition and regenerate the artifact.</div></div>
+      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Verify the source-of-truth field list, run the schema generator, and commit only the regenerated artifact.</div></div>
       <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Hand-editing generated output fixes today's diff while leaving the build process broken for every future change.</div></div>
     </div>
 
@@ -333,7 +333,7 @@
       <div class="cc-subtitle">Regenerate, don't repaint</div>
       <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">One route is stale in the checked-in OpenAPI specification artifact.</div></div>
       <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Manually edit the visible route entry in the artifact.</div></div>
-      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Update the source route definition and run the OpenAPI generator to produce the artifact.</div></div>
+      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Regenerate <code>generated/openapi.json</code> from the existing route source and leave unrelated generated artifacts unchanged.</div></div>
       <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">The next regeneration silently deletes the manual repair, returning the artifact to a stale state.</div></div>
     </div>
 
@@ -371,10 +371,10 @@
     <div class="case-card">
       <a href="scenario-catalog.html#pw" class="cc-scenario">inventory_reservation_idempotency</a>
       <div class="cc-subtitle">Retries must not consume twice</div>
-      <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">Reservation works correctly for the first request.</div></div>
-      <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Decrement inventory on every handler invocation.</div></div>
-      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Repeating the same reservation request must return the same result without double-consuming inventory.</div></div>
-      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Retries are normal distributed-system behavior, not unusual input. An idempotency gap causes real inventory drift.</div></div>
+      <div class="cc-row"><span class="cc-label visible">Visible failure</span><div class="cc-text">Retrying the same reservation key consumes stock twice.</div></div>
+      <div class="cc-row"><span class="cc-label tempt">Tempting fix</span><div class="cc-text">Cache completed keys and return early on duplicate requests.</div></div>
+      <div class="cc-row"><span class="cc-label contract">Real contract</span><div class="cc-text">Repeated keys return the original result, distinct keys respect available stock, and failed reservations do not mutate inventory.</div></div>
+      <div class="cc-row"><span class="cc-label risk">Why it matters</span><div class="cc-text">Retries are normal distributed-system behavior, not unusual input. Failure atomicity is also part of the contract — fixing the visible retry bug is not enough.</div></div>
     </div>
 
     <div class="case-card">
@@ -393,29 +393,29 @@
 
   <div class="walkthrough">
     <div class="walk-col sparse">
-      <h4>&#x26A0;&#xFE0F; SPARSE PROMPT</h4>
+      <h4>SPARSE PROMPT</h4>
       <div class="walk-step"><strong>Input:</strong> Scenario description + repository code + visible failing test</div>
       <div class="walk-step"><strong>Agent sees:</strong> "Float arithmetic produces wrong value"</div>
-      <div class="walk-step"><strong>Strategy:</strong> Convert variables to <code>Decimal</code> but retain <code>int(total * 100)</code> truncation</div>
+      <div class="walk-step"><strong>Repeated strategy (attempts 1–2):</strong> Convert to <code>Decimal</code> but preserve <code>int(total * 100)</code> truncation</div>
       <div class="walk-step"><strong>Visible tests:</strong> <span style="color:#27ae60;font-weight:600">Pass</span> — the value matches for the test case</div>
-      <div class="walk-outcome fail">&#x1F7E5; HIDDEN: 0 of 3 attempts pass<br><span style="font-size:0.65rem;font-weight:400">Half-cent rounding contract is violated</span></div>
+      <div class="walk-outcome fail">HIDDEN: 0 of 3 attempts pass<br><span style="font-size:0.65rem;font-weight:400">Half-cent rounding contract is violated</span></div>
     </div>
     <div class="walk-col cv">
-      <h4>&#x2705; CONTRACT-VISIBLE PROMPT</h4>
+      <h4>CONTRACT-VISIBLE PROMPT</h4>
       <div class="walk-step"><strong>Input:</strong> Same + expected behavior + success signals + known failure modes</div>
       <div class="walk-step"><strong>Agent sees:</strong> "Implement half-up cent rounding policy including 0.005 boundaries"</div>
-      <div class="walk-step"><strong>Strategy:</strong> Use <code>Decimal</code> with <code>quantize(ROUND_HALF_UP)</code> rounding</div>
+      <div class="walk-step"><strong>Observed result:</strong> All three attempts implemented behavior satisfying the explicit half-up contract</div>
       <div class="walk-step"><strong>Visible tests:</strong> <span style="color:#27ae60;font-weight:600">Pass</span></div>
-      <div class="walk-outcome pass">&#x1f7e9; HIDDEN: 3 of 3 attempts pass<br><span style="font-size:0.65rem;font-weight:400">Financial rounding policy is satisfied</span></div>
+      <div class="walk-outcome pass">HIDDEN: 3 of 3 attempts pass<br><span style="font-size:0.65rem;font-weight:400">Financial rounding policy is satisfied</span></div>
     </div>
   </div>
 
-  <div class="figure" id="fig-contract-mechanism">
-    <div class="fig-caption"><strong>Figure 3:</strong> Laguna XS.2 / OpenRouter on <code>decimal_money_rounding</code>. The model did not become more capable between lanes. The search target became less ambiguous. Sparse mode provides the symptom; contract-visible mode provides the policy.</div>
-  </div>
+  <figure class="figure" id="fig-contract-mechanism">
+    <div class="fig-caption"><strong>Figure 3:</strong> Laguna XS.2 / OpenRouter on <code>decimal_money_rounding</code>. The model identity stayed constant; the information exposed in the prompt changed. Sparse mode provides the symptom; contract-visible mode provides the policy.</div>
+  </figure>
 
-  <h2>6. Study A — Breadth Across Five Deployed Systems</h2>
-  <p>In Stage A, we ran a single-attempt (Pass@1) breadth evaluation testing 5 model configurations across 4 families: Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2, and Google Gemma 4 31B/e4b. Table 2 details the attempt-level false-green rates across packs under sparse and contract-visible prompt lanes.</p>
+  <h2>6. Study A — Breadth Across Four Deployed Systems</h2>
+  <p>In Stage A, we ran a single-attempt (Pass@1) breadth evaluation testing 4 model configurations: Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, and Poolside Laguna XS.2. The Gemma 4 e4b/31B configurations are treated separately in the Supporting Study (Section 13). Table 2 details the attempt-level false-green rates across packs under sparse and contract-visible prompt lanes.</p>
 
   <table>
     <caption>Table 2: Selected Study A configurations with comparable pack coverage</caption>
@@ -664,83 +664,23 @@
   <p>In attempt 2, North Mini failed on <code>env_bool_parser</code> (which it solved in attempt 1) without gaining any new solved scenarios. This shows independent resampling occasionally recovered a failure, occasionally replaced a successful strategy with a failing one, and repeatedly reproduced stable errors.</p>
 
   <h2>11. Effect of Contract Exposure</h2>
-  <p>Contract-visible prompts reduced the attempt-level false-green rate in every matched cell. Figure 5 shows the magnitude and variation: product workflows remained the most difficult pack under both prompt conditions, and the improvement was not uniform across systems or scenario packs.</p>
+  <p>Contract-visible prompts reduced the attempt-level false-green rate in every matched cell. Figure 4 shows the magnitude and variation: product workflows remained the most difficult pack under both prompt conditions, and the improvement was not uniform across systems or scenario packs.</p>
 
   <div class="figure" id="fig-slopegraph">
     <span class="fgl observed">OBSERVED — ATTEMPT-LEVEL FG RATE</span>
     <div class="fig-headline">Every line falls. Product workflows stay hard.</div>
-    <svg viewBox="0 0 680 310" role="img" aria-labelledby="fig3-title fig3-desc">
-      <title id="fig3-title">Contract exposure reduces false-green rate across all cells</title>
-      <desc id="fig3-desc">A slopegraph showing six matched pairs of sparse versus contract-visible false-green rates. All lines fall. Laguna product drops from 72.7% to 6.1%. North Mini product drops from 80.0% to 32.3%.</desc>
-
-      <!-- axes labels -->
-      <text x="140" y="28" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="700">SPARSE</text>
-      <text x="540" y="28" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="700">CONTRACT-VISIBLE</text>
-
-      <!-- faint column markers -->
-      <rect x="60" y="38" width="160" height="250" rx="3" fill="#fafafa" stroke="none"/>
-      <rect x="460" y="38" width="160" height="250" rx="3" fill="#fafafa" stroke="none"/>
-
-      <!-- horizontal grid -->
-      <line x1="52" y1="88" x2="628" y2="88" stroke="#e5e7eb" stroke-width="0.5"/>
-      <text x="44" y="91" font-family="system-ui,sans-serif" font-size="8" fill="#94a3b8" text-anchor="end">0%</text>
-      <line x1="52" y1="128" x2="628" y2="128" stroke="#e5e7eb" stroke-width="0.5"/>
-      <text x="44" y="131" font-family="system-ui,sans-serif" font-size="8" fill="#94a3b8" text-anchor="end">20%</text>
-      <line x1="52" y1="168" x2="628" y2="168" stroke="#e5e7eb" stroke-width="0.5"/>
-      <text x="44" y="171" font-family="system-ui,sans-serif" font-size="8" fill="#94a3b8" text-anchor="end">40%</text>
-      <line x1="52" y1="208" x2="628" y2="208" stroke="#e5e7eb" stroke-width="0.5"/>
-      <text x="44" y="211" font-family="system-ui,sans-serif" font-size="8" fill="#94a3b8" text-anchor="end">60%</text>
-      <line x1="52" y1="248" x2="628" y2="248" stroke="#e5e7eb" stroke-width="0.5"/>
-      <text x="44" y="251" font-family="system-ui,sans-serif" font-size="8" fill="#94a3b8" text-anchor="end">80%</text>
-
-      <!-- product workflows band -->
-      <rect x="56" y="216" width="568" height="72" rx="3" fill="#fff7ed" fill-opacity="0.5" stroke="none"/>
-
-      <!-- Laguna lines (blue) -->
-      <!-- CI: 27.8 -> 5.6 -->
-      <line x1="80" y1="194.4" x2="480" y2="116.8" stroke="#2563eb" stroke-width="2"/>
-      <circle cx="80" cy="194.4" r="4" fill="#2563eb"/><circle cx="480" cy="116.8" r="4" fill="#2563eb"/>
-      <text x="74" y="199" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">27.8%</text>
-      <text x="486" y="112" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">5.6%</text>
-
-      <!-- Maintenance: 26.7 -> 0.0 -->
-      <line x1="80" y1="191.6" x2="480" y2="90" stroke="#2563eb" stroke-width="2"/>
-      <circle cx="80" cy="191.6" r="4" fill="#2563eb"/><circle cx="480" cy="90" r="4" fill="#2563eb"/>
-      <text x="74" y="188" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">26.7%</text>
-      <text x="486" y="85" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">0.0%</text>
-
-      <!-- Product: 72.7 -> 6.1 -->
-      <line x1="80" y1="233.6" x2="480" y2="112.2" stroke="#2563eb" stroke-width="2" stroke-dasharray="6,3"/>
-      <circle cx="80" cy="233.6" r="4" fill="#2563eb"/><circle cx="480" cy="112.2" r="4" fill="#2563eb"/>
-      <text x="74" y="238" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">72.7%</text>
-      <text x="486" y="107" font-family="system-ui,sans-serif" font-size="8" fill="#2563eb" font-weight="600">6.1%</text>
-
-      <!-- North Mini lines (amber/rose) -->
-      <!-- CI: 30.6 -> 5.6 -->
-      <line x1="80" y1="179.2" x2="480" y2="116.8" stroke="#c0392b" stroke-width="2"/>
-      <circle cx="80" cy="179.2" r="4" fill="#c0392b"/><circle cx="480" cy="116.8" r="4" fill="#c0392b"/>
-      <text x="74" y="175" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">30.6%</text>
-      <text x="486" y="122" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">5.6%</text>
-
-      <!-- Maintenance: 24.1 -> 4.0 -->
-      <line x1="80" y1="152.2" x2="480" y2="98" stroke="#c0392b" stroke-width="2"/>
-      <circle cx="80" cy="152.2" r="4" fill="#c0392b"/><circle cx="480" cy="98" r="4" fill="#c0392b"/>
-      <text x="74" y="148" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">24.1%</text>
-      <text x="486" y="93" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">4.0%</text>
-
-      <!-- Product: 80.0 -> 32.3 -->
-      <line x1="80" y1="248" x2="480" y2="154.6" stroke="#c0392b" stroke-width="2" stroke-dasharray="6,3"/>
-      <circle cx="80" cy="248" r="4" fill="#c0392b"/><circle cx="480" cy="154.6" r="4" fill="#c0392b"/>
-      <text x="74" y="253" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">80.0%</text>
-      <text x="486" y="151" font-family="system-ui,sans-serif" font-size="8" fill="#c0392b" font-weight="600">32.3%</text>
-
-      <!-- legend -->
-      <text x="170" y="290" font-family="system-ui,sans-serif" font-size="9" fill="#2563eb" font-weight="600">Laguna XS.2</text>
-      <text x="300" y="290" font-family="system-ui,sans-serif" font-size="9" fill="#c0392b" font-weight="600">North Mini</text>
-      <line x1="360" y1="287" x2="390" y2="287" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,2"/>
-      <text x="395" y="290" font-family="system-ui,sans-serif" font-size="9" fill="#64748b">product_workflows</text>
-    </svg>
-    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates under sparse and contract-visible prompts. Solid lines represent <code>ci_forensics</code> and <code>maintenance_value</code>. Dashed lines represent <code>product_workflows</code>. All six matched cells improved; product workflows remained the most difficult pack.</div>
+    <table style="max-width:620px;font-size:0.82rem">
+      <thead><tr><th></th><th class="num">Sparse FG Rate</th><th></th><th class="num">Contract-Visible FG Rate</th><th class="num">Change</th></tr></thead>
+      <tbody>
+        <tr><td style="color:#2563eb;font-weight:600">Laguna XS.2 · CI</td><td class="num fg">27.8%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">5.6%</td><td class="num hp">−22.2pp</td></tr>
+        <tr><td style="color:#2563eb;font-weight:600">Laguna XS.2 · Maintenance</td><td class="num fg">26.7%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">0.0%</td><td class="num hp">−26.7pp</td></tr>
+        <tr style="border-bottom:2px solid #fde68a"><td style="color:#2563eb;font-weight:600;font-style:italic">Laguna XS.2 · Product</td><td class="num fg">72.7%</td><td style="text-align:center;color:#94a3b8">●────────●</td><td class="num fg">6.1%</td><td class="num hp">−66.6pp</td></tr>
+        <tr><td style="color:#c0392b;font-weight:600">North Mini · CI</td><td class="num fg">30.6%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">5.6%</td><td class="num hp">−25.0pp</td></tr>
+        <tr><td style="color:#c0392b;font-weight:600">North Mini · Maintenance <sup>&dagger;</sup></td><td class="num fg">24.1%</td><td style="text-align:center;color:#94a3b8">●─────●</td><td class="num hp">4.0%</td><td class="num hp">−20.1pp</td></tr>
+        <tr style="border-top:2px solid #fde68a"><td style="color:#c0392b;font-weight:600;font-style:italic">North Mini · Product</td><td class="num fg">80.0%</td><td style="text-align:center;color:#94a3b8">●─────────●</td><td class="num fg">32.3%</td><td class="num fg">−47.7pp</td></tr>
+      </tbody>
+    </table>
+    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates under sparse and contract-visible prompts. Solid rows represent <code>ci_forensics</code> and <code>maintenance_value</code>. Separated rows represent <code>product_workflows</code>. The proportional reduction in false-greens is large, but product workflows remain meaningfully above zero for North Mini. <sup>&dagger;</sup> North Mini maintenance CV retained 25/30 attempts; missing quota-interrupted runs may bias the rate.</div>
   </div>
 
   <h2>12. Failure Case Analysis</h2>
@@ -754,7 +694,7 @@
 
   <p><strong>Operational reliability</strong> describes whether the deployed system — model, prompt, runtime, timeout policy, and tools — starts, reasons, edits code, and reaches a testable patch within the configured constraints. <strong>Acceptance reliability</strong> describes whether a public-green patch satisfies the broader authored contract beyond the visible tests. A system may fail either surface, or both.</p>
 
-  <h3>12.1 Gemma 4 e4b vs 31B — Same Acceptance Traps, Different Operational Reliability</h3>
+  <h3>13.1 Gemma 4 e4b vs 31B — Same Acceptance Traps, Different Operational Reliability</h3>
 
   <p>In a matched Pass@1 maintenance experiment (<code>local-gemma4-two-model</code>) using sparse prompts on ten scenarios, the larger configuration reached public green more consistently: 10/10 attempts, compared with 8/10 for e4b. We treat this as an operational-reachability signal, not as evidence that the two public-red e4b attempts shared one specific cause. Greater reachability did not eliminate acceptance failures.</p>
 
@@ -771,7 +711,7 @@
 
   <p>Both configurations produced three false-greens among their public-green patches. The same two scenarios — <code>adapter_field_rename</code> and <code>batch_splitter_utility</code> — attracted incomplete fixes across both model sizes and also appeared as stable false-greens in the North Mini sparse lane. Once the agent entered a locally plausible implementation path, model scale alone did not guarantee that the broader authored contract would be recovered.</p>
 
-  <h3>12.2 Gemma 4 12B — Contract Exposure Across Three Packs</h3>
+  <h3>13.2 Gemma 4 12B — Contract Exposure Across Three Packs</h3>
 
   <p>A second controlled matrix (<code>north-mini-vs-gemma4-12b</code>) compared sparse and contract-visible prompts across three scenario packs for Gemma 4 12B, matched to the same packs used in the main Study B: <code>ci_forensics</code> (12 scenarios), <code>maintenance_value</code> (10 scenarios), and <code>product_workflows</code> (11 scenarios).</p>
 
@@ -794,7 +734,7 @@
 
   <p>A parallel observation involves operational reliability. In a separately configured Gemma e4b contract-visible batch (<code>local-gemma4-smallest-two</code>), all ten attempts produced no public pass and averaged 120 seconds — matching the configured first-output timeout boundary. A second 12B contract-visible batch in the same matrix averaged 240 seconds with no public passes. These runs do not isolate whether the cause was model capacity, prompt length, runtime behavior, local resource pressure, or first-output latency. They illustrate why richer semantic guidance and operational reliability must be measured separately: adding useful contract information to the prompt is only effective when the deployed system can process it within its runtime envelope.</p>
 
-  <h3>12.3 Two Failure Surfaces</h3>
+  <h3>13.3 Two Failure Surfaces</h3>
 
   <p>The Gemma evidence supports a narrower but analytically useful claim. The evaluated object in a coding-agent pipeline is not just the model. It is the model plus the prompt, gateway, runtime configuration, timeout policy, tool environment, visible tests, repository context, and acceptance gate. Some deployments produce public-green patches that follow the wrong implementation strategy. Others fail before reaching public green — because of runtime limits, provider behavior, unsuccessful patches, or causes that the current result schema does not fully distinguish. These failures occur at different stages of the pipeline and should not be collapsed into one correctness score.</p>
 
@@ -802,47 +742,75 @@
 
   <div class="figure" id="fig-two-surfaces">
     <span class="fgl frame">ANALYTIC FRAME</span>
-    <div class="fig-headline">One score cannot tell us where the system failed.</div>
-    <svg viewBox="0 0 680 260" role="img" aria-labelledby="fig5-title fig5-desc">
-      <title id="fig5-title">Two failure surfaces matrix</title>
-      <desc id="fig5-desc">A 2x2 matrix showing four outcomes from public/hidden test combinations and their relationship to operational reachability and acceptance reliability.</desc>
+    <div class="fig-headline">Reliability is staged. A system must reach a viable patch before it can survive acceptance.</div>
+    <svg viewBox="0 0 640 290" role="img" aria-labelledby="fig5-title fig5-desc">
+      <title id="fig5-title">Staged pipeline: from operational reachability to acceptance</title>
+      <desc id="fig5-desc">A staged decision diagram showing the two evaluation gates: operational reachability (did the system produce a testable patch?) and acceptance reliability (does the patch satisfy hidden contracts?).</desc>
 
-      <!-- column headers -->
-      <text x="200" y="38" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="700">Hidden acceptance fails</text>
-      <text x="490" y="38" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle" font-weight="700">Hidden acceptance passes</text>
+      <!-- Gate 1 -->
+      <rect x="135" y="12" width="370" height="40" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="320" y="36" font-family="system-ui,sans-serif" font-size="11" fill="#334155" text-anchor="middle" font-weight="600">Gate 1: Did the system produce a testable patch?</text>
 
-      <!-- row 1: public green reached -->
-      <rect x="40" y="50" width="320" height="58" rx="4" fill="#fef2f2" stroke="#fecaca"/>
-      <rect x="360" y="50" width="280" height="58" rx="4" fill="#f0fdf4" stroke="#bbf7d0"/>
-      <text x="200" y="74" font-family="system-ui,sans-serif" font-size="13" fill="#c0392b" text-anchor="middle" font-weight="700">False-green</text>
-      <text x="200" y="94" font-family="system-ui,sans-serif" font-size="9" fill="#c0392b" text-anchor="middle">viable patch, incomplete contract</text>
-      <text x="500" y="74" font-family="system-ui,sans-serif" font-size="13" fill="#27ae60" text-anchor="middle" font-weight="700">Accepted patch</text>
-      <text x="500" y="94" font-family="system-ui,sans-serif" font-size="9" fill="#27ae60" text-anchor="middle">public and hidden pass</text>
+      <line x1="320" y1="52" x2="320" y2="64" stroke="#94a3b8" stroke-width="1.5"/>
 
-      <!-- row label -->
-      <text x="22" y="88" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="700" transform="rotate(-90,22,88)">Public green reached</text>
+      <!-- No branch -->
+      <text x="180" y="62" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">No</text>
+      <line x1="320" y1="64" x2="135" y2="64" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="135" y1="64" x2="135" y2="78" stroke="#94a3b8" stroke-width="1.5"/>
 
-      <!-- row 2: public green not reached -->
-      <rect x="40" y="116" width="320" height="58" rx="4" fill="#fefce8" stroke="#fde68a"/>
-      <rect x="360" y="116" width="280" height="58" rx="4" fill="#f8fafc" stroke="#e2e8f0"/>
-      <text x="200" y="140" font-family="system-ui,sans-serif" font-size="13" fill="#856404" text-anchor="middle" font-weight="700">Pre-acceptance failure</text>
-      <text x="200" y="160" font-family="system-ui,sans-serif" font-size="9" fill="#856404" text-anchor="middle">cause not distinguished: timeout, bad patch, provider</text>
-      <text x="500" y="140" font-family="system-ui,sans-serif" font-size="13" fill="#64748b" text-anchor="middle" font-weight="700">Inconsistent evidence</text>
-      <text x="500" y="160" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" text-anchor="middle">investigate harness / result state</text>
+      <rect x="55" y="80" width="160" height="44" rx="5" fill="#fefce8" stroke="#fde68a"/>
+      <text x="135" y="100" font-family="system-ui,sans-serif" font-size="11" fill="#856404" text-anchor="middle" font-weight="700">OPERATIONAL FAILURE</text>
+      <text x="135" y="116" font-family="system-ui,sans-serif" font-size="8" fill="#856404" text-anchor="middle">timeout · provider · no usable patch</text>
 
-      <!-- row label -->
-      <text x="22" y="154" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="700" transform="rotate(-90,22,154)">Public green not reached</text>
+      <!-- Yes branch -->
+      <text x="480" y="62" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">Yes</text>
+      <line x1="320" y1="64" x2="505" y2="64" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="505" y1="64" x2="505" y2="110" stroke="#94a3b8" stroke-width="1.5"/>
 
-      <!-- braces -->
-      <!-- operational reachability brace: public-red row -->
-      <path d="M24,192 L24,198 Q24,204 30,204 L320,204" stroke="#64748b" stroke-width="1.5" fill="none"/>
-      <text x="172" y="220" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="600">Operational reachability</text>
+      <!-- Gate 2 -->
+      <rect x="240" y="112" width="370" height="40" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="425" y="136" font-family="system-ui,sans-serif" font-size="11" fill="#334155" text-anchor="middle" font-weight="600">Gate 2: Do visible tests pass?</text>
 
-      <!-- acceptance reliability brace: false-green column -->
-      <path d="M360,30 L360,24 Q360,18 366,18 L680,18" stroke="#64748b" stroke-width="1.5" fill="none"/>
-      <text x="520" y="238" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" text-anchor="middle" font-weight="600">Acceptance reliability</text>
+      <line x1="425" y1="152" x2="425" y2="164" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <!-- No branch -->
+      <text x="280" y="162" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">No</text>
+      <line x1="425" y1="164" x2="240" y2="164" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="240" y1="164" x2="240" y2="178" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <rect x="55" y="180" width="160" height="38" rx="5" fill="#f8fafc" stroke="#e2e8f0"/>
+      <text x="135" y="198" font-family="system-ui,sans-serif" font-size="11" fill="#475569" text-anchor="middle" font-weight="700">PUBLIC-RED PATCH</text>
+      <text x="135" y="212" font-family="system-ui,sans-serif" font-size="8" fill="#64748b" text-anchor="middle">completed, wrong solution</text>
+
+      <!-- Yes branch -->
+      <text x="585" y="162" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">Yes</text>
+      <line x1="425" y1="164" x2="610" y2="164" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="610" y1="164" x2="610" y2="200" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <!-- Gate 3 -->
+      <rect x="370" y="202" width="240" height="40" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="490" y="226" font-family="system-ui,sans-serif" font-size="11" fill="#334155" text-anchor="middle" font-weight="600">Hidden acceptance?</text>
+
+      <line x1="490" y1="242" x2="490" y2="252" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <!-- Fail -->
+      <text x="410" y="250" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">Fail</text>
+      <line x1="490" y1="252" x2="380" y2="252" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="380" y1="252" x2="380" y2="264" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <rect x="55" y="266" width="160" height="32" rx="5" fill="#fef2f2" stroke="#fecaca"/>
+      <text x="135" y="286" font-family="system-ui,sans-serif" font-size="11" fill="#c0392b" text-anchor="middle" font-weight="700">FALSE-GREEN</text>
+      <text x="135" y="294" font-family="system-ui,sans-serif" font-size="7" fill="#c0392b" text-anchor="middle">viable, incomplete</text>
+
+      <!-- Pass -->
+      <text x="580" y="250" font-family="system-ui,sans-serif" font-size="9" fill="#64748b" font-weight="600">Pass</text>
+      <line x1="490" y1="252" x2="600" y2="252" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="600" y1="252" x2="600" y2="264" stroke="#94a3b8" stroke-width="1.5"/>
+
+      <rect x="400" y="266" width="240" height="32" rx="5" fill="#f0fdf4" stroke="#bbf7d0"/>
+      <text x="520" y="286" font-family="system-ui,sans-serif" font-size="11" fill="#27ae60" text-anchor="middle" font-weight="700">ACCEPTED</text>
     </svg>
-    <div class="fig-caption"><strong>Figure 5:</strong> A single aggregate score cannot show whether a deployment fails before reaching a testable patch or after producing a plausible wrong one. Both dimensions must be audited independently.</div>
+    <div class="fig-caption"><strong>Figure 5:</strong> Coding-agent reliability has at least two evaluation gates. Operational reachability determines whether a testable patch is produced at all. Acceptance reliability determines whether that patch satisfies the broader contract. A public-red patch (completed but wrong) and an operational timeout are distinct failure modes.</div>
   </div>
 
   <h2>14. From Classification to Executable Diagnosis</h2>

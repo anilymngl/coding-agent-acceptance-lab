@@ -971,14 +971,19 @@
   <p>The practical unit of evaluation is not the model. It is the deployed system, the information it receives, the acceptance boundary it must cross, and the evidence preserved when it fails. Measuring acceptance reliability requires measuring all four.</p>
 
   <h2>17. Data and Reproduction Manifest</h2>
-  <p>The public reproduction files are structured in the research suite. They contain derived publication summaries and scenario-level cell data:</p>
+  <p>The public reproduction files are structured in the research suite and the versioned data release. The release data contains sanitized attempt-level records, derived cells, source provenance, and checksums:</p>
   <ul>
+    <li>Study B SQLite: <a href="../data/releases/v1/study-b.sqlite"><code>data/releases/v1/study-b.sqlite</code></a></li>
+    <li>Study B attempts CSV: <a href="../data/releases/v1/exports/study-b-attempts.csv"><code>data/releases/v1/exports/study-b-attempts.csv</code></a></li>
+    <li>Study B cells CSV: <a href="../data/releases/v1/exports/study-b-cells.csv"><code>data/releases/v1/exports/study-b-cells.csv</code></a></li>
+    <li>Release provenance: <a href="../data/releases/v1/provenance.json"><code>data/releases/v1/provenance.json</code></a></li>
+    <li>Release checksums: <a href="../data/releases/v1/checksums.sha256"><code>data/releases/v1/checksums.sha256</code></a></li>
     <li>Source manifest: <a href="data/source-manifest.json"><code>publishables/data/source-manifest.json</code></a></li>
     <li>Study A summary: <a href="data/study-a-summary.json"><code>publishables/data/study-a-summary.json</code></a></li>
     <li>Study B cells: <a href="data/study-b-cells.json"><code>publishables/data/study-b-cells.json</code></a></li>
     <li>Study B summary: <a href="data/study-b-summary.json"><code>publishables/data/study-b-summary.json</code></a></li>
   </ul>
-  <p>The public repository at <a href="https://github.com/anilymngl/north-mini-test">github.com/anilymngl/north-mini-test</a> contains the harness code, authored scenario contracts, generated publication pages, and derived JSON summaries. Raw model streams, generated worktrees, and local SQLite run databases were audited locally but are not part of the public artifact.</p>
+  <p>Published metrics can be recomputed with <code>uv run python scripts/verify_release_data.py</code>. Study A, Study B, evaluator reviews, and supporting Gemma evidence are separated in the release data. Raw provider streams, generated worktrees, and mutable local operational databases remain excluded; source database hashes are recorded in release provenance.</p>
 
 </div>
 </body>

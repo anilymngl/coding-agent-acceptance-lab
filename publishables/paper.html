@@ -153,7 +153,7 @@
 
   <div class="abstract">
     <h2>Abstract</h2>
-    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
+    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini Code, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
     <div class="sans" style="font-size:0.75rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, false-green, hidden acceptance, Pass@3, evaluation harness, contract-visible</div>
   </div>
 
@@ -321,7 +321,7 @@
       <text x="54" y="88" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">3 scenario packs</text>
       <text x="54" y="110" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">Pass@1</text>
       <text x="54" y="132" font-family="system-ui,sans-serif" font-size="11" fill="#475569" font-weight="600">Broader comparison</text>
-      <text x="54" y="166" font-family="system-ui,sans-serif" font-size="9" fill="#6d28d9">cohere · gemma4 · deepseek · laguna</text>
+      <text x="54" y="166" font-family="system-ui,sans-serif" font-size="9" fill="#6d28d9">north-mini · gemma4 · deepseek · laguna</text>
 
       <!-- connecting arrow -->
       <text x="340" y="62" font-family="system-ui,sans-serif" font-size="9" fill="#94a3b8" text-anchor="middle">Which systems</text>
@@ -471,7 +471,7 @@
   </figure>
 
   <h2>6. Study A — Breadth Across Four Deployed Systems</h2>
-  <p>In Stage A, we ran a single-attempt (Pass@1) breadth evaluation testing 4 model configurations: Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, and Poolside Laguna XS.2. The Gemma 4 e4b/31B configurations are treated separately in the Supporting Study (Section 13). Table 2 details the attempt-level false-green rates across packs under sparse and contract-visible prompt lanes.</p>
+  <p>In Stage A, we ran a single-attempt (Pass@1) breadth evaluation testing 4 model configurations: Cohere North Mini Code, Google Gemma 4 12B, DeepSeek V4 Pro, and Poolside Laguna XS.2. The Gemma 4 e4b/31B configurations are treated separately in the Supporting Study (Section 13). Table 2 details the attempt-level false-green rates across packs under sparse and contract-visible prompt lanes.</p>
 
   <table>
     <caption>Table 2: Selected Study A configurations with comparable pack coverage</caption>

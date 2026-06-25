@@ -305,19 +305,16 @@
   <p>Laguna leads by 3 hidden passes overall (54/66 vs 51/66 best-of-3), with the entire gap in product_workflows (4 vs 2 on sparse, 11 vs 10 on cv). The models are indistinguishable on ci_forensics and maintenance_value. The practical implication: partition CI repair by task type, not by model. Mechanical and refactoring work can be delegated with clear specs. Business logic needs explicit acceptance criteria and hidden-test gates. The model is replaceable. The trust gate is not.</p>
 
   <h2>References</h2>
-  <p class="ref">[1] Yamangil, A. (2026). Challenge Design Philosophy. <code>docs/challenge-design.md</code> in <code>anomalyco/north-mini-test</code>.</p>
-  <p class="ref">[2] Yamangil, A. (2026). CI Vibe Lab Runner. <code>ci_vibe_lab/runner.py</code> in <code>anomalyco/north-mini-test</code>.</p>
-  <p class="ref">[3] Yamangil, A. (2026). Matrix Outcome Classification. <code>ci_vibe_lab/matrix.py</code>, function <code>classify_row()</code>.</p>
-  <p class="ref">[4] Yamangil, A. (2026). Evaluator Agent with Shadow Fix Verification. <code>ci_vibe_lab/evaluator.py</code> in <code>anomalyco/north-mini-test</code>.</p>
-  <p class="ref">[5] Jimenez, C. E. et al. (2024). SWE-bench: Can Language Models Resolve Real-World GitHub Issues? <em>ICLR 2024</em>.</p>
-  <p class="ref">[6] Terminal-Bench 2.0. <a href="https://www.tbench.ai/">tbench.ai</a>.</p>
+  <p class="ref">[1] Yamangil, A. (2026). CI Vibe Lab Runner. <code>ci_vibe_lab/runner.py</code> in <code>anilymngl/north-mini-test</code>.</p>
+  <p class="ref">[2] Yamangil, A. (2026). Matrix Runner. <code>ci_vibe_lab/matrix.py</code> in <code>anilymngl/north-mini-test</code>.</p>
+  <p class="ref">[3] Yamangil, A. (2026). The Trust Gap: Measuring Acceptance Reliability in Coding-Agent CI Repair (v1, pass@1, 5 models). <code>presentation/paper.html</code> in <code>anilymngl/north-mini-test</code>. <a href="paper.html">[html]</a></p>
 
   <div class="fn">
-    <strong>Data availability:</strong> All run databases, artifacts, evaluator reviews, and harness source code are available at <a href="https://github.com/anomalyco/north-mini-test">github.com/anomalyco/north-mini-test</a>. Matrix configs are in <code>configs/matrix/</code>. Reports are in <code>reports/</code>.
+    <strong>Data availability:</strong> All run databases, artifacts, and harness source code are available at <a href="https://github.com/anilymngl/north-mini-test">github.com/anilymngl/north-mini-test</a>. The laguna-xs2-vs-north-mini matrix is at <code>data/matrix/laguna-xs2-vs-north-mini-2026-06-22/</code>. The leaderboard report is at <code>reports/laguna-xs2-vs-north-mini-leaderboard.md</code>.
   </div>
 
   <div class="fn">
-    <strong>Model disclosures:</strong> North Mini Code (Cohere, Apache 2.0). Gemma 4 (Google, various licenses). DeepSeek V4 Pro (DeepSeek, proprietary). Laguna XS.2 (Poolside, Apache 2.0). All models accessed through free tiers or standard APIs. No fine-tuning was performed.
+    <strong>Model disclosures:</strong> North Mini Code (Cohere, Apache 2.0). Laguna XS.2 (Poolside, Apache 2.0). Both accessed through free API tiers. No fine-tuning was performed. Evaluator: DeepSeek V4 Pro (DeepSeek, proprietary), hosted API.
   </div>
 
 </div>

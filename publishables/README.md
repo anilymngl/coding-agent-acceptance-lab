@@ -4,11 +4,13 @@ Self-contained HTML research exhibit. No build step. No CDN dependencies (Georgi
 
 ## What's here
 
-| File | What it is |
+| File/Dir | What it is |
 |---|---|
 | `index.html` | Entry point. Thesis, findings, signposts to everything. |
-| `paper_v2.html` | Research paper. Pass@3 head-to-head: Laguna XS.2 vs North Mini on 33 CI-repair scenarios. |
-| `paper.html` | Prior paper (v1). Pass@1 across 5 models, 4 families. Original trust gap finding. |
+| `paper.html` | Canonical two-stage report. Pass@1 breadth and Pass@3 depth studies. |
+| `paper_v2.html` | Compatibility redirect to `paper.html`. |
+| `archive/` | Superseded historical snapshots retained for provenance. |
+| `data/` | Machine-readable publication snapshot (JSON). |
 | `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all 10 components with I/O, 6 gaps named, 5 targets. |
 | `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
 | `evidence-index.html` | 132-row matrix. Every scenario × model × prompt mode as a cell. Filterable by pack, lane, outcome. |

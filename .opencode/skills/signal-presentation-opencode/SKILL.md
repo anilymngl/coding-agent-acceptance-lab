@@ -84,7 +84,7 @@ Sometimes you need 6 interconnected pages with a shared nav bar, not a single de
 
 ### Example 2: System Inventory
 
-**File:** `publishables/harness-built-target.html`
+**File:** `examples/north-mini-test/harness-built-target.html`
 **Purpose:** Document what exists and what's missing
 **Structure:**
 - Pipeline flow diagram (left-to-right blocks with arrows)
@@ -108,7 +108,7 @@ Sometimes you need 6 interconnected pages with a shared nav bar, not a single de
 
 ### Example 4: Evaluator Findings
 
-**File:** `publishables/evaluator-findings.html`
+**File:** `examples/north-mini-test/evaluator-findings.html`
 **Purpose:** Reviewed false-greens with root causes
 **Structure:**
 - Glossary (what is a false-green, how reviews work)

@@ -262,7 +262,7 @@
   <h2>5. Limitations</h2>
   <p style="padding-left: 20px; text-indent: -20px;">1. <strong>Pass@1 is noisy.</strong> Gemma 12B's maintenance hidden pass swung from 4/10 to 7/10 across two same-day runs. Single-attempt numbers describe an attempt, not a model. Pass@3 minimum is needed for defensible claims.</p>
   <p style="padding-left: 20px; text-indent: -20px;">2. <strong>System comparison, not model ranking.</strong> North Mini runs on its native tool surface. Gemma runs through a foreign agent loop on local Ollama. Speed asymmetry (17s vs 211s) confounds raw capability. We measure system behavior, not abstract model quality.</p>
-  <p style="padding-left: 20px; text-indent: -20px;">3. <strong>33 scenarios. One harness. No external audit.</strong> The hidden tests and evaluator verdicts are authored by the same team. Tier 1 evidence — behavior microscope only. Tier 2 (comparative claims) needs evaluator agreement. Tier 3 (public benchmark) needs external audit.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">3. <strong>33 scenarios. One evaluator. No external audit.</strong> The hidden tests and evaluator verdicts are authored by the same team. Tier 1 evidence — behavior microscope only. Tier 2 (comparative claims) needs evaluator agreement. Tier 3 (public benchmark) needs external audit.</p>
   <p style="padding-left: 20px; text-indent: -20px;">4. <strong>Incomplete matrix.</strong> Four cells complete (ci_forensics sparse + cv for both models, 144 runs). Maintenance and product_workflows cells still running. DeepSeek product_workflows sparse is from a prior control run. Conclusions strengthen with more data.</p>
 
   <h2>6. Related Work</h2>
@@ -270,7 +270,7 @@
 
   <h2>7. Conclusion</h2>
   <p>The trust gap is real, structural, and cross-model. When a coding agent makes CI green, there is a 20–62% chance the bug is not actually fixed, depending on task type and prompt specificity. The gap persists across five models from four families. It collapses to 0–14% with explicit acceptance criteria on mechanical tasks but remains at 9–33% on business-logic tasks even for frontier models.</p>
-  <p style="margin-top: 10px;">The practical implication is clear: partition your CI repair by task type, not by model. Mechanical work can be delegated with clear specs. Business logic needs hidden acceptance gates. The model is replaceable. The trust gate is not.</p>
+  <p>The practical implication is clear: partition your CI repair by task type, not by model. Mechanical work can be delegated with clear specs. Business logic needs hidden acceptance gates. The model is replaceable. The trust gate is not.</p>
 
   <h2>References</h2>
   <p class="ref">[1] Yamangil, A. (2026). Challenge Design Philosophy. <code>docs/challenge-design.md</code> in <code>anomalyco/north-mini-test</code>.</p>

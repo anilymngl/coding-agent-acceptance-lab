@@ -1,0 +1,40 @@
+{
+  "ci_forensics": {
+    "sparse": {
+      "north-mini": { "public": 12, "hidden": 8, "false_green": 4 },
+      "gemma4-12b": { "public": 5, "hidden": 3, "false_green": 2 },
+      "deepseek-v4-pro": { "public": 12, "hidden": 9, "false_green": 3 },
+      "laguna-xs2": { "public": 12, "hidden": 8, "false_green": 4 }
+    },
+    "cv": {
+      "north-mini": { "public": 12, "hidden": 11, "false_green": 1 },
+      "gemma4-12b": { "public": 7, "hidden": 6, "false_green": 1 },
+      "deepseek-v4-pro": { "public": 12, "hidden": 12, "false_green": 0 },
+      "laguna-xs2": { "public": 12, "hidden": 12, "false_green": 0 }
+    }
+  },
+  "maintenance_value": {
+    "sparse": {
+      "north-mini": { "public": 10, "hidden": 8, "false_green": 2 },
+      "gemma4-12b": { "public": 9, "hidden": 7, "false_green": 2 },
+      "deepseek-v4-pro": { "public": 10, "hidden": 7, "false_green": 3 }
+    },
+    "cv": {
+      "north-mini": { "public": 9, "hidden": 9, "false_green": 0 },
+      "gemma4-12b": { "public": 7, "hidden": 6, "false_green": 1 },
+      "deepseek-v4-pro": { "public": 10, "hidden": 10, "false_green": 0 }
+    }
+  },
+  "product_workflows": {
+    "sparse": {
+      "north-mini": { "public": 9, "hidden": 1, "false_green": 8 },
+      "gemma4-12b": { "public": 6, "hidden": 2, "false_green": 4 },
+      "deepseek-v4-pro": { "public": 11, "hidden": 3, "false_green": 8 }
+    },
+    "cv": {
+      "north-mini": { "public": 9, "hidden": 6, "false_green": 3 },
+      "gemma4-12b": { "public": 8, "hidden": 7, "false_green": 1 },
+      "deepseek-v4-pro": { "public": 11, "hidden": 10, "false_green": 1 }
+    }
+  }
+}

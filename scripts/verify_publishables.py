@@ -90,16 +90,12 @@ def verify_dataset_integrity():
         h = cell["h"]
         fg = cell["fg"]
         
-        if not (0 <= h <= r):
-            print(f"Error at index {i}: h ({h}) must be between 0 and r ({r})")
+        if not (0 <= h <= p <= r <= 3):
+            print(f"Error at index {i}: bounds failed. Expected 0 <= h ({h}) <= p ({p}) <= r ({r}) <= 3")
             sys.exit(1)
             
-        if not (0 <= fg <= r):
-            print(f"Error at index {i}: fg ({fg}) must be between 0 and r ({r})")
-            sys.exit(1)
-            
-        if h + fg > r:
-            print(f"Error at index {i}: h + fg ({h + fg}) exceeds retained attempts r ({r})")
+        if fg != p - h:
+            print(f"Error at index {i}: fg ({fg}) must equal p ({p}) - h ({h})")
             sys.exit(1)
             
         total_retained += r
@@ -123,6 +119,10 @@ def verify_dataset_integrity():
                 if cell["gw"] != "zen":
                     print(f"Error: North Mini non-product cell {key} must have gw='zen'")
                     sys.exit(1)
+        elif cell["model"] == "laguna-xs2":
+            if cell["gw"] != "or":
+                print(f"Error: Laguna cell {key} must have gw='or'")
+                sys.exit(1)
                     
     # Validate sums
     if total_retained != 391:
@@ -218,7 +218,7 @@ def verify_metric_integrity(cells):
                 
     print("Metric integrity verified successfully!")
 
-def verify_html_integrity():
+def verify_html_integrity(cells):
     print("--- Verifying HTML and Hyperlinks ---")
     html_files = [
         "index.html",
@@ -271,14 +271,59 @@ def verify_html_integrity():
             
     print("HTML data-metrics checked and match expected totals.")
 
+    # Validate embedded evidence dataset
+    with open(os.path.join(PUBLISHABLES_DIR, "evidence-index.html"), "r", encoding="utf-8") as f:
+        ev_content = f.read()
+        
+    data_match = re.search(r'const data = \[\s*(.*?)\s*\];', ev_content, re.DOTALL)
+    if not data_match:
+        print("Error: Could not find embedded data block in evidence-index.html")
+        sys.exit(1)
+        
+    rows_text = data_match.group(1)
+    embedded_rows = []
+    for row_match in re.finditer(r'\{([^\}]+)\}', rows_text):
+        fields_str = row_match.group(1)
+        row_dict = {}
+        for field in re.finditer(r'(\w+):(?:"([^"]*)"|(\d+))', fields_str):
+            k = field.group(1)
+            val_str = field.group(2)
+            val_num = field.group(3)
+            if val_str is not None:
+                row_dict[k] = val_str
+            else:
+                row_dict[k] = int(val_num)
+        embedded_rows.append(row_dict)
+        
+    if len(embedded_rows) != len(cells):
+        print(f"Error: evidence-index.html has {len(embedded_rows)} embedded rows, but study-b-cells.json has {len(cells)}")
+        sys.exit(1)
+        
+    def row_key(r):
+        return (r["sc"], r["pack"], r["lane"], r["model"])
+        
+    embedded_sorted = sorted(embedded_rows, key=row_key)
+    canonical_sorted = sorted(cells, key=row_key)
+    
+    for idx, (emb, can) in enumerate(zip(embedded_sorted, canonical_sorted)):
+        for k in ["sc", "pack", "lane", "model", "gw", "r", "p", "h", "fg", "verdict"]:
+            if emb.get(k) != can.get(k):
+                print(f"Error: Mismatch at sorted row {idx} for field '{k}': embedded={emb.get(k)}, canonical={can.get(k)}")
+                sys.exit(1)
+                
+    print("Embedded evidence index dataset matches study-b-cells.json exactly!")
+
     # Validate hyperlinks and anchors
     all_links = []
     for parser in parsed_files.values():
         all_links.extend(parser.links)
         
     for source_file, href in all_links:
-        # Ignore external links
+        # Check external links
         if href.startswith("http://") or href.startswith("https://") or href.startswith("mailto:"):
+            if "github.com/anomalyco/north-mini-test" in href:
+                print(f"Error: Link '{href}' in {source_file} points to the wrong repository (anomalyco instead of anilymngl)")
+                sys.exit(1)
             continue
             
         # Parse link target
@@ -350,7 +395,7 @@ def main():
     print("Starting Publishables Verification Suite...")
     cells = verify_dataset_integrity()
     verify_metric_integrity(cells)
-    parsed_files = verify_html_integrity()
+    parsed_files = verify_html_integrity(cells)
     verify_stale_claims(parsed_files)
     print("\nSUCCESS: All verification checks passed!")
 

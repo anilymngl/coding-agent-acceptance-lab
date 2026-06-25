@@ -62,11 +62,11 @@
   </div>
 
   <div class="findings">
-    <p><span class="tag b">Observed</span> Both models converge to identical 9/12 hidden pass on ci_forensics sparse at best-of-3. Two scenarios unconquered by both. Different third Achilles' heel per model.</p>
-    <p><span class="tag b">Observed</span> Contract-visible collapses attempt-level false-green rate from 25–30% to 0–9% across all packs for both models. Laguna reaches 0% false-greens on maintenance_value cv and product_workflows cv at a scenario level (all 10 and 11 scenarios solved under any-of-three, though individual attempts have minor residual false-greens).</p>
-    <p><span class="tag r">Observed</span> Product workflows sparse: 64–82% false-green. 7 of 11 scenarios completely unconquered by both models at pass@3.</p>
+    <p><span class="tag b">Observed</span> Both models converge to identical 9/12 hidden pass on ci_forensics sparse under any-of-observed aggregation. Two scenarios unconquered by both. Different third Achilles' heel per model.</p>
+    <p><span class="tag b">Observed</span> Contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. The remaining failures were concentrated in product workflows, particularly North Mini/OpenRouter. Every Laguna maintenance and product scenario had at least one successful contract-visible attempt.</p>
+    <p><span class="tag r">Observed</span> Product workflows sparse: 76.2% false-green attempt-level rate. 7 of 11 scenarios completely unconquered by both models at pass@3.</p>
     <p><span class="tag b">Observed</span> Independent retries are not monotonically better — North Mini lost a solved scenario on its second attempt, and resampling from a wrong distribution can yield worse outcomes.</p>
-    <p><span class="tag b">Observed</span> Laguna leads +3 hidden passes overall (54/66 vs 51/66 best-of-3). The gap is entirely in product_workflows sparse (4 vs 2) and cv (11 vs 10).</p>
+    <p><span class="tag b">Observed</span> Laguna leads by 3 scenario-cell successes overall (54/66 vs 51/66 scenario-cell successes under any-of-observed aggregation). The gap is entirely in product_workflows sparse (4 vs 2) and cv (11 vs 10).</p>
     <p><span class="tag a">Recommendation</span> Partition CI repair by task type. Mechanical: delegate with clear specs. Business logic: human review.</p>
   </div>
 
@@ -120,7 +120,7 @@
   </div>
 
   <div class="foot">
-    <span class="mono">github.com/anomalyco/north-mini-test</span> &middot; presentation/ &middot; June 2026 &middot; Tier 1 evidence — behavior microscope
+    <span class="mono">github.com/anilymngl/north-mini-test</span> &middot; presentation/ &middot; June 2026 &middot; Tier 1 evidence — behavior microscope
   </div>
 
 </div>

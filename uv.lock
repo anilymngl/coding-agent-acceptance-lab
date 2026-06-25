@@ -186,6 +186,28 @@ wheels = [
 ]
 
 [[package]]
+name = "coding-agent-acceptance-lab"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+app = [
+    { name = "pandas" },
+    { name = "streamlit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pandas", marker = "extra == 'app'", specifier = ">=2.2" },
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "streamlit", marker = "extra == 'app'", specifier = ">=1.36" },
+]
+provides-extras = ["app"]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -409,28 +431,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/62/3c/c4ef2164a71c1a63d
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/ca/36339329c4604adbcc99c899b7eb1ce1a555c499b6a6860757dc9bfed36d/narwhals-2.22.1-py3-none-any.whl", hash = "sha256:60567d774edf77db53906f89d9fbd164e66e56d66d388e1e6990f17ac33cfb53", size = 454815, upload-time = "2026-06-05T12:34:32.289Z" },
 ]
-
-[[package]]
-name = "north-mini-test"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-app = [
-    { name = "pandas" },
-    { name = "streamlit" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pandas", marker = "extra == 'app'", specifier = ">=2.2" },
-    { name = "pydantic", specifier = ">=2.7" },
-    { name = "streamlit", marker = "extra == 'app'", specifier = ">=1.36" },
-]
-provides-extras = ["app"]
 
 [[package]]
 name = "numpy"

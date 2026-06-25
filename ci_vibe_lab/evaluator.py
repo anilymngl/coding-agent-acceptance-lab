@@ -279,7 +279,11 @@ def prepare_workbench(row: sqlite3.Row, review_dir: Path) -> None:
     write_text(workbench / "model_patch.diff", patch)
     write_text(workbench / "model_patch_apply.txt", apply_patch(model_repo, patch))
 
-    model_summary = str(row["model_summary"] or "")
+    model_summary = ""
+    try:
+        model_summary = str(row["model_summary"] or "")
+    except (KeyError, IndexError):
+        pass
     if model_summary.strip():
         write_text(workbench / "model_summary.txt", model_summary + "\n")
 
@@ -361,6 +365,12 @@ def make_packet(row: sqlite3.Row) -> str:
     failure_modes = "\n".join(f"- {item}" for item in json_list(row["failure_modes"])) or "- n/a"
     hidden_markers = "\n".join(f"- {item}" for item in compact_test_failures(hidden_output)) or "- n/a"
 
+    model_summary_val = ""
+    try:
+        model_summary_val = str(row["model_summary"] or "")
+    except (KeyError, IndexError):
+        pass
+
     return dedent(
         f"""
         # Evaluation Packet
@@ -379,7 +389,7 @@ def make_packet(row: sqlite3.Row) -> str:
 
         ## Model's Own Explanation
 
-        {str(row['model_summary'] or '') or '(no summary produced)'}
+        {model_summary_val or '(no summary produced)'}
 
         ## Challenge Intent
 

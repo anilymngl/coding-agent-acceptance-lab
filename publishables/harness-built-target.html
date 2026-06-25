@@ -102,7 +102,7 @@
   <div style="text-align:center;font-size:10px;margin-bottom:24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
     <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
     <span style="color:#999;margin:0 10px">|</span>
-    <a href="paper_v2.html" style="color:#2563eb;text-decoration:none">Paper</a>
+    <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
     <span style="color:#999;margin:0 10px">|</span>
     <span style="color:#333;font-weight:700">Harness</span>
     <span style="color:#999;margin:0 10px">|</span>
@@ -117,10 +117,10 @@
   <div style="background:white; border:1px solid #e5e7eb; border-left:4px solid #2563eb; border-radius:10px; padding:18px 22px; margin-bottom:32px; display:flex; align-items:center; gap:18px; flex-wrap:wrap">
     <div style="flex:1; min-width:240px">
       <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#999; margin-bottom:4px">Research Paper</div>
-      <div style="font-size:15px; font-weight:700; margin-bottom:4px">Pass@3 Trust Gap: Laguna XS.2 vs North Mini on 33 CI-Repair Scenarios</div>
-      <div style="font-size:11px; color:#666">Two independently trained 3B-active MoE coding agents. Identical false-green patterns. Contract-visible eliminates the gap. Retries don't converge. One model regressed.</div>
+      <div style="font-size:15px; font-weight:700; margin-bottom:4px">Measuring Acceptance Reliability in Coding-Agent CI Repair</div>
+      <div style="font-size:11px; color:#666">Five-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios. Structural trust-gap analysis, retry variance, and spec recovery.</div>
     </div>
-    <a href="paper_v2.html" style="display:inline-block; background:#2563eb; color:white; font-size:12px; font-weight:700; padding:10px 20px; border-radius:8px; text-decoration:none; white-space:nowrap">Open paper &rarr;</a>
+    <a href="paper.html" style="display:inline-block; background:#2563eb; color:white; font-size:12px; font-weight:700; padding:10px 20px; border-radius:8px; text-decoration:none; white-space:nowrap">Open paper &rarr;</a>
   </div>
 
   <!-- ======== PIPELINE FLOW ======== -->
@@ -145,13 +145,13 @@
   <p class="section-title">Pipeline — How one run works</p>
   <div class="pflow">
     <div class="pblock"><div class="pstep"><div class="num">1</div><div class="ptitle">Write Scenario</div><div class="pdesc">Fresh worktree from templates</div></div></div><div class="pconn"><div class="pln"></div></div>
-    <div class="pblock"><div class="pstep"><div class="num">2</div><div class="ptitle">Baseline Test</div><div class="pdesc">Confirm red CI</div></div></div><div class="pconn"><div class="pln"></div></div>
+    <div class="pblock"><div class="pstep"><div class="num">2</div><div class="ptitle">Baseline Test</div><div class="pdesc">Confirm red CI (recorded, not enforced)</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep agent"><div class="num">3</div><div class="ptitle">Run Agent</div><div class="pdesc">Read &rarr; edit &rarr; test &rarr; exit</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep"><div class="num">4</div><div class="ptitle">Public Test</div><div class="pdesc">CI green? Record</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep crit"><div class="num">5</div><div class="ptitle">Inject Hidden</div><div class="pdesc"><b>After agent exits</b></div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep"><div class="num">6</div><div class="ptitle">Hidden Test</div><div class="pdesc">Contract pass?</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep"><div class="num">7</div><div class="ptitle">Classify</div><div class="pdesc">pub/hid &rarr; trust gap</div></div></div><div class="pconn"><div class="pln"></div></div>
-    <div class="pblock" style="width:112px"><div class="pstep"><div class="num">8</div><div class="ptitle">Save Patch</div><div class="pdesc">git diff &rarr; DB</div></div></div><div class="pconn"><div class="pln"></div></div>
+    <div class="pblock" style="width:112px"><div class="pstep"><div class="num">8</div><div class="ptitle">Save Patch</div><div class="pdesc">git diff (untracked omitted)</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock" style="width:122px"><div class="pstep"><div class="num">9</div><div class="ptitle">Hash Artifacts</div><div class="pdesc">SHA256 evidence</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock" style="width:120px"><div class="pstep store"><div class="num">10</div><div class="ptitle">Persist</div><div class="pdesc">SQLite. 3 tables.</div></div></div>
   </div>
@@ -206,6 +206,8 @@
     </div>
     <div class="vdots mono" style="padding: 4px 0">evaluator.py calls ↓</div>
     <div class="flow-row">
+      <div class="fnode entry" style="border-color:#be185d; background:#fdf2f8"><div class="flabel">Shadow workbench</div><div class="fsub">Evaluator checks shadow fix (retained source repo)</div></div>
+      <div class="farrow" style="min-width:14px"></div>
       <div class="fnode ext"><div class="flabel">OpenCode evaluator model</div><div class="fsub">DeepSeek V4 Pro → writes back reviews</div></div>
     </div>
   </div>
@@ -232,7 +234,7 @@
     <div class="comp">
       <div class="header"><span class="fname mono">matrix.py</span><span class="lines">1,003 lines</span> <span class="t g">Built</span></div>
       <div class="role">Orchestrates model×pack×lane×attempt grids from JSON matrix configs (Pydantic-validated). Expands cells, calls <span class="mono">ci-vibe-run</span> subprocess per cell with
-        <span class="tip">resume<span class="tt multi">Queries SQLite for (scenario, attempt_index) already stored. Skips completed. Timeout rows (exit 124) count as done unless deleted.</span></span>,
+        <span class="tip">resume<span class="tt multi">Queries SQLite for (scenario, attempt_index) already stored. Skips completed. Note: resume skips stored attempts blindly without verifying completeness of the run.</span></span>,
         inter-cell delays,
         <span class="tip">backoff<span class="tt multi">Exponential: 15s start, 2× multiplier, 300s ceiling. Tracks consecutive rate limits.</span></span>.
         CLI: validate, plan, status, dbs, run, evaluate. Evaluator batch-run machinery.</div>
@@ -250,20 +252,20 @@
       <div class="role">10-step evaluation pipeline:
         1. Read scenario from <span class="mono">scenarios.py</span>
         2. Write fresh worktree (scenario files only)
-        3. Baseline tests → confirm red CI
+        3. Baseline tests → recorded (not enforced)
         4. Render prompt (sparse or contract_visible)
         5. <span class="tip">Invoke OpenCode agent<span class="tt multi">Subprocess: opencode run --dir {worktree} --model {model} --agent build. stdout JSONL, stderr, exit code. 600s first-output timeout, 900s total. --auto-approve.</span></span>
         6. Public tests → <span class="mono">public_pass</span>
         7. <span class="tip">Inject hidden tests<span class="tt multi">Writes hidden_test into worktree. File did not exist during agent run. Thesis: model optimizes for visible, harness checks for invisible.</span></span>
         8. Hidden tests → <span class="mono">hidden_pass</span>
-        9. Capture git diff, SHA256 all artifacts
-        10. <span class="tip">Persist to SQLite<span class="tt multi">INSERT INTO runs: run_id, experiment_id, scenario, model, prompt_mode, public_pass, hidden_pass, baseline_pass, patch, duration, all paths, scenario_audit.</span></span></div>
+        9. Capture git diff (note: historical patches may omit untracked files)
+        10. <span class="tip">Persist to SQLite<span class="tt multi">INSERT INTO runs: run_id, ...</span></span></div>
       <div class="io">
         <div class="iogroup iogreen"><div class="iolabel">reads</div><div class="ioval">scenarios.py, worktree</div></div>
         <div class="iogroup ioblue"><div class="iolabel">calls</div><div class="ioval">OpenCode CLI, git, python -m unittest</div></div>
         <div class="iogroup iopurple"><div class="iolabel">writes</div><div class="ioval">SQLite via db.py, worktree artifacts</div></div>
       </div>
-      <div class="evidence"><span class="t b">Observed</span> 239 runs across 2 model families. Zero pipeline failures. CLI: list, prepare, run, inspect. Supports --resume, --skip-timeouts, --experiment-id.</div>
+      <div class="evidence"><span class="t b">Observed</span> 391 runs across 2 model families. Zero pipeline failures. CLI: list, prepare, run, inspect. Supports --resume, --skip-timeouts, --experiment-id.</div>
     </div>
 
     <!-- db.py -->
@@ -272,7 +274,7 @@
       <div class="role">SQLite persistence. Three tables:
         <span class="mono"><span class="tip">runs<span class="tt multi">run_id (UUID), experiment_id, scenario, model, agent, prompt_mode, started_at, ended_at, duration, public_pass, hidden_pass, baseline_pass, opencode_exit_code, patch, test outputs, artifact paths, patch stats. Indexed: started_at, scenario, model, experiment_id.</span></span></span>,
         <span class="mono"><span class="tip">evaluator_reviews<span class="tt multi">Pydantic: verdict, root_cause_category, root_cause, patch_quality (1-5), debug_discipline (1-5), severity, confidence, evidence_json, recommendation. Unique per (run_id, evaluator_model, review_dir).</span></span></span>,
-        <span class="mono"><span class="tip">scenario_audits<span class="tt multi">audit_status (accepted/quarantine/revise), risk_area, contract_visibility, fairness_classification, inferability_score, hidden_legitimacy_score, recommended_lane.</span></span></span>.</div>
+        <span class="mono"><span class="tip">scenario_audits<span class="tt multi">audit_status, risk_area, contract_visibility, fairness_classification, inferability_score, hidden_legitimacy_score, recommended_lane.</span></span></span>.</div>
       <div class="io">
         <div class="iogroup iogreen"><div class="iolabel">writes</div><div class="ioval">runs, evaluator_reviews, scenario_audits</div></div>
         <div class="iogroup ioblue"><div class="iolabel">read by</div><div class="ioval">runner, report, evaluator, dashboard, matrix</div></div>
@@ -302,59 +304,37 @@
     <div class="comp">
       <div class="header"><span class="fname mono">evaluator.py</span><span class="lines">1,310 lines</span> <span class="t g">Built</span></div>
       <div class="role">Evaluator-agent workbench. Reviews false-greens.
-        <span class="tip">Builds evaluation packet<span class="tt multi">Markdown: trap, expected behavior, success/failure signals, model's patch, public output, hidden output. Evaluator reads this — never sees original source.</span></span>
-        and three repos: <span class="mono">seed_repo</span> (original broken code), <span class="mono">model_repo</span> (patch applied), <span class="mono">shadow_repo</span> (blank — evaluator writes its own fix).
-        Invokes evaluator model (DeepSeek V4 Pro) to produce
-        <span class="tip">Pydantic EvaluationReview<span class="tt multi">verdict, root_cause_category, root_cause, missed_contract, patch_quality (1-5), debug_discipline (1-5), severity, confidence (0-1), evidence_json (≥2 verbatim quotes from packet), recommendation. extra="forbid" — no hallucinated fields. Every quote must be exact substring of packet.</span></span>.
-        Gate rejects fabricated evidence. CLI: run, report, ingest.</div>
+        <span class="tip">Builds evaluation packet<span class="tt multi">Markdown: trap, expected behavior, success/failure signals, model's patch, public output, hidden output. Evaluator reads this — it can see original source under shadow repository.</span></span>
+        and three repos: <span class="mono">seed_repo</span>, <span class="mono">model_repo</span>, <span class="mono">shadow_repo</span>.
+        Invokes evaluator model to produce
+        <span class="tip">Pydantic EvaluationReview<span class="tt multi">verdict, root_cause_category, root_cause, missed_contract, patch_quality (1-5), debug_discipline (1-5), severity, confidence (0-1), evidence_json, recommendation.</span></span>.
+        Note: Fallback review metrics are not currently filtered out in codebase.</div>
       <div class="io">
         <div class="iogroup iogreen"><div class="iolabel">reads</div><div class="ioval">SQLite runs → builds packets</div></div>
         <div class="iogroup ioblue"><div class="iolabel">calls</div><div class="ioval">OpenCode evaluator model (subprocess)</div></div>
         <div class="iogroup iopurple"><div class="iolabel">writes</div><div class="ioval">evaluator_reviews → SQLite</div></div>
       </div>
-      <div class="evidence"><span class="t b">Observed</span> 10 reviews on Laguna ci_forensics sparse FGs. All confirmed. Mean confidence 0.95. Root cause taxonomy: edge_case_gap (4), missed_hidden_contract (3), incomplete_domain_policy (3). <span class="t r">Not built</span> 49 unreviewed FGs remain.</div>
+      <div class="evidence"><span class="t b">Observed</span> 10 reviews on Laguna ci_forensics sparse FGs. All confirmed. Mean confidence 0.95. <span class="t r">Not built</span> 91 unreviewed FGs remain.</div>
     </div>
 
     <!-- analysis.py + integrity.py -->
     <div class="comp">
       <div class="header"><span class="fname mono">analysis.py</span><span class="lines">284 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Computes <span class="mono">TrustMetrics</span> (trust gap, false-green rate, pass rates by pack/lane/model), <span class="mono">ValueMetrics</span> (patch acceptance rate per review hour), <span class="mono">FalseGreenBreakdown</span>. All report data computed here.</div>
-      <div class="io" style="margin-top:14px">
-        <div class="iogroup iogreen"><div class="iolabel">read by</div><div class="ioval">report.py</div></div>
-      </div>
-
-      <div class="header" style="margin-top:16px"><span class="fname mono">integrity.py</span><span class="lines">220 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Evidence integrity. For each run: checks on-disk artifacts (prompts, patches, hidden outputs, stdout/stderr) exist at recorded paths, verifies SHA256, flags missing/broken evidence, quarantines unclassified false-greens. Run as pre-report gate.</div>
+      <div class="role">Computes <span class="mono">html reports and summaries</span>. Verifies SHA256 (note: integrity hashes are computed post-run, not compared against real-time digests during execution), flags missing/broken evidence, quarantines unclassified false-greens.</div>
       <div class="io" style="margin-top:4px">
         <div class="iogroup iogreen"><div class="iolabel">read by</div><div class="ioval">report.py (integrity subcommand)</div></div>
       </div>
-      <div class="evidence"><span class="t b">Observed</span> 120/120 verified (Gemma 4 matrix). <span class="t r">Not built</span> Laguna matrix integrity not yet run.</div>
+      <div class="evidence"><span class="t b">Observed</span> 120/120 verified (Gemma 4 matrix) and 391/391 verified (Laguna vs North Mini Stage B).</div>
     </div>
 
     <!-- dashboard + generators -->
     <div class="comp">
       <div class="header"><span class="fname mono">dashboard.py</span><span class="lines">1,256 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Streamlit. Tabs: Runs explorer (filterable, trust-gap metrics), Evaluator Reviews (verdicts, root cause, patch quality, confidence), Matrix progress (per-cell bars, false-green flags, evaluator coverage), Scenario Audit. Launched: <span class="mono">uv run --extra app streamlit run ci_vibe_lab/dashboard.py</span>.</div>
+      <div class="role">Streamlit dashboard. Scans all SQLite DBs under <span class="mono">data/</span>. Static HTML galleries and evaluator reports.</div>
       <div class="io" style="margin-top:12px">
         <div class="iogroup iogreen"><div class="iolabel">reads</div><div class="ioval">SQLite (all 3 tables)</div></div>
       </div>
-
-      <div class="header" style="margin-top:16px"><span class="fname mono">generate_gallery.py</span><span class="lines">518 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Static HTML gallery. Chart.js scorecards, pass-rate charts by pack/lane/model, evaluator coverage. Scans all SQLite DBs under <span class="mono">data/</span>.</div>
-
-      <div class="header" style="margin-top:16px"><span class="fname mono">generate_evaluator_report.py</span><span class="lines">263 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Static HTML evaluator report with review details, root cause taxonomy, evidence summaries.</div>
       <div class="evidence"><span class="t b">Observed</span> Dashboard used for live matrix monitoring. Gallery generated for Gemma 4 matrix.</div>
-    </div>
-
-    <!-- check-opencode.sh -->
-    <div class="comp">
-      <div class="header"><span class="fname mono">check-opencode.sh</span><span class="lines">760 lines</span> <span class="t g">Built</span></div>
-      <div class="role">Health check. Ollama (processes, loaded models, config-vs-disk), OpenCode (daemon, agents, MCP, session/cost stats from <span class="mono">opencode.db</span>), eval harness (per-cell progress, outcomes, false-green/trust-gap scores, evaluator coverage, disk, log health). Flags stale runs, missing models, unreviewed FGs. Modes: <span class="mono">--quiet</span> <span class="mono">--watch</span> <span class="mono">--follow</span> <span class="mono">--deep</span> <span class="mono">--integrity</span> <span class="mono">--raw</span>.</div>
-      <div class="io">
-        <div class="iogroup iogreen"><div class="iolabel">checks</div><div class="ioval">ollama ps, opencode.db, SQLite run DBs</div></div>
-      </div>
-      <div class="evidence"><span class="t b">Observed</span> Used throughout all matrix runs. Detected missing models and stale agent processes during the laguna-xs2-vs-north-mini run.</div>
     </div>
   </div>
 
@@ -364,8 +344,8 @@
     <div class="stat"><div class="val">33</div><div class="lbl">scenarios</div></div>
     <div class="stat blue"><div class="val">4</div><div class="lbl">model families</div></div>
     <div class="stat green"><div class="val">3</div><div class="lbl">matrix configs</div></div>
-    <div class="stat purple"><div class="val">239</div><div class="lbl">non-timeout runs</div></div>
-    <div class="stat rose"><div class="val">59</div><div class="lbl">false-greens</div></div>
+    <div class="stat purple"><div class="val">391</div><div class="lbl">retained attempts</div></div>
+    <div class="stat rose"><div class="val">101</div><div class="lbl">false-greens</div></div>
     <div class="stat blue"><div class="val">10</div><div class="lbl">evaluator reviews</div></div>
     <div class="stat green"><div class="val">120</div><div class="lbl">SHA256 verified</div></div>
   </div>
@@ -377,19 +357,19 @@
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">External audit workflow</strong><br><span style="font-size:10px;color:#666">No third-party verification of hidden tests, evaluator verdicts, or artifacts. Tier 1 only.</span></div>
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Multi-evaluator agreement</strong><br><span style="font-size:10px;color:#666">Single evaluator model. No inter-evaluator metric. 10 reviews, 1 evaluator.</span></div>
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Retry strategy variants</strong><br><span style="font-size:10px;color:#666">Pass@k only re-samples from scratch. No hint-based, progressive, or decomposed retry.</span></div>
-      <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Prompt length analysis</strong><br><span style="font-size:10px;color:#666">cv prompts timeout on product_workflows. Can't distinguish cause. No token profiling.</span></div>
+      <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Prompt length analysis</strong><br><span style="font-size:10px;color:#666">cv prompts are longer. Token profiling not implemented. Can't measure prompt→outcome dose-response.</span></div>
+      <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #f59e0b; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#d97706">Gateway confound (North Mini)</strong><br><span style="font-size:10px;color:#666">North Mini product cells ran through OpenRouter, earlier packs through OpenCode Zen. Cannot separate gateway from pack effects.</span></div>
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Continuous monitoring</strong><br><span style="font-size:10px;color:#666">On-demand only. No scheduled re-runs when providers update or models change.</span></div>
-      <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; font-size:12px"><strong style="color:#9f1239">Public publishing pipeline</strong><br><span style="font-size:10px;color:#666">Raw repo only. No caveated, auto-updated public page.</span></div>
     </div>
     <div style="flex:0 0 400px; min-width:300px">
       <table class="targ">
-        <thead><tr><th>What</th><th>Effort</th><th>Blocks</th></tr></thead>
+        <thead><tr><th>What (Target Behavior)</th><th>Effort</th><th>Blocks</th></tr></thead>
         <tbody>
-          <tr><td style="font-weight:700">Complete active matrix</td><td class="eff">~8h</td><td>full model comparison</td></tr>
-          <tr><td style="font-weight:700">Resolve product cv timeout</td><td class="eff">uncertain</td><td>Red zone policy</td></tr>
-          <tr><td style="font-weight:700">Evaluator-review all 59 FGs</td><td class="eff">~4h</td><td>Tier 2 claims</td></tr>
+          <tr><td style="font-weight:700">Complete active matrix</td><td class="eff">~2h</td><td>full 396-run comparison</td></tr>
+          <tr><td style="font-weight:700">Resolve missing cell (NM maint cv)</td><td class="eff">~1h</td><td>complete data</td></tr>
+          <tr><td style="font-weight:700">Evaluator-review all 101 FGs</td><td class="eff">~6h</td><td>Tier 2 claims</td></tr>
           <tr><td style="font-weight:700">Multi-evaluator sample</td><td class="eff">~2h</td><td>Tier 2 claims</td></tr>
-          <tr><td style="font-weight:700">Integrity check active matrix</td><td class="eff">~1min</td><td>public claims</td></tr>
+          <tr><td style="font-weight:700">Filter fallback reviews in metrics</td><td class="eff">~1h</td><td>Strict correctness check (not yet enforced)</td></tr>
         </tbody>
       </table>
     </div>
@@ -398,13 +378,13 @@
   <!-- ======== RECS ======== -->
   <p class="section-title" style="margin-top:28px">Recommendation</p>
   <div class="recs">
-    <div class="rec do"><div class="label">Do next</div><div class="body">Complete North Mini matrix cells. Highest leverage — gates every cross-model claim. Known runtime.</div></div>
-    <div class="rec do"><div class="label">Do next</div><div class="body">Evaluator-review product_workflows sparse FGs. 24 FGs, 7 scenarios at 0/3 — most severe trust failures in the dataset.</div></div>
-    <div class="rec do"><div class="label">Do soon</div><div class="body">Investigate product cv timeout. Try per-scenario runs with reduced prompt before adding models.</div></div>
-    <div class="rec dont"><div class="label">Do not overbuild yet</div><div class="body">Don't add models before completing current matrix. Don't build a public leaderboard — Tier 1 evidence only. Repo-as-publication is sufficient.</div></div>
+    <div class="rec do"><div class="label">Do next</div><div class="body">Complete North Mini maintenance_value cv cell (5 missing runs). Closes the one remaining gap in the 396-run matrix.</div></div>
+    <div class="rec do"><div class="label">Do next</div><div class="body">Evaluator-review product_workflows sparse FGs. 24+ FGs, 7 scenarios at 0/3 — most severe trust failures in the dataset.</div></div>
+    <div class="rec do"><div class="label">Do soon</div><div class="body">Run evaluator on North Mini product CV FGs. 10 false-greens with contract-visible prompts — tests whether specs leave residual ambiguity.</div></div>
+    <div class="rec dont"><div class="label">Do not overbuild yet</div><div class="body">Don't add models before completing evaluator coverage. Don't build a public leaderboard — Tier 1 evidence only. Repo-as-publication is sufficient.</div></div>
   </div>
 
-  <div class="foot"><span class="mono">github.com/anilymngl/north-mini-test</span> &middot; <span class="t g" style="font-size:8px">Built</span> = implemented &middot; <span class="t b" style="font-size:8px">Observed</span> = seen in run &middot; <span class="t r" style="font-size:8px">Not built</span> = desired, not implemented &middot; <span class="t a" style="font-size:8px">Target</span> = next state</div>
+  <div class="foot"><span class="mono">github.com/anomalyco/north-mini-test</span> &middot; <span class="t g" style="font-size:8px">Built</span> = implemented &middot; <span class="t b" style="font-size:8px">Observed</span> = seen in run &middot; <span class="t r" style="font-size:8px">Not built</span> = desired, not implemented &middot; <span class="t a" style="font-size:8px">Target</span> = next state</div>
 
 </div>
 </body>

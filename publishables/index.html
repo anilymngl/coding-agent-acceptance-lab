@@ -40,21 +40,21 @@
 <body>
 <div class="page">
 
-  <h1>Pass@3 Trust Gap</h1>
-  <p class="thesis">Two independently trained 3B-active MoE coding agents. Same architecture. Same false-green wall on business logic. Contract-visible prompts eliminate the gap on mechanical and refactoring tasks. Product workflows resist everything. Laguna leads by 3 hidden passes &mdash; all in product_workflows.</p>
+  <h1>Measuring Acceptance Reliability in Coding-Agent CI Repair</h1>
+  <p class="thesis">Two independently trained coding agents in a similar architecture class (3B-active MoE). Sparse product workflows produced the most persistent false-greens. Explicit contracts recovered most scenarios, but per-attempt reliability remained weaker—especially for North Mini. Laguna leads by 3 hidden passes overall, entirely in product_workflows.</p>
 
   <div class="stats">
     <div class="stat"><div class="val">2</div><div class="lbl">models</div></div>
     <div class="stat"><div class="val">33</div><div class="lbl">scenarios</div></div>
     <div class="stat blue"><div class="val">3</div><div class="lbl">packs</div></div>
     <div class="stat"><div class="val">2</div><div class="lbl">prompt lanes</div></div>
-    <div class="stat green"><div class="val">391</div><div class="lbl">non-timeout runs</div></div>
+    <div class="stat green"><div class="val">391</div><div class="lbl">retained attempts</div></div>
     <div class="stat rose"><div class="val">101</div><div class="lbl">false-greens</div></div>
   </div>
 
   <div class="nav-links" style="margin-bottom:20px;font-size:11px">
     <span style="color:#333;font-weight:700">Home</span>
-    <a href="paper_v2.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Paper</a>
+    <a href="paper.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Paper</a>
     <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Harness</a>
     <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Catalog</a>
     <a href="evidence-index.html" style="color:#2563eb;text-decoration:none;margin-left:14px">Evidence</a>
@@ -63,33 +63,33 @@
 
   <div class="findings">
     <p><span class="tag b">Observed</span> Both models converge to identical 9/12 hidden pass on ci_forensics sparse at best-of-3. Two scenarios unconquered by both. Different third Achilles' heel per model.</p>
-    <p><span class="tag b">Observed</span> Contract-visible collapses false-green rate from 25&ndash;30% to 0&ndash;9% across all packs for both models. Laguna reaches 0% on maintenance_value and product_workflows cv.</p>
-    <p><span class="tag r">Observed</span> Product workflows sparse: 64&ndash;82% false-green. 7 of 11 scenarios completely unconquered by both models at pass@3.</p>
-    <p><span class="tag b">Observed</span> North Mini regressed from pass@1 to pass@2 &mdash; lost a solved scenario. Giving the model another fresh try doesn't guarantee improvement. It can do worse.</p>
+    <p><span class="tag b">Observed</span> Contract-visible collapses attempt-level false-green rate from 25–30% to 0–9% across all packs for both models. Laguna reaches 0% false-greens on maintenance_value cv and product_workflows cv at a scenario level (all 10 and 11 scenarios solved under any-of-three, though individual attempts have minor residual false-greens).</p>
+    <p><span class="tag r">Observed</span> Product workflows sparse: 64–82% false-green. 7 of 11 scenarios completely unconquered by both models at pass@3.</p>
+    <p><span class="tag b">Observed</span> Independent retries are not monotonically better — North Mini lost a solved scenario on its second attempt, and resampling from a wrong distribution can yield worse outcomes.</p>
     <p><span class="tag b">Observed</span> Laguna leads +3 hidden passes overall (54/66 vs 51/66 best-of-3). The gap is entirely in product_workflows sparse (4 vs 2) and cv (11 vs 10).</p>
     <p><span class="tag a">Recommendation</span> Partition CI repair by task type. Mechanical: delegate with clear specs. Business logic: human review.</p>
   </div>
 
   <div class="divider"></div>
 
-  <p class="section-title">Prior evidence</p>
-  <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px">This matrix is the <strong>latest piece</strong> of a larger research program. The original <a href="paper.html" style="color:#2563eb">pass@1 study</a> tested 5 models across 4 families (North Mini, Gemma 4 12B/e4b/31B, DeepSeek V4 Pro, Laguna XS.2) — ~600 runs total. The core finding held across all of them: a consistent 20–62 point trust gap. Three scenarios remained unconquered by any model at pass@1. The contract-visible effect was measured across 4 models on ci_forensics and maintenance_value. See <span class="mono" style="font-size:10px">paper.html</span> and <span class="mono" style="font-size:10px">v11.html</span> for the full multi-model evidence.</p>
+  <p class="section-title">Evidence Context</p>
+  <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px">The canonical paper consolidates both stages of this research: <strong>Study A (five-model breadth study)</strong> testing 5 models at Pass@1 (~600 runs total), and <strong>Study B (depth study)</strong> running a Pass@3 head-to-head comparison between North Mini and Laguna XS.2 (391 attempts total). Historical snapshots are retained under `archive/` for provenance. See the main paper for details.</p>
 
   <p class="section-title">Research suite</p>
   <div class="grid">
-    <a class="card" href="paper_v2.html">
+    <a class="card" href="paper.html">
       <div class="icon paper">&#9998;</div>
       <div class="right">
-        <div class="ctitle">Research Paper</div>
-        <div class="cdesc">Full academic paper. Pass@3 results, per-pack tables, latency, pass@k progression, three-zone deployment policy.</div>
-        <div class="cfile mono">paper_v2.html</div>
+        <div class="ctitle">Research Paper (Consolidated)</div>
+        <div class="cdesc">Full academic paper. Incorporates Study A (breadth) and Study B (depth), 15 structured sections, metrics recomputed, and gateway caveated.</div>
+        <div class="cfile mono">paper.html</div>
       </div>
     </a>
     <a class="card" href="harness-built-target.html">
       <div class="icon harness">&#9881;</div>
       <div class="right">
         <div class="ctitle">Harness — Built, Not Built, Target</div>
-        <div class="cdesc">System inventory. Pipeline flow. Data flow diagram. All 10 components with I/O. 6 gaps named. 5 targets with effort + blockers.</div>
+        <div class="cdesc">System inventory. Pipeline flow. Data flow diagram. Documented audit findings, including baseline tests, resume complete-checks, and fallback review handling.</div>
         <div class="cfile mono">harness-built-target.html</div>
       </div>
     </a>
@@ -104,8 +104,8 @@
     <a class="card" href="evidence-index.html">
       <div class="icon evidence">&#9632;</div>
       <div class="right">
-        <div class="ctitle">Evidence Index</div>
-        <div class="cdesc">All scenario × model × lane rows across 3 packs. Filter by pack, lane, or outcome. Color-coded: green pass, rose false-green.</div>
+        <div class="ctitle">Evidence Matrix — Scenario Cells</div>
+        <div class="cdesc">132 aggregated scenario × model × lane cells. Count-based cell classification: all attempts passed, mixed, all failed, and incomplete status filters.</div>
         <div class="cfile mono">evidence-index.html</div>
       </div>
     </a>
@@ -113,22 +113,14 @@
       <div class="icon eval">&#9745;</div>
       <div class="right">
         <div class="ctitle">Evaluator Findings</div>
-        <div class="cdesc">10 reviewed false-greens. Root cause taxonomy, confidence scores, patch quality. All confirmed genuine. 91 unreviewed.</div>
+        <div class="cdesc">10 reviewed false-greens. Root cause taxonomy, patch quality. Corrected evaluator visibility details. 91 unreviewed.</div>
         <div class="cfile mono">evaluator-findings.html</div>
-      </div>
-    </a>
-    <a class="card" href="paper.html">
-      <div class="icon" style="background:#f1f5f9">&#128214;</div>
-      <div class="right">
-        <div class="ctitle">Prior Paper (v1)</div>
-        <div class="cdesc">Pass@1 study across 5 models, 4 families. Original trust gap finding. Three-zone policy. ~600 runs.</div>
-        <div class="cfile mono">paper.html</div>
       </div>
     </a>
   </div>
 
   <div class="foot">
-    <span class="mono">github.com/anilymngl/north-mini-test</span> &middot; presentation/ &middot; June 2026 &middot; Tier 1 evidence — behavior microscope
+    <span class="mono">github.com/anomalyco/north-mini-test</span> &middot; presentation/ &middot; June 2026 &middot; Tier 1 evidence — behavior microscope
   </div>
 
 </div>

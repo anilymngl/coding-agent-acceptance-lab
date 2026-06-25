@@ -681,7 +681,7 @@
   </p>
 
   <div class="fn" style="background:#f0fdf4;border-left:3px solid #86efac;padding:14px 18px;margin:20px 0;color:#065f46;">
-    <strong>North Mini deserves a task-sensitive interpretation rather than a single overall rank.</strong> On ci_forensics, it matched Laguna at the scenario level under both prompt lanes, including identical contract-visible false-green and stability results. On maintenance work, it remained competitive despite a quota-truncated contract-visible cell. The larger separation appeared on product workflows, where explicit contracts recovered broad scenario coverage but did not produce the same per-attempt consistency. North Mini therefore looks less like a generally weaker system and more like a system whose reliability depends strongly on the semantic width of the task: highly capable on bounded repair, responsive to specification, and less stable when correctness requires reconstructing a broader business policy.
+    <strong>North Mini rewards a task-sensitive reading rather than a single overall rank.</strong> On ci_forensics, it matched Laguna at the scenario level under both prompt lanes, including identical contract-visible false-green and stability results. On maintenance work, it remained competitive despite a quota-truncated contract-visible cell. The larger separation appeared on product workflows, where explicit contracts recovered broad scenario coverage but did not produce the same per-attempt consistency. North Mini reads as a system whose reliability depends strongly on the semantic width of the task: highly capable on bounded repair, responsive to specification, and less stable when correctness requires reconstructing a broader business policy.
   </div>
 
   <h2>8. Attempt-Level Reliability</h2>
@@ -825,7 +825,7 @@
     </tbody>
   </table>
 
-  <p>Both configurations produced three false-greens among their public-green patches. The same two scenarios — <code>adapter_field_rename</code> and <code>batch_splitter_utility</code> — attracted incomplete fixes across both model sizes and also appeared as stable false-greens in the North Mini sparse lane. Once the agent entered a locally plausible implementation path, model scale alone did not guarantee that the broader authored contract would be recovered.</p>
+  <p>Both configurations produced three false-greens among their public-green patches. The same two scenarios — <code>adapter_field_rename</code> and <code>batch_splitter_utility</code> — attracted incomplete fixes across both model sizes and also appeared as stable false-greens in the North Mini sparse lane, where they were later fully resolved under contract-visible prompts. Once the agent entered a locally plausible implementation path, model scale alone did not guarantee that the broader authored contract would be recovered.</p>
 
   <h3>13.2 Gemma 4 12B — Contract Exposure Across Three Packs</h3>
 
@@ -846,7 +846,7 @@
     </tbody>
   </table>
 
-  <p>Within each pack, contract-visible prompts were associated with lower false-green rates among public-green attempts. On <code>product_workflows</code> — the hardest pack in the main study as well — the false-green rate dropped from 66.7% to 12.5%. The specific false-green scenarios under sparse prompts — <code>adapter_field_rename</code>, <code>batch_splitter_utility</code>, <code>audit_log_redaction</code>, <code>billing_proration</code>, <code>bulk_invite_dedupe</code>, and <code>search_ranking_stability</code> — overlapped substantially with the false-green scenarios observed for North Mini in the main study, consistent with the stable-attractor interpretation.</p>
+  <p>Within each pack, contract-visible prompts were associated with lower false-green rates among public-green attempts. On <code>product_workflows</code> — the hardest pack in the main study as well — the false-green rate dropped from 66.7% to 12.5%. The specific false-green scenarios under sparse prompts — <code>adapter_field_rename</code>, <code>batch_splitter_utility</code>, <code>audit_log_redaction</code>, <code>billing_proration</code>, <code>bulk_invite_dedupe</code>, and <code>search_ranking_stability</code> — overlapped substantially with the false-green scenarios observed for North Mini in the main study, where contract-visible prompts also drove broad recovery, consistent with the stable-attractor interpretation.</p>
 
   <p>A parallel observation involves operational reliability. In a separately configured Gemma e4b contract-visible batch (<code>local-gemma4-smallest-two</code>), all ten attempts produced no public pass and averaged 120 seconds — matching the configured first-output timeout boundary. A second 12B contract-visible batch in the same matrix averaged 240 seconds with no public passes. These runs do not isolate whether the cause was model capacity, prompt length, runtime behavior, local resource pressure, or first-output latency. They illustrate why richer semantic guidance and operational reliability must be measured separately: adding useful contract information to the prompt is only effective when the deployed system can process it within its runtime envelope.</p>
 

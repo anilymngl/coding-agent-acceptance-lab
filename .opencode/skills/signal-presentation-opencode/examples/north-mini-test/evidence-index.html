@@ -41,14 +41,14 @@
 <body>
 <div class="wrap">
   <h1>Evidence Matrix — Scenario Cells</h1>
-  <p class="sub">The paper makes the argument. This page lets you check the cells. Every scenario &times; model &times; prompt-lane combination. 3 independent attempts per cell (pass@3). 391 runs across 2 systems.</p>
+  <p class="sub">Every scenario × model × prompt type. 3 independent attempts per cell (pass@3). 391 runs across 2 configs. <span class="mono">laguna-xs2-vs-north-mini-2026-06-22</span> + <span class="mono">north-mini-openrouter-completion</span></p>
 
   <div style="background:#f0f4ff;border:1px solid #dbeafe;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:10px;color:#555;line-height:1.55">
-    <strong style="color:#1d4ed8">Green tells you the visible test passed. Everything after that still needs evidence.</strong><br>
+    <strong style="color:#1d4ed8">How to read:</strong>
     <span style="margin-right:12px"><strong>Runs</strong> = attempts completed</span>
     <span style="margin-right:12px"><strong>Public</strong> = visible tests passed</span>
     <span style="margin-right:12px"><strong>Hidden</strong> = hidden acceptance tests passed (injected after agent exit)</span>
-    <span style="margin-right:12px"><strong>FG</strong> = false-greens (public pass, hidden fail)</span>
+    <span style="margin-right:12px"><strong>FG</strong> = false-greens (public pass, hidden fail — CI green but bug not fixed)</span>
     <span><strong>Avg s</strong> = mean duration in seconds</span>
   </div>
   <div class="nav-links">
@@ -57,9 +57,9 @@
     <span style="color:#999;margin:0 8px">|</span>
     <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
     <span style="color:#999;margin:0 8px">|</span>
-    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">System</a>
+    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">Harness</a>
     <span style="color:#999;margin:0 8px">|</span>
-    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Scenarios</a>
+    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
     <span style="color:#999;margin:0 8px">|</span>
     <span style="color:#333;font-weight:700">Evidence</span>
     <span style="color:#999;margin:0 8px">|</span>
@@ -87,72 +87,72 @@
 <tbody id="rows">
 <script>
 const data = [
-{sc:"async_export_race",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:27,verdict:"hidden_pass"},
-{sc:"config_deep_merge",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:26,verdict:"hidden_pass"},
-{sc:"csv_header_contract",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:59,verdict:"false_green"},
-{sc:"decimal_money_rounding",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:77,verdict:"false_green"},
-{sc:"dependency_api_change",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:2,fg:1,s:28,verdict:"hidden_pass"},
-{sc:"env_bool_parser",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:33,verdict:"false_green"},
-{sc:"idempotency_key_regression",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:43,verdict:"hidden_pass"},
-{sc:"mutable_default_leak",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:32,verdict:"hidden_pass"},
-{sc:"pagination_cursor_drift",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:23,verdict:"hidden_pass"},
-{sc:"stale_generated_schema",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:52,verdict:"hidden_pass"},
-{sc:"tenant_cache_leak",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:89,verdict:"hidden_pass"},
-{sc:"timezone_ci_only",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:31,verdict:"hidden_pass"},
-{sc:"async_export_race",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:307,verdict:"hidden_pass"},
-{sc:"config_deep_merge",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:184,verdict:"hidden_pass"},
-{sc:"csv_header_contract",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:2,fg:1,s:67,verdict:"hidden_pass"},
-{sc:"decimal_money_rounding",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:66,verdict:"hidden_pass"},
-{sc:"dependency_api_change",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:86,verdict:"hidden_pass"},
-{sc:"env_bool_parser",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:2,fg:1,s:105,verdict:"hidden_pass"},
-{sc:"idempotency_key_regression",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:101,verdict:"hidden_pass"},
-{sc:"mutable_default_leak",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:55,verdict:"hidden_pass"},
-{sc:"pagination_cursor_drift",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:51,verdict:"hidden_pass"},
-{sc:"stale_generated_schema",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:57,verdict:"hidden_pass"},
-{sc:"tenant_cache_leak",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:34,verdict:"hidden_pass"},
-{sc:"timezone_ci_only",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:62,verdict:"hidden_pass"},
-{sc:"adapter_field_rename",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:1,fg:2,s:51,verdict:"hidden_pass"},
-{sc:"batch_splitter_utility",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:33,verdict:"false_green"},
-{sc:"docs_cli_sync",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:23,verdict:"hidden_pass"},
-{sc:"explicit_validation_matrix",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:40,verdict:"hidden_pass"},
-{sc:"fixture_schema_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:56,verdict:"hidden_pass"},
-{sc:"generated_openapi_refresh",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:95,verdict:"hidden_pass"},
-{sc:"import_hygiene_fix",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:36,verdict:"hidden_pass"},
-{sc:"logger_warn_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:36,verdict:"false_green"},
-{sc:"regression_test_gap",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:44,verdict:"hidden_pass"},
-{sc:"utcnow_timezone_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:64,verdict:"hidden_pass"},
-{sc:"adapter_field_rename",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:82,verdict:"hidden_pass"},
-{sc:"batch_splitter_utility",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:49,verdict:"hidden_pass"},
-{sc:"docs_cli_sync",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:41,verdict:"hidden_pass"},
-{sc:"explicit_validation_matrix",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:76,verdict:"hidden_pass"},
-{sc:"fixture_schema_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:43,verdict:"hidden_pass"},
-{sc:"generated_openapi_refresh",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:102,verdict:"hidden_pass"},
-{sc:"import_hygiene_fix",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:45,verdict:"hidden_pass"},
-{sc:"logger_warn_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:50,verdict:"hidden_pass"},
-{sc:"regression_test_gap",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:107,verdict:"hidden_pass"},
-{sc:"utcnow_timezone_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:29,verdict:"hidden_pass"},
-{sc:"audit_log_redaction",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:27,verdict:"false_green"},
-{sc:"billing_proration",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:20,verdict:"false_green"},
-{sc:"bulk_invite_dedupe",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:38,verdict:"false_green"},
-{sc:"cart_discount_stack",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:30,verdict:"false_green"},
-{sc:"feature_rollout_bucket",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:2,fg:1,s:114,verdict:"hidden_pass"},
-{sc:"inventory_reservation_idempotency",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:35,verdict:"false_green"},
-{sc:"markdown_slug_collision",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:36,verdict:"false_green"},
-{sc:"search_ranking_stability",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:0,fg:3,s:27,verdict:"false_green"},
-{sc:"silent_exception_swallower",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:32,verdict:"hidden_pass"},
-{sc:"support_sla_business_hours",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:1,fg:2,s:135,verdict:"hidden_pass"},
-{sc:"webhook_signature_raw_body",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:47,verdict:"hidden_pass"},
-{sc:"audit_log_redaction",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:42,verdict:"hidden_pass"},
-{sc:"billing_proration",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:305,verdict:"hidden_pass"},
-{sc:"bulk_invite_dedupe",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:148,verdict:"hidden_pass"},
-{sc:"cart_discount_stack",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:233,verdict:"hidden_pass"},
-{sc:"feature_rollout_bucket",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:152,verdict:"hidden_pass"},
-{sc:"inventory_reservation_idempotency",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:175,verdict:"hidden_pass"},
-{sc:"markdown_slug_collision",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:162,verdict:"hidden_pass"},
-{sc:"search_ranking_stability",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:150,verdict:"hidden_pass"},
-{sc:"silent_exception_swallower",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:121,verdict:"hidden_pass"},
-{sc:"support_sla_business_hours",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:1,fg:2,s:243,verdict:"hidden_pass"},
-{sc:"webhook_signature_raw_body",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"or",r:3,p:3,h:3,fg:0,s:245,verdict:"hidden_pass"},
+{sc:"async_export_race",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:27,verdict:"hidden_pass"},
+{sc:"config_deep_merge",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:26,verdict:"hidden_pass"},
+{sc:"csv_header_contract",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:59,verdict:"false_green"},
+{sc:"decimal_money_rounding",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:77,verdict:"false_green"},
+{sc:"dependency_api_change",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:2,fg:1,s:28,verdict:"hidden_pass"},
+{sc:"env_bool_parser",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:33,verdict:"false_green"},
+{sc:"idempotency_key_regression",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:43,verdict:"hidden_pass"},
+{sc:"mutable_default_leak",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:32,verdict:"hidden_pass"},
+{sc:"pagination_cursor_drift",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:23,verdict:"hidden_pass"},
+{sc:"stale_generated_schema",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:52,verdict:"hidden_pass"},
+{sc:"tenant_cache_leak",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:89,verdict:"hidden_pass"},
+{sc:"timezone_ci_only",pack:"ci_forensics",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:31,verdict:"hidden_pass"},
+{sc:"async_export_race",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:307,verdict:"hidden_pass"},
+{sc:"config_deep_merge",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:184,verdict:"hidden_pass"},
+{sc:"csv_header_contract",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:2,fg:1,s:67,verdict:"hidden_pass"},
+{sc:"decimal_money_rounding",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:66,verdict:"hidden_pass"},
+{sc:"dependency_api_change",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:86,verdict:"hidden_pass"},
+{sc:"env_bool_parser",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:2,fg:1,s:105,verdict:"hidden_pass"},
+{sc:"idempotency_key_regression",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:101,verdict:"hidden_pass"},
+{sc:"mutable_default_leak",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:55,verdict:"hidden_pass"},
+{sc:"pagination_cursor_drift",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:51,verdict:"hidden_pass"},
+{sc:"stale_generated_schema",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:57,verdict:"hidden_pass"},
+{sc:"tenant_cache_leak",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:34,verdict:"hidden_pass"},
+{sc:"timezone_ci_only",pack:"ci_forensics",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:62,verdict:"hidden_pass"},
+{sc:"adapter_field_rename",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:1,fg:2,s:51,verdict:"hidden_pass"},
+{sc:"batch_splitter_utility",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:33,verdict:"false_green"},
+{sc:"docs_cli_sync",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:23,verdict:"hidden_pass"},
+{sc:"explicit_validation_matrix",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:40,verdict:"hidden_pass"},
+{sc:"fixture_schema_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:56,verdict:"hidden_pass"},
+{sc:"generated_openapi_refresh",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:95,verdict:"hidden_pass"},
+{sc:"import_hygiene_fix",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:36,verdict:"hidden_pass"},
+{sc:"logger_warn_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:36,verdict:"false_green"},
+{sc:"regression_test_gap",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:44,verdict:"hidden_pass"},
+{sc:"utcnow_timezone_migration",pack:"maintenance_value",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:64,verdict:"hidden_pass"},
+{sc:"adapter_field_rename",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:82,verdict:"hidden_pass"},
+{sc:"batch_splitter_utility",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:49,verdict:"hidden_pass"},
+{sc:"docs_cli_sync",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:41,verdict:"hidden_pass"},
+{sc:"explicit_validation_matrix",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:76,verdict:"hidden_pass"},
+{sc:"fixture_schema_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:43,verdict:"hidden_pass"},
+{sc:"generated_openapi_refresh",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:102,verdict:"hidden_pass"},
+{sc:"import_hygiene_fix",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:45,verdict:"hidden_pass"},
+{sc:"logger_warn_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:50,verdict:"hidden_pass"},
+{sc:"regression_test_gap",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:107,verdict:"hidden_pass"},
+{sc:"utcnow_timezone_migration",pack:"maintenance_value",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:29,verdict:"hidden_pass"},
+{sc:"audit_log_redaction",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:27,verdict:"false_green"},
+{sc:"billing_proration",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:20,verdict:"false_green"},
+{sc:"bulk_invite_dedupe",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:38,verdict:"false_green"},
+{sc:"cart_discount_stack",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:30,verdict:"false_green"},
+{sc:"feature_rollout_bucket",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:2,fg:1,s:114,verdict:"hidden_pass"},
+{sc:"inventory_reservation_idempotency",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:35,verdict:"false_green"},
+{sc:"markdown_slug_collision",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:36,verdict:"false_green"},
+{sc:"search_ranking_stability",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:0,fg:3,s:27,verdict:"false_green"},
+{sc:"silent_exception_swallower",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:32,verdict:"hidden_pass"},
+{sc:"support_sla_business_hours",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:1,fg:2,s:135,verdict:"hidden_pass"},
+{sc:"webhook_signature_raw_body",pack:"product_workflows",lane:"sparse",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:47,verdict:"hidden_pass"},
+{sc:"audit_log_redaction",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:42,verdict:"hidden_pass"},
+{sc:"billing_proration",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:305,verdict:"hidden_pass"},
+{sc:"bulk_invite_dedupe",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:148,verdict:"hidden_pass"},
+{sc:"cart_discount_stack",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:233,verdict:"hidden_pass"},
+{sc:"feature_rollout_bucket",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:152,verdict:"hidden_pass"},
+{sc:"inventory_reservation_idempotency",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:175,verdict:"hidden_pass"},
+{sc:"markdown_slug_collision",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:162,verdict:"hidden_pass"},
+{sc:"search_ranking_stability",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:150,verdict:"hidden_pass"},
+{sc:"silent_exception_swallower",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:121,verdict:"hidden_pass"},
+{sc:"support_sla_business_hours",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:1,fg:2,s:243,verdict:"hidden_pass"},
+{sc:"webhook_signature_raw_body",pack:"product_workflows",lane:"cv",model:"laguna-xs2",gw:"zen",r:3,p:3,h:3,fg:0,s:245,verdict:"hidden_pass"},
 {sc:"async_export_race",pack:"ci_forensics",lane:"sparse",model:"north-mini",gw:"zen",r:3,p:3,h:3,fg:0,s:15,verdict:"hidden_pass"},
 {sc:"config_deep_merge",pack:"ci_forensics",lane:"sparse",model:"north-mini",gw:"zen",r:3,p:3,h:3,fg:0,s:17,verdict:"hidden_pass"},
 {sc:"csv_header_contract",pack:"ci_forensics",lane:"sparse",model:"north-mini",gw:"zen",r:3,p:3,h:0,fg:3,s:14,verdict:"false_green"},
@@ -273,7 +273,7 @@ function render(filter){
     const statusLabel = statuses.join(" + ") || "unrun";
 
     const vCls = isAllPass ? 'hp' : (isMixed ? 'amber' : 'fg');
-    const gwName = r.gw === 'or' ? 'OpenRouter' : 'OpenCode Zen';
+    const gwName = r.model === 'laguna-xs2' ? 'OpenRouter' : (r.pack === 'product_workflows' ? 'OpenRouter' : 'OpenCode Zen');
 
     return `<tr class="${cls}">
       <td><span class="mono">${r.sc}</span></td>
@@ -300,7 +300,7 @@ render('all');
 </script>
 </tbody>
 </table>
-<p style="font-size:10px;color:#999;margin-top:12px">132 rows across 2 systems &times; 3 packs &times; 2 prompt lanes. Cell Status is derived from actual run counts: <span class="hp">all passed</span> = all attempts passed hidden. <span class="amber">mixed</span> = some passed, some failed. <span class="fg">all failed</span> = no hidden passes. North Mini product_workflows (gateway: OpenRouter) completed through a separate free-tier gateway after OpenCode Zen quota exhaustion. 5 runs missing on North Mini maintenance_value cv (quota exhaustion, pending retry).</p>
+<p style="font-size:10px;color:#999;margin-top:12px">132 rows across 2 models × 3 packs × 2 prompt modes. Cell Status is derived from actual run counts: <span class="hp">all passed</span> = all attempts passed. <span class="amber">mixed</span> = some attempts passed and some failed. <span class="fg">all failed</span> = no attempts passed. North Mini product_workflows rows (gateway: OpenRouter) completed through a separate free-tier gateway after OpenCode Zen quota exhaustion. 5 runs missing on North Mini maintenance_value cv (quota exhaustion, pending retry).</p>
 </div>
 </body>
 </html>

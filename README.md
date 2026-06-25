@@ -23,11 +23,11 @@ self-contained HTML research suite, openable in any browser, no build step:
 | Page | What it is |
 |---|---|
 | `index.html` | Entry point. Thesis, findings, signposts to everything. |
-| `paper_v2.html` | Pass@3 head-to-head: Laguna XS.2 vs North Mini on 33 CI-repair scenarios. |
-| `paper.html` | Prior paper (v1). Pass@1 across 5 models, 4 families. |
+| `paper.html` | Canonical Technical Report. Two-stage study: five-model breadth (Pass@1) and Pass@3 head-to-head (Laguna XS.2 vs North Mini) across 33 hidden-acceptance scenarios. |
+| `paper_v2.html` | Redirect page. Preserved for compatibility, redirects to `paper.html`. |
 | `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all components. |
 | `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
-| `evidence-index.html` | 81-row data table. Every scenario × model × prompt mode. Filterable. |
+| `evidence-index.html` | Evidence Matrix. Complete 132-cell data table of every scenario × model × prompt mode with count-based statuses. |
 | `evaluator-findings.html` | Reviewed false-greens. Root causes, confidence scores, patch quality. |
 
 Start with [publishables/index.html](publishables/index.html).

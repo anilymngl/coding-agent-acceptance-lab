@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-06-25",
+  "planned_attempts": 396,
+  "retained_attempts": 391,
+  "cell_count": 132,
+  "false_greens": 101,
+  "sources": [
+    "data/matrix/laguna-xs2-vs-north-mini-2026-06-22",
+    "data/matrix/north-mini-openrouter-completion"
+  ],
+  "gateway_routes": {
+    "laguna-xs2": "openrouter",
+    "north-mini/ci_forensics": "opencode-zen",
+    "north-mini/maintenance_value": "opencode-zen",
+    "north-mini/product_workflows": "openrouter"
+  },
+  "harness_commit": "c04d42c",
+  "scenario_revision": "6bb5ba3"
+}

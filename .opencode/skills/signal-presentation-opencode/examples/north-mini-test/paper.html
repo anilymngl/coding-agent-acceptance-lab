@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Measuring Acceptance Reliability in Coding-Agent CI Repair</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body { font-family: Georgia, 'Times New Roman', Times, serif; color: #1a1a1a; background: #fff; line-height: 1.7; }
+    .paper { max-width: 820px; margin: 0 auto; padding: 60px 24px 100px; }
+    h1 { font-size: 1.65rem; font-weight: 700; line-height: 1.25; margin-bottom: 8px; letter-spacing: -0.01em; }
+    h2 { font-size: 1.2rem; font-weight: 700; margin-top: 48px; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+    h3 { font-size: 1.0rem; font-weight: 700; margin-top: 28px; margin-bottom: 10px; }
+    p { font-size: 0.92rem; margin-bottom: 14px; text-align: justify; hyphens: auto; }
+    .sans { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    .mono { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; }
+    .author { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.9rem; color: #555; margin-bottom: 4px; }
+    .affil { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.78rem; color: #888; margin-bottom: 24px; }
+    .abstract { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 20px 24px; margin: 24px 0 32px; }
+    .abstract h2 { margin-top: 0; border: none; padding: 0; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    .abstract p { font-size: 0.88rem; text-align: left; margin-bottom: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.82rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    caption { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.78rem; font-weight: 600; text-align: left; margin-bottom: 6px; color: #333; }
+    th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #333; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td { padding: 6px 8px; border-bottom: 1px solid #ddd; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .fg { color: #c0392b; font-weight: 600; }
+    .hp { color: #27ae60; font-weight: 600; }
+    code { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; background: #f5f5f5; padding: 1px 4px; border-radius: 2px; }
+    pre { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.78rem; line-height: 1.6; background: #fafafa; border: 1px solid #eee; border-radius: 4px; padding: 14px; margin: 12px 0; overflow-x: auto; }
+    pre .del { color: #c0392b; }
+    pre .add { color: #27ae60; }
+    pre .ctx { color: #999; }
+    blockquote { border-left: 3px solid #ccc; padding-left: 16px; margin: 16px 0; color: #555; font-style: italic; font-size: 0.88rem; }
+    .ref { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.78rem; color: #555; margin-bottom: 8px; padding-left: 28px; text-indent: -28px; }
+    .fn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.76rem; color: #666; margin: 16px 0; padding: 12px 16px; background: #f8f9fa; border-radius: 4px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.68rem; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; vertical-align: middle; margin-right: 2px; }
+    .tag.red { background: #fde8e8; color: #c0392b; }
+    .tag.green { background: #e8fde8; color: #27ae60; }
+    .tag.amber { background: #fff3cd; color: #856404; }
+    .tag.blue { background: #e8f0fd; color: #2563eb; }
+    .tag.gray { background: #f0f0f0; color: #666; }
+    sup { font-size: 0.7em; }
+    .label { font-size: 0.7rem; color: #888; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    @media print { .paper { padding: 0; max-width: 100%; } }
+  </style>
+</head>
+<body>
+<div class="paper">
+
+  <h1>Measuring Acceptance Reliability in Coding-Agent CI Repair</h1>
+  <p class="subtitle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 1.1rem; font-weight: 500; color: #444; margin-top: 4px; margin-bottom: 12px; line-height: 1.4;">Five-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios</p>
+  <p class="author">Anil Yamangil</p>
+  <p class="affil">Independent Research &middot; June 2026 &middot; Canonical Technical Report &middot; <a href="index.html" style="color:#888">research suite</a></p>
+
+  <div class="sans" style="font-size:10px; margin-bottom:20px">
+    <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
+    <span style="color:#999;margin:0 10px">|</span>
+    <span style="color:#333;font-weight:700">Paper</span>
+    <span style="color:#999;margin:0 10px">|</span>
+    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">Harness</a>
+    <span style="color:#999;margin:0 10px">|</span>
+    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
+    <span style="color:#999;margin:0 10px">|</span>
+    <a href="evidence-index.html" style="color:#2563eb;text-decoration:none">Evidence</a>
+    <span style="color:#999;margin:0 10px">|</span>
+    <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none">Evaluator</a>
+  </div>
+
+  <div class="abstract">
+    <h2>Abstract</h2>
+    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate five model families (Cohere North Mini, Google Gemma 4, Poolside Laguna XS.2, DeepSeek V4 Pro) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. We demonstrate that the trust gap is heavily driven by task pack and prompt specificity rather than model identity. While sparse prompts on product workflows produce massive attempt-level false-green rates (43.3% combined), contract-visible prompts collapse this rate to 8.9% combined. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors, tool-call distributions, and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
+    <div class="sans" style="font-size:0.75rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, false-green, hidden acceptance, Pass@3, evaluation harness, contract-visible</div>
+  </div>
+
+  <h2>1. Plain-Language Summary</h2>
+  <p>When an AI coding assistant completes a software bug fix and gets your continuous integration (CI) tests to pass, how confident can you be that the underlying bug is actually fixed? This report shows that public test suites are often too sparse to define correctness. AI agents easily optimize for whatever visible assertions they can see, producing a green CI check while violating hidden requirements (a <strong>false-green</strong>). We find that this "trust gap" is structural: it is present across all evaluated models, ranging from local 12B models to hosted frontier engines. However, exposing explicit contracts directly in the prompt (contract-visible) collapses false-greens on mechanical and refactoring tasks. For complex business logic, explicit contracts recover most scenarios, but per-attempt reliability remains weaker, meaning human verification or hidden acceptance gates remain essential.</p>
+
+  <h2>2. Research Question and Terminology</h2>
+  <p>Standard benchmarks evaluate whether an agent can produce code that passes unit tests. Our study audits the correctness of those fixes when they satisfy visible assertions. We define four core metrics to examine this reliability:</p>
+  <ul>
+    <li><strong>Attempt-level hidden pass rate:</strong> The percentage of all completed attempts that pass hidden acceptance tests.</li>
+    <li><strong>Attempt-level false-green rate:</strong> The number of attempts that passed visible tests but failed hidden acceptance, divided by all attempts that passed visible tests.</li>
+    <li><strong>Any-of-3 scenario success:</strong> The proportion of scenarios where at least one of three independent attempts successfully passed hidden acceptance.</li>
+    <li><strong>All-of-3 scenario reliability:</strong> The proportion of scenarios where every single completed attempt passed hidden acceptance, indicating high strategy stability.</li>
+  </ul>
+
+  <h2>3. Evaluation System</h2>
+  <p>The evaluation harness automates a 10-step pipeline: (1) clone a template repository to a fresh worktree, (2) run baseline tests to verify the starting red CI state, (3) execute the coding agent via the OpenCode CLI, (4) evaluate public tests to check visible success, (5) inject hidden acceptance tests, (6) execute hidden tests, (7) calculate classification outcomes, (8) extract the patch diff, (9) compute SHA256 hashes for all workspace states, and (10) persist results to a central SQLite database. Each attempt is run in an isolated worktree with no memory of prior trials. Baseline test results are recorded but not enforced. Historical patches are extracted via git diff and may omit untracked files. Integrity hashes are computed after the run is complete, not compared against real-time digests.</p>
+
+  <h2>4. Coverage Matrix</h2>
+  <p>The Depth matrix (Stage B) planned <span data-metric="study_b.planned_attempts">396</span> attempts across <span data-metric="study_b.cell_count">132</span> cells (two models, two prompt lanes, three packs, and three retries). Due to operational daily caps on the Cohere OpenCode free gateway, 5 attempts on the North Mini maintenance contract-visible cell were cut short. This leaves <span data-metric="study_b.retained_attempts">391</span> retained attempts. Table 1 shows the experimental cell coverage.</p>
+
+  <table>
+    <caption>Table 1: Stage B cell coverage (Laguna XS.2 vs North Mini)</caption>
+    <thead>
+      <tr>
+        <th>Study</th>
+        <th>System / Gateway Route</th>
+        <th>Scenario Pack</th>
+        <th>Prompt Lane</th>
+        <th class="num">Planned</th>
+        <th class="num">Retained</th>
+        <th class="num">Coverage</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>B</td>
+        <td>Laguna XS.2 / OpenRouter</td>
+        <td>All packs</td>
+        <td>Sparse + CV</td>
+        <td class="num">198</td>
+        <td class="num">198</td>
+        <td class="num hp">100.0%</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td>North Mini / OpenCode Zen</td>
+        <td>ci_forensics</td>
+        <td>Sparse + CV</td>
+        <td class="num">72</td>
+        <td class="num">72</td>
+        <td class="num hp">100.0%</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td>North Mini / OpenCode Zen</td>
+        <td>maintenance_value</td>
+        <td>Sparse</td>
+        <td class="num">30</td>
+        <td class="num">30</td>
+        <td class="num hp">100.0%</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td>North Mini / OpenCode Zen</td>
+        <td>maintenance_value</td>
+        <td>CV</td>
+        <td class="num">30</td>
+        <td class="num">25</td>
+        <td class="num fg">83.3%</td>
+      </tr>
+      <tr>
+        <td>B</td>
+        <td>North Mini / OpenRouter<sup>*</sup></td>
+        <td>product_workflows</td>
+        <td>Sparse + CV</td>
+        <td class="num">66</td>
+        <td class="num">66</td>
+        <td class="num hp">100.0%</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 11px; color: #666;"><sup>*</sup> Note: Due to OpenCode Zen quota exhaustion, North Mini product workflows were routed through the OpenRouter gateway. Gateway effects and task packs change together, so they cannot be isolated.</p>
+
+  <h2>5. Study A — Breadth Across Five Deployed Systems</h2>
+  <p>In Stage A, we ran a single-attempt (Pass@1) breadth evaluation testing 5 models: Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2, and Google Gemma 4 31B/e4b. Table 2 details the attempt-level false-green rates across packs under sparse and contract-visible prompt lanes.</p>
+
+  <table>
+    <caption>Table 2: Study A (Pass@1) attempt-level false-green rates by model and pack</caption>
+    <thead>
+      <tr>
+        <th>Scenario Pack</th>
+        <th>Prompt Lane</th>
+        <th class="num">North Mini</th>
+        <th class="num">Gemma 4 12B</th>
+        <th class="num">DeepSeek V4 Pro</th>
+        <th class="num">Laguna XS.2</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2"><code>ci_forensics</code></td>
+        <td>sparse</td>
+        <td class="num fg">33.3% (4/12)</td>
+        <td class="num fg">40.0% (2/5)</td>
+        <td class="num fg">25.0% (3/12)</td>
+        <td class="num fg">33.3% (4/12)</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num hp">8.3% (1/12)</td>
+        <td class="num fg">14.3% (1/7)</td>
+        <td class="num hp">0.0% (0/12)</td>
+        <td class="num hp">0.0% (0/12)</td>
+      </tr>
+      <tr>
+        <td rowspan="2"><code>maintenance_value</code></td>
+        <td>sparse</td>
+        <td class="num fg">20.0% (2/10)</td>
+        <td class="num fg">22.2% (2/9)</td>
+        <td class="num fg">30.0% (3/10)</td>
+        <td class="num">N/A</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num hp">0.0% (0/9)</td>
+        <td class="num fg">14.3% (1/7)</td>
+        <td class="num hp">0.0% (0/10)</td>
+        <td class="num">N/A</td>
+      </tr>
+      <tr>
+        <td rowspan="2"><code>product_workflows</code></td>
+        <td>sparse</td>
+        <td class="num fg">88.9% (8/9)</td>
+        <td class="num fg">66.7% (4/6)</td>
+        <td class="num fg">72.7% (8/11)</td>
+        <td class="num">N/A</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num fg">33.3% (3/9)</td>
+        <td class="num fg">12.5% (1/8)</td>
+        <td class="num hp">9.1% (1/11)</td>
+        <td class="num">N/A</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Study B — Three-Attempt Depth Study</h2>
+  <p>In Stage B, we narrowed the focus to a matched comparison between North Mini (Zen / OpenRouter) and Laguna XS.2 (OpenRouter) with three independent attempts per cell. A pooled view shows that under sparse conditions, the models achieved a combined false-green rate of 43.3% (84 false-greens out of 194 public-green attempts). Exposing specifications via contract-visible prompts reduced this combined attempt-level false-green rate to 8.9% (17 false-greens out of 191 public-green attempts). Table 3 provides the core head-to-head comparison.</p>
+
+  <table>
+    <caption>Table 3: Study B (Pass@3) cell convergence and attempt-level false-green (FG) rates</caption>
+    <thead>
+      <tr>
+        <th>System / Route</th>
+        <th>Pack</th>
+        <th>Lane</th>
+        <th class="num">Attempts</th>
+        <th class="num">Public Pass</th>
+        <th class="num">Hidden Pass</th>
+        <th class="num font-bold">FG Rate</th>
+        <th class="num">Any-of-3 Success</th>
+        <th class="num">All-of-3 Reliability</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="6">Laguna XS.2 / OpenRouter</td>
+        <td rowspan="2">ci_forensics</td>
+        <td>sparse</td>
+        <td class="num">36</td>
+        <td class="num">36</td>
+        <td class="num">26</td>
+        <td class="num fg">27.8% (10/36)</td>
+        <td class="num">9/12 (75.0%)</td>
+        <td class="num">8/12 (66.7%)</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num">36</td>
+        <td class="num">36</td>
+        <td class="num">34</td>
+        <td class="num hp">5.6% (2/36)<sup>b</sup></td>
+        <td class="num">12/12 (100.0%)</td>
+        <td class="num">10/12 (83.3%)</td>
+      </tr>
+      <tr>
+        <td rowspan="2">maintenance_value</td>
+        <td>sparse</td>
+        <td class="num">30</td>
+        <td class="num">30</td>
+        <td class="num">22</td>
+        <td class="num fg">26.7% (8/30)</td>
+        <td class="num">8/10 (80.0%)</td>
+        <td class="num">7/10 (70.0%)</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num">30</td>
+        <td class="num">30</td>
+        <td class="num">30</td>
+        <td class="num hp">0.0% (0/30)</td>
+        <td class="num">10/10 (100.0%)</td>
+        <td class="num">10/10 (100.0%)</td>
+      </tr>
+      <tr>
+        <td rowspan="2">product_workflows</td>
+        <td>sparse</td>
+        <td class="num">33</td>
+        <td class="num">33</td>
+        <td class="num">9</td>
+        <td class="num fg">72.7% (24/33)</td>
+        <td class="num">4/11 (36.4%)</td>
+        <td class="num">2/11 (18.2%)</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num">33</td>
+        <td class="num">33</td>
+        <td class="num">31</td>
+        <td class="num hp">6.1% (2/33)<sup>a</sup></td>
+        <td class="num">11/11 (100.0%)</td>
+        <td class="num">9/11 (81.8%)</td>
+      </tr>
+      <tr>
+        <td rowspan="6">North Mini / Zen + Router<sup>*</sup></td>
+        <td rowspan="2">ci_forensics</td>
+        <td>sparse</td>
+        <td class="num">36</td>
+        <td class="num">36</td>
+        <td class="num">25</td>
+        <td class="num fg">30.6% (11/36)</td>
+        <td class="num">9/12 (75.0%)</td>
+        <td class="num">8/12 (66.7%)</td>
+      </tr>
+      <tr>
+        <td>CV</td>
+        <td class="num">36</td>
+        <td class="num">36</td>
+        <td class="num">34</td>
+        <td class="num hp">5.6% (2/36)</td>
+        <td class="num">12/12 (100.0%)</td>
+        <td class="num">10/12 (83.3%)</td>
+      </tr>
+      <tr>
+        <td rowspan="2">maintenance_value</td>
+        <td>sparse</td>
+        <td class="num">30</td>
+        <td class="num">29</td>
+        <td class="num">22</td>
+        <td class="num fg">24.1% (7/29)</td>
+        <td class="num">8/10 (80.0%)</td>
+        <td class="num">7/10 (70.0%)</td>
+      </tr>
+      <tr>
+        <td>CV<sup>†</sup></td>
+        <td class="num">25</td>
+        <td class="num">25</td>
+        <td class="num">24</td>
+        <td class="num hp">4.0% (1/25)</td>
+        <td class="num">10/10 (100.0%)</td>
+        <td class="num">9/10 (90.0%)</td>
+      </tr>
+      <tr>
+        <td rowspan="2">product_workflows<sup>*</sup></td>
+        <td>sparse</td>
+        <td class="num">33</td>
+        <td class="num">30</td>
+        <td class="num">6</td>
+        <td class="num fg">80.0% (24/30)</td>
+        <td class="num">2/11 (18.2%)</td>
+        <td class="num">2/11 (18.2%)</td>
+      </tr>
+      <tr>
+        <td>CV<sup>*</sup></td>
+        <td class="num">33</td>
+        <td class="num">31</td>
+        <td class="num">21</td>
+        <td class="num fg">32.3% (10/31)<sup>c</sup></td>
+        <td class="num">10/11 (90.9%)</td>
+        <td class="num">6/11 (54.5%)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 11px; color: #666; line-height: 1.4;">
+    <sup>*</sup> North Mini product workflows routed through OpenRouter due to OpenCode Zen quota exhaustion.<br />
+    <sup>†</sup> Incomplete cell: only 25 of 30 planned attempts completed due to quota limits.<br />
+    <sup>a</sup> Laguna missed 2 attempts on <code>support_sla_business_hours</code> (1 pass, 2 FGs).<br />
+    <sup>b</sup> Laguna missed 1 attempt each on <code>csv_header_contract</code> and <code>env_bool_parser</code>.<br />
+    <sup>c</sup> North Mini CV missed 10 attempts across 6 scenarios, including all 3 attempts on <code>support_sla_business_hours</code> (3 FGs).
+  </p>
+
+  <h2>7. Attempt-Level Reliability</h2>
+  <p>The attempt-level metrics reflect the chance that any individual run produces a correct patch. Under sparse conditions, attempt-level false-green rates are consistently high across both models (ranging from 24% to 80%). The contract-visible treatment lowers this rate substantially, but residual errors remain. For instance, in product workflows under contract-visible mode, Laguna's attempt-level false-green rate dropped to 6.1%, whereas North Mini's stayed at 32.3% (partly due to persistent failure attractors in <code>support_sla_business_hours</code> and billing scenarios).</p>
+
+  <h2>8. Scenario Coverage and Stability</h2>
+  <p>Any-of-three scenario success treats a scenario as solved if at least one attempt passes hidden tests. Laguna XS.2 reached 33/33 any-of-three success under contract-visible conditions, and North Mini reached 32/33 (failing to solve <code>support_sla_business_hours</code>). However, this any-of-three metric obscures instability. The all-of-three metric reveals how consistently the agent reproduces a fix: Laguna fell to 29/33 all-of-three reliability in CV, and North Mini reached 21/30 (retained matching cells), showing that even with clear specifications, agents fluctuate between correct and incorrect strategies.</p>
+
+  <h2>9. Independent Retries Are Not Monotonically Better</h2>
+  <p>A cumulative Pass@k metric cannot mathematically regress, but individual attempts can. Table 4 demonstrates that resampling independently from a model's generation distribution does not guarantee improvement and can result in regression.</p>
+
+  <table>
+    <caption>Table 4: Stage B (ci_forensics sparse) scenario success across attempts</caption>
+    <thead>
+      <tr>
+        <th>Model / System</th>
+        <th class="num">Attempt 1</th>
+        <th class="num">Attempt 2</th>
+        <th class="num">Attempt 3</th>
+        <th class="num font-bold">Any-of-3 Success</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Laguna XS.2 / OpenRouter</td>
+        <td class="num">8/12</td>
+        <td class="num hp">9/12 (+1 recovery)</td>
+        <td class="num">9/12 (plateau)</td>
+        <td class="num hp">9/12 (75.0%)</td>
+      </tr>
+      <tr>
+        <td>North Mini / OpenCode Zen</td>
+        <td class="num hp">9/12</td>
+        <td class="num fg">8/12 (-1 regression)</td>
+        <td class="num">8/12 (plateau)</td>
+        <td class="num hp">9/12 (75.0%)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>In attempt 2, North Mini failed on <code>env_bool_parser</code> (which it solved in attempt 1) without gaining any new solved scenarios. This shows independent resampling occasionally recovered a failure, occasionally replaced a successful strategy with a failing one, and repeatedly reproduced stable errors.</p>
+
+  <h2>10. Effect of Contract Exposure</h2>
+  <p>Exposing the contract in the prompt lane collapses the false-green rate across both systems. On mechanical tasks (<code>ci_forensics</code>) and refactoring tasks (<code>maintenance_value</code>), Laguna’s attempt-level false-green rate fell to 5.6% and 0.0% respectively. North Mini showed similar reductions (to 5.6% and 4.0%). The spec is the primary lever of control: informing the agent of the hidden validation criteria redirects its search space toward true acceptance.</p>
+
+  <h2>11. Failure Case Analysis</h2>
+  <p>Certain scenarios present stable failure attractors. In `decimal_money_rounding`, Laguna generated byte-identical wrong patches on attempts 1 and 2, converting variables to `Decimal` but leaving `int(total * 100)` in place, which truncates half-cents instead of rounding. The model satisfies the visible assertions but fails the hidden half-cent test. The evaluator agent (DeepSeek V4 Pro) confirmed that the model optimistically declared success because its code satisfied the visible test suite. We conclude that when visible tests are sparse, agents converge to stable, incomplete attractors.</p>
+
+  <h2>12. Operational Behavior and Gateway Limitations</h2>
+  <p>North Mini was routed through two gateways: OpenCode Zen (for forensics and maintenance) and OpenRouter (for product workflows). We cannot separate gateway route effects from scenario pack differences. Because the OpenCode Zen gateway enforces strict daily quotas, 5 attempts are missing from the North Mini maintenance CV cells. Operational limitations, such as rate limits and quota walls, are significant variables in agent deployment.</p>
+
+  <h2>13. Exploratory Trace and Patch Statistics</h2>
+  <p>We analyze the relationship between run metrics and outcomes. These statistics are exploratory and should be interpreted with caution. Tool-call metrics are parsed from the logged stdout and may vary across runtime environments. Diff statistics only represent files tracked in the git diff; untracked files added by the model are omitted.</p>
+  <ul>
+    <li><strong>Tracked-file diff statistics:</strong> False-greens are slightly larger on average (7.4–7.7 changed lines vs 6.0–6.1 for passes), showing that models write more code to satisfy visible tests without matching hidden logic.</li>
+    <li><strong>Tool-call counts:</strong> In the pooled retained traces, false-green attempts used fewer logged tool calls on average (10.7–10.8 vs 13.1–14.2). This association may reflect pack, lane, and scenario mix; a within-cell analysis is needed before interpreting it as an agent stopping mechanism.</li>
+  </ul>
+
+  <h2>14. Threats to Validity</h2>
+  <ul>
+    <li><strong>Benchmark author bias:</strong> Hidden tests, templates, and baseline suites were written by the same team, which may introduce systematic omissions.</li>
+    <li><strong>Incomplete evaluator coverage:</strong> Only 10 of <span data-metric="study_b.false_greens">101</span> false-green attempts have been audited by the evaluator model. <span data-metric="study_b.unreviewed_false_greens">91</span> false-greens remain unreviewed.</li>
+    <li><strong>Inference differences:</strong> OpenRouter and OpenCode Zen gateways may serve different model versions or use different temperature configurations.</li>
+    <li><strong>Code Audit Findings:</strong> The baseline test is recorded but not enforced. Incomplete runs skipped by matrix resume are assumed complete in SQLite. Evaluator fallback reviews are not currently filtered out from validation statistics.</li>
+  </ul>
+
+  <h2>15. Data and Reproduction Manifest</h2>
+  <p>The reproduction files are structured in the research suite. The intermediate data files are located at:</p>
+  <ul>
+    <li>Source manifest: <a href="data/source-manifest.json"><code>publishables/data/source-manifest.json</code></a></li>
+    <li>Study A summary: <a href="data/study-a-summary.json"><code>publishables/data/study-a-summary.json</code></a></li>
+    <li>Study B cells: <a href="data/study-b-cells.json"><code>publishables/data/study-b-cells.json</code></a></li>
+    <li>Study B summary: <a href="data/study-b-summary.json"><code>publishables/data/study-b-summary.json</code></a></li>
+  </ul>
+  <p>The code repository and raw run artifacts are maintained at <a href="https://github.com/anomalyco/north-mini-test">github.com/anomalyco/north-mini-test</a>.</p>
+
+</div>
+</body>
+</html>

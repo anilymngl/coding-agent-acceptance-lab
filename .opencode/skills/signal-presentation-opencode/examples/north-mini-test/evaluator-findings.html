@@ -45,104 +45,27 @@
     margin-bottom: 16px;
     text-align: center;
   }
-  .flow-grid {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-  }
-  .flow-col {
-    flex: 1;
-    border-radius: 10px;
-    padding: 16px;
+  .flow-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-  }
-  .flow-col.prepares {
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-top: 4px solid #64748b;
-  }
-  .flow-col.investigates {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-top: 4px solid #2563eb;
-  }
-  .flow-col.validates {
-    background: #f0fdf4;
-    border: 1px solid #a7f3d0;
-    border-top: 4px solid #10b981;
-  }
-  .flow-col-title {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 4px;
-  }
-  .flow-col.prepares .flow-col-title { color: #475569; }
-  .flow-col.investigates .flow-col-title { color: #1e40af; }
-  .flow-col.validates .flow-col-title { color: #065f46; }
-  
-  .flow-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-    justify-content: center;
-  }
-  .flow-item {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-align: center;
-    color: #475569;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.01);
-  }
-  .flow-col.prepares .flow-item {
-    border-color: #e2e8f0;
-    color: #475569;
-  }
-  .flow-col.investigates .flow-item {
-    border-color: #bfdbfe;
-    color: #1e3a8a;
-  }
-  .flow-col.validates .flow-item {
-    border-color: #a7f3d0;
-    color: #064e3b;
-  }
-  .flow-arrow-horizontal {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    color: #cbd5e1;
-    font-size: 20px;
-    font-weight: 700;
-    width: 20px;
+    gap: 8px;
   }
-  .flow-intellectual-point {
+  .flow-step {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
+    padding: 10px 18px;
     border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    color: #334155;
-    margin-top: 20px;
     text-align: center;
-    line-height: 1.5;
+    width: 280px;
+    color: #334155;
   }
-  .flow-intellectual-point strong {
-    color: #2563eb;
-  }
-  @media (max-width: 768px) {
-    .flow-grid { flex-direction: column; }
-    .flow-arrow-horizontal { transform: rotate(90deg); margin: 6px auto; }
+  .flow-arrow {
+    font-size: 14px;
+    color: #94a3b8;
+    font-weight: bold;
   }
 
   /* Repo Cards Styles */
@@ -239,7 +162,7 @@
 <body>
 <div class="wrap">
   <h1>Evaluator Findings</h1>
-  <p class="sub">10 validated false-green reviews run within a disposable engineering workspace. <span class="mono">ci_forensics / sparse / pass@1</span></p>
+  <p class="sub">10 validated false-green reviews run within a disposable engineering workspace. <span class="mono">laguna-xs2 / ci_forensics / sparse / pass@1</span></p>
   
   <div class="nav-links">
     <span>Research suite:</span>
@@ -247,9 +170,9 @@
     <span>|</span>
     <a href="paper.html">Paper</a>
     <span>|</span>
-    <a href="harness-built-target.html">System</a>
+    <a href="harness-built-target.html">Harness</a>
     <span>|</span>
-    <a href="scenario-catalog.html">Scenarios</a>
+    <a href="scenario-catalog.html">Catalog</a>
     <span>|</span>
     <a href="evidence-index.html">Evidence</a>
     <span>|</span>
@@ -257,64 +180,34 @@
   </div>
 
   <div class="one-liner">
-    <strong>&ldquo;A second model agreed&rdquo; is not a validation method.</strong> The evaluator only becomes useful when its judgment is constrained by a reconstructed repository, retained test evidence, an authored contract, and deterministic validation.
+    The evaluator is not asked, “Do you agree that this patch is wrong?” It is asked to rebuild the failure, explain the violated contract, and demonstrate a better fix in a clean repository.
   </div>
 
   <!-- Flow section -->
   <div class="flow-box">
-    <h3>The Evaluator Enclosure Flow</h3>
-    <div class="flow-grid">
-      <!-- Harness Prepares -->
-      <div class="flow-col prepares">
-        <div class="flow-col-title">1. Harness Prepares</div>
-        <div class="flow-steps">
-          <div class="flow-item">Rebuild repositories</div>
-          <div class="flow-item">Apply original model patch</div>
-          <div class="flow-item">Inject hidden acceptance tests</div>
-          <div class="flow-item">Reproduce failed state</div>
-          <div class="flow-item">Assemble evaluation packet</div>
-        </div>
-      </div>
-      
-      <!-- Arrow -->
-      <div class="flow-arrow-horizontal">&rarr;</div>
-      
-      <!-- Evaluator Investigates -->
-      <div class="flow-col investigates">
-        <div class="flow-col-title">2. Evaluator Investigates</div>
-        <div class="flow-steps">
-          <div class="flow-item">Inspect code & test failures</div>
-          <div class="flow-item">Hypothesize root cause</div>
-          <div class="flow-item">Diagnose violated contract</div>
-          <div class="flow-item">Optional: test an alternative in shadow repo</div>
-        </div>
-      </div>
-      
-      <!-- Arrow -->
-      <div class="flow-arrow-horizontal">&rarr;</div>
-      
-      <!-- Harness Validates -->
-      <div class="flow-col validates">
-        <div class="flow-col-title">3. Harness Validates</div>
-        <div class="flow-steps">
-          <div class="flow-item">Enforce Pydantic schema constraints</div>
-          <div class="flow-item">Verify verdict consistency</div>
-          <div class="flow-item">Assert exact evidence quotes</div>
-          <div class="flow-item">Persist to database or reject</div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="flow-intellectual-point">
-      <strong>Why this works:</strong> Agentic judgment is enclosed by deterministic preparation and deterministic validation. The evaluator is not a free-range reviewer. It operates inside a reproducible workbench with constrained evidence. The system does not ask &ldquo;do you agree this patch is wrong?&rdquo; It asks the evaluator to rebuild the failure, diagnose the violated contract, and support the diagnosis with evidence from the packet.
+    <h3>The Evaluator Workflow</h3>
+    <div class="flow-container">
+      <div class="flow-step">Original agent patch</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Rebuild the exact failed state</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Run public + hidden tests</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Inspect the authored contract</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Create a shadow fix</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Run the same tests again</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Produce an evidence-backed diagnosis</div>
     </div>
   </div>
 
   <!-- Copy section -->
   <div class="copy-section">
-    <h2>The harness does the boring authoritative work. The evaluator does the uncertain work.</h2>
-    <p>The runner rebuilds the repository, applies the captured patch, injects the hidden tests, and preserves the packet. The evaluator inspects, reasons, diagnoses, and optionally tests an alternative implementation. Then deterministic checks decide whether the review is admissible — not whether it is correct, but whether it is structurally valid, consistent with the stored run, and supported by exact evidence from the packet.</p>
-    <p>A false-green tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain why the patch failed. For selected false-greens, we give a separate evaluator agent a disposable engineering workbench.</p>
+    <h2>The evaluator is given a workbench, not just a diff</h2>
+    <p>A false-green tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain why the patch failed.</p>
+    <p>For selected false-greens, we give a separate evaluator agent a disposable engineering workbench.</p>
   </div>
 
   <!-- Cards Section -->
@@ -329,7 +222,7 @@
     </div>
     <div class="repo-card">
       <div class="card-title">SHADOW REPO</div>
-      <div class="card-desc">Clean seed + hidden tests.<br><small>OPTIONAL &middot; OUTCOME NOT STRUCTURED &middot; Evaluator may edit this to demonstrate a valid fix.</small></div>
+      <div class="card-desc">Clean seed + hidden tests.<br><small>Evaluator may edit this to demonstrate a valid fix.</small></div>
     </div>
     <div class="repo-card">
       <div class="card-title">EVIDENCE PACKET</div>
@@ -346,11 +239,11 @@
     <h2>2. Diagnose the missed contract</h2>
     <p>The evaluator inspects the code, test output, and authored acceptance contract. It must identify the specific mismatch between the patch and the required behavior. The diagnosis must point to concrete evidence from the workbench. A verdict without an observable code path, test failure, or contract mismatch is not enough.</p>
 
-    <h2>3. Build a shadow fix (Optional)</h2>
-    <p>The evaluator may edit a clean shadow repository and attempt an alternative implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it shows that the authored contract is implementable in the supplied repository and supports the evaluator&rsquo;s diagnosis of a concrete gap in the original patch. Note that shadow-fix outcomes are currently not structured in the results database.</p>
+    <h2>3. Build a shadow fix</h2>
+    <p>The evaluator then edits a clean shadow repository and attempts a different implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it shows that the authored contract is implementable in the supplied repository and supports the evaluator&rsquo;s diagnosis of a concrete gap in the original patch.</p>
 
     <h2>What this establishes</h2>
-    <p>A validated review means the verdict is structurally valid, consistent with the stored run, and supported by exact evidence from the packet. It does not mean the evaluator has discovered the one true explanation. The narrow claim it supports:</p>
+    <p>A validated evaluator review supports a narrow claim:</p>
     <ul>
       <li>Under the authored benchmark contract, the original agent patch was incomplete or incorrect, and the evaluator demonstrated an alternative implementation that satisfied the same acceptance tests.</li>
     </ul>
@@ -361,9 +254,9 @@
       <li>the hidden tests are complete;</li>
       <li>the scenario is fair or representative;</li>
       <li>the benchmark contract matches every real-world requirement;</li>
-      <li>the evaluator&rsquo;s root-cause category is uniquely correct.</li>
+      <li>the evaluator’s root-cause category is uniquely correct.</li>
     </ul>
-    <p>The workbench makes the diagnosis executable and auditable. It does not turn one evaluator model into an external scientific authority. <strong>Another model's opinion is not evidence. The workbench is what makes the diagnosis inspectable.</strong></p>
+    <p>The workbench makes the diagnosis executable and auditable. It does not turn one evaluator model into an external scientific authority.</p>
   </div>
 
   <!-- Summary stats -->
@@ -371,7 +264,7 @@
     <div class="sum-stat"><div class="val" id="val-reviews">10</div><div class="lbl">evaluator-agent reviews</div></div>
     <div class="sum-stat green"><div class="val" id="val-violation">10/10</div><div class="lbl">diagnosed authored-contract violations</div></div>
     <div class="sum-stat green"><div class="val" id="val-validated">10/10</div><div class="lbl">evidence-validated verdicts</div></div>
-    <div class="sum-stat amber"><div class="val" id="val-shadow">OPTIONAL</div><div class="lbl">OUTCOME NOT STRUCTURED</div></div>
+    <div class="sum-stat"><div class="val" id="val-shadow">--</div><div class="lbl">shadow-fix outcomes not yet structured</div></div>
     <div class="sum-stat amber"><div class="val">91</div><div class="lbl">not yet reviewed</div></div>
   </div>
 
@@ -379,7 +272,7 @@
   <div class="reviews" id="reviews"></div>
 
   <div class="note">
-    <strong>What's missing:</strong> 91 false-greens remain unreviewed (pass@2, pass@3, maintenance_value, product_workflows, North Mini). Only one evaluator model used — no inter-evaluator agreement data. Reviews cover only Laguna ci_forensics sparse pass@1. Each missing control limits a claim the project can safely make. Generalizing to other packs or models requires additional review.
+    <strong>What's missing:</strong> 91 false-greens remain unreviewed (pass@2, pass@3, maintenance_value, product_workflows, North Mini). Only one evaluator model used — no inter-evaluator agreement data. Reviews cover only Laguna ci_forensics sparse pass@1. Generalizing to other packs or models requires additional review.
   </div>
 </div>
 

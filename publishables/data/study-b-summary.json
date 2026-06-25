@@ -1,0 +1,51 @@
+{
+  "summary": {
+    "total_cells": 132,
+    "planned_attempts": 396,
+    "retained_attempts": 391,
+    "false_greens": 101,
+    "hidden_passes": 284
+  },
+  "models": {
+    "laguna-xs2": {
+      "sparse": {
+        "runs": 99,
+        "public": 99,
+        "hidden": 57,
+        "false_green": 42,
+        "false_green_rate": 0.4242,
+        "any_of_three_success": 21,
+        "all_of_three_reliability": 17
+      },
+      "cv": {
+        "runs": 99,
+        "public": 99,
+        "hidden": 95,
+        "false_green": 4,
+        "false_green_rate": 0.0404,
+        "any_of_three_success": 33,
+        "all_of_three_reliability": 30
+      }
+    },
+    "north-mini": {
+      "sparse": {
+        "runs": 99,
+        "public": 95,
+        "hidden": 53,
+        "false_green": 42,
+        "false_green_rate": 0.4421,
+        "any_of_three_success": 19,
+        "all_of_three_reliability": 16
+      },
+      "cv": {
+        "runs": 94,
+        "public": 92,
+        "hidden": 79,
+        "false_green": 13,
+        "false_green_rate": 0.1413,
+        "any_of_three_success": 32,
+        "all_of_three_reliability": 20
+      }
+    }
+  }
+}

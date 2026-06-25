@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Trust Gap: Measuring Acceptance Reliability in Coding-Agent CI Repair</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body { font-family: Georgia, 'Times New Roman', Times, serif; color: #1a1a1a; background: #fff; line-height: 1.7; }
+    .paper { max-width: 700px; margin: 0 auto; padding: 60px 24px 100px; }
+    h1 { font-size: 1.8rem; font-weight: 700; line-height: 1.25; margin-bottom: 8px; letter-spacing: -0.01em; }
+    h2 { font-size: 1.25rem; font-weight: 700; margin-top: 48px; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+    h3 { font-size: 1.05rem; font-weight: 700; margin-top: 28px; margin-bottom: 10px; }
+    p { font-size: 0.95rem; margin-bottom: 14px; text-align: justify; hyphens: auto; }
+    .sans { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    .mono { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; }
+    .author { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.9rem; color: #555; margin-bottom: 4px; }
+    .affil { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.8rem; color: #888; margin-bottom: 24px; }
+    .abstract { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 20px 24px; margin: 24px 0 32px; }
+    .abstract h2 { margin-top: 0; border: none; padding: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #888; }
+    .abstract p { font-size: 0.9rem; text-align: left; margin-bottom: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    caption { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.8rem; font-weight: 600; text-align: left; margin-bottom: 6px; color: #333; }
+    th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #333; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td { padding: 6px 8px; border-bottom: 1px solid #ddd; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .fg { color: #c0392b; font-weight: 600; }
+    .hp { color: #27ae60; font-weight: 600; }
+    code { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; background: #f5f5f5; padding: 1px 4px; border-radius: 2px; }
+    pre { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.6; background: #fafafa; border: 1px solid #eee; border-radius: 4px; padding: 14px; margin: 12px 0; overflow-x: auto; }
+    pre .del { color: #c0392b; }
+    pre .add { color: #27ae60; }
+    pre .ctx { color: #999; }
+    blockquote { border-left: 3px solid #ccc; padding-left: 16px; margin: 16px 0; color: #555; font-style: italic; font-size: 0.9rem; }
+    .ref { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.8rem; color: #555; margin-bottom: 8px; padding-left: 28px; text-indent: -28px; }
+    .fn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 0.78rem; color: #666; margin: 16px 0; padding: 12px 16px; background: #f8f9fa; border-radius: 4px; }
+    .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+    .tag.red { background: #fde8e8; color: #c0392b; }
+    .tag.green { background: #e8fde8; color: #27ae60; }
+    sup { font-size: 0.7em; }
+    @media print { .paper { padding: 0; max-width: 100%; } }
+  </style>
+</head>
+<body>
+<div class="paper">
+
+  <h1>The Trust Gap: Measuring Acceptance Reliability in Coding-Agent CI Repair</h1>
+  <p class="author">Anil Yamangil</p>
+  <p class="affil">Independent Research &middot; June 2026</p>
+
+  <div class="abstract">
+    <h2>Abstract</h2>
+    <p>We present a behavioral evaluation of five coding-agent models across 33 curated CI-repair scenarios with hidden acceptance tests injected after the agent exits. Models achieve 55–100% public pass rates but 27–68% hidden pass rates, producing a consistent trust gap of 20–62 percentage points. The trust gap persists across model families (Cohere North Mini, Google Gemma 4, Poolside Laguna XS.2, DeepSeek V4 Pro), model sizes (3B to frontier), and deployment contexts (local Ollama, hosted API, free tier). Three scenarios remain unconquered by any model at pass@1. Contract-visible prompts collapse the gap to 0–8% on mechanical tasks but only to 9–33% on business-logic tasks. We find that pass@3 retries do not converge — North Mini regressed from pass@1 to pass@2, and both models failed all 9 retry attempts on the 3 unconquered scenarios. We identify a secondary trust gap: the model's own post-repair summary declares success in 3 of 4 false-green cases. We release the harness, all artifacts, and evaluation methodology as open-source evidence.</p>
+  <div class="sans" style="font-size:0.78rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, hidden acceptance, false-green, evaluation harness</div>
+  </div>
+
+  <h2>1. Introduction</h2>
+  <p>Standard coding benchmarks measure whether a model can generate code that passes tests. This evaluation asks a different question: when a coding agent makes CI green, how often is the bug actually fixed?</p>
+  <p>The distinction matters because visible tests create an optimization attractor. The agent optimizes for the public test signal — the only feedback available during its run. It stops when CI passes. It does not ask "what else should be true here?" because nobody told it there was more to check.<sup>[1]</sup></p>
+  <p>A model that satisfies the visible assertion without satisfying the hidden contract is a <strong>false-green</strong>: <code>public_pass=1, hidden_pass=0</code>. The <strong>trust gap</strong> — public pass rate minus hidden pass rate — measures how often "looks fixed" is actually "is fixed."</p>
+  <p>We evaluate five models across three task types with two prompt lanes (sparse and contract-visible) at pass@1. The evaluation produces three findings:</p>
+  <p style="padding-left: 20px; text-indent: -20px;">1. The trust gap is structural, not model-specific. Two independently trained 3B-active MoE coding agents from different companies produce identical false-green scenarios.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">2. Contract-visible prompts collapse the gap on mechanical tasks but not on business-logic tasks. The frontier model's ceiling is the spec density, not the model size.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">3. The model's own post-repair summary declares success in 3 of 4 false-green cases, creating a secondary trust gap between the model's explanation and reality.</p>
+
+  <h2>2. Methodology</h2>
+  <h3>2.1 Harness Design</h3>
+  <p>Each scenario is a self-contained Python repository with a failing public test suite. The harness executes the following pipeline:<sup>[2]</sup></p>
+  <p style="padding-left: 20px; text-indent: -20px;">1. Write the scenario to a fresh worktree.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">2. Run baseline tests (confirm red CI).</p>
+  <p style="padding-left: 20px; text-indent: -20px;">3. Invoke the coding agent via OpenCode CLI with the rendered prompt.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">4. Run public tests (record CI state).</p>
+  <p style="padding-left: 20px; text-indent: -20px;">5. Inject hidden acceptance tests into the worktree.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">6. Run hidden tests (record acceptance state).</p>
+  <p style="padding-left: 20px; text-indent: -20px;">7. Store all artifacts: prompt, stdout JSONL, patch, test outputs.</p>
+  <p>Runtime failures (timeouts, provider errors) are classified separately from semantic outcomes. A <code>no_output_timeout</code> is operational evidence, not a model failure.<sup>[3]</sup></p>
+
+  <h3>2.2 Scenario Packs</h3>
+  <p>33 scenarios across three packs:</p>
+  <table>
+    <caption>Table 1: Scenario packs</caption>
+    <thead><tr><th>Pack</th><th>Scenarios</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>ci_forensics</code></td><td class="num">12</td><td>Dependency changes, stale configs, import errors, timezone drift</td></tr>
+      <tr><td><code>maintenance_value</code></td><td class="num">10</td><td>Logger migrations, field renames, generated artifacts, validation matrices</td></tr>
+      <tr><td><code>product_workflows</code></td><td class="num">11</td><td>Billing, discounts, inventory, SLAs, audit logging, webhooks</td></tr>
+    </tbody>
+  </table>
+  <p>Each pack has a distinct semantic density: mechanical (low), refactoring (medium), business logic (high). The hidden tests encode contracts that cannot be fully inferred from the public test alone.</p>
+
+  <h3>2.3 Prompt Lanes</h3>
+  <table>
+    <caption>Table 2: Prompt modes</caption>
+    <thead><tr><th>Mode</th><th>Description</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>sparse</code></td><td>"CI is red after a dependency upgrade. Diagnose and get it green." + scenario title</td><td>Control — tests independent problem-solving</td></tr>
+      <tr><td><code>contract_visible</code></td><td>Sparse + acceptance criteria, success signals, known failure modes</td><td>Treatment — tests whether explicit specs reduce false-greens</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.4 Models</h3>
+  <table>
+    <caption>Table 3: Evaluated models</caption>
+    <thead><tr><th>Model</th><th>Provider</th><th>Architecture</th><th>Deployment</th><th>Avg Speed</th></tr></thead>
+    <tbody>
+      <tr><td>North Mini Code</td><td>Cohere</td><td>30B total / 3B active MoE</td><td>OpenCode free tier (API)</td><td>17s</td></tr>
+      <tr><td>Gemma 4 12B</td><td>Google</td><td>Dense 12B</td><td>Local Ollama</td><td>211s</td></tr>
+      <tr><td>DeepSeek V4 Pro</td><td>DeepSeek</td><td>Large (undisclosed)</td><td>Hosted API</td><td>36s</td></tr>
+      <tr><td>Laguna XS.2</td><td>Poolside</td><td>33B total / 3B active MoE</td><td>OpenRouter free tier (API)</td><td>44s</td></tr>
+      <tr><td>Gemma 4 e4b / 31B</td><td>Google</td><td>MoE e4b / Dense 31B</td><td>Local Ollama</td><td>varying</td></tr>
+    </tbody>
+  </table>
+  <p>All models were tested through the same OpenCode CLI interface with identical prompts, hidden tests, and evaluation criteria.</p>
+
+  <h3>2.5 Evaluator Agent</h3>
+  <p>False-green rows are reviewed by a separate evaluator agent (DeepSeek V4 Pro) with a workbench: the original repo, the model's patch, the hidden tests, and a blank <code>shadow_repo</code> for writing alternative fixes. Every claim in the evaluator's verdict must appear verbatim in the evidence packet. Pydantic enforces schema compliance. The evaluator cannot hallucinate its way to confidence.<sup>[4]</sup></p>
+
+  <h2>3. Results</h2>
+  <h3>3.1 CI Forensics (12 scenarios)</h3>
+  <table>
+    <caption>Table 4: CI forensics — false-green rates by model and prompt lane</caption>
+    <thead><tr><th>Model</th><th class="num">Sparse Pub</th><th class="num">Sparse Hid</th><th class="num">Sparse FG%</th><th class="num">CV Pub</th><th class="num">CV Hid</th><th class="num">CV FG%</th></tr></thead>
+    <tbody>
+      <tr><td>North Mini</td><td class="num">12/12</td><td class="num">8/12</td><td class="num fg">33%</td><td class="num">12/12</td><td class="num">11/12</td><td class="num hp">8%</td></tr>
+      <tr><td>Gemma 12B</td><td class="num">5/12</td><td class="num">3/12</td><td class="num fg">40%</td><td class="num">7/12</td><td class="num">6/12</td><td class="num hp">14%</td></tr>
+      <tr><td>DeepSeek</td><td class="num">12/12</td><td class="num">9/12</td><td class="num fg">25%</td><td class="num">12/12</td><td class="num">12/12</td><td class="num hp">0%</td></tr>
+      <tr><td>Laguna</td><td class="num">12/12</td><td class="num">8/12</td><td class="num fg">33%</td><td class="num">12/12</td><td class="num">12/12</td><td class="num hp">0%</td></tr>
+    </tbody>
+  </table>
+  <p>North Mini and Laguna produce identical false-green rates (33%) on identical scenarios. DeepSeek and Laguna both reach 0% false-green with contract-visible prompts.</p>
+
+  <h3>3.2 Maintenance Value (10 scenarios)</h3>
+  <table>
+    <caption>Table 5: Maintenance value — false-green rates</caption>
+    <thead><tr><th>Model</th><th class="num">Sparse Pub</th><th class="num">Sparse Hid</th><th class="num">Sparse FG%</th><th class="num">CV Pub</th><th class="num">CV Hid</th><th class="num">CV FG%</th></tr></thead>
+    <tbody>
+      <tr><td>North Mini</td><td class="num">10/10</td><td class="num">8/10</td><td class="num fg">20%</td><td class="num">9/10</td><td class="num">9/10</td><td class="num hp">0%</td></tr>
+      <tr><td>Gemma 12B</td><td class="num">9/10</td><td class="num">7/10</td><td class="num fg">22%</td><td class="num">7/10</td><td class="num">6/10</td><td class="num hp">14%</td></tr>
+      <tr><td>DeepSeek</td><td class="num">10/10</td><td class="num">7/10</td><td class="num fg">30%</td><td class="num">10/10</td><td class="num">10/10</td><td class="num hp">0%</td></tr>
+    </tbody>
+  </table>
+  <p>North Mini and DeepSeek reach 0% false-green with contract-visible prompts. Gemma 12B retains 14% — foreign tool surface limits its ability to navigate the codebase even with clear specs.</p>
+
+  <h3>3.3 Product Workflows (11 scenarios)</h3>
+  <table>
+    <caption>Table 6: Product workflows — false-green rates</caption>
+    <thead><tr><th>Model</th><th class="num">Sparse Pub</th><th class="num">Sparse Hid</th><th class="num">Sparse FG%</th><th class="num">CV Pub</th><th class="num">CV Hid</th><th class="num">CV FG%</th></tr></thead>
+    <tbody>
+      <tr><td>North Mini</td><td class="num">9/11</td><td class="num">1/11</td><td class="num fg">89%</td><td class="num">9/11</td><td class="num">6/11</td><td class="num fg">33%</td></tr>
+      <tr><td>Gemma 12B</td><td class="num">6/11</td><td class="num">2/11</td><td class="num fg">67%</td><td class="num">8/11</td><td class="num">7/11</td><td class="num hp">12%</td></tr>
+      <tr><td>DeepSeek</td><td class="num">11/11</td><td class="num">3/11</td><td class="num fg">73%</td><td class="num">11/11</td><td class="num">10/11</td><td class="num hp">9%</td></tr>
+    </tbody>
+  </table>
+  <p>Under sparse prompts, 67–89% of CI-green patches are false-greens across all three models. The free model and the frontier model fail identically. With contract-visible prompts, DeepSeek drops to 9% but does not reach 0%. <code>bulk_invite_dedupe</code> survives even DeepSeek with clear specs.</p>
+
+  <h3>3.4 Cross-Model False-Green Overlap</h3>
+  <table>
+    <caption>Table 7: False-green scenarios at pass@1 (ci_forensics sparse)</caption>
+    <thead><tr><th>Scenario</th><th>North Mini</th><th>Gemma 12B</th><th>DeepSeek</th><th>Laguna</th></tr></thead>
+    <tbody>
+      <tr><td><code>csv_header_contract</code></td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td></tr>
+      <tr><td><code>decimal_money_rounding</code></td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td></tr>
+      <tr><td><code>env_bool_parser</code></td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td><td class="fg">✗</td></tr>
+      <tr><td><code>dependency_api_change</code></td><td class="fg">✗</td><td class="fg">✗</td><td class="hp">✓</td><td class="fg">✗</td></tr>
+    </tbody>
+  </table>
+  <p>Three scenarios are unconquered by all four models at pass@1. <code>dependency_api_change</code> was solved by DeepSeek only. The wall is shared — the same scenarios fail regardless of model family, size, or deployment context.</p>
+
+  <h3>3.5 Laguna Pass@3 Variance</h3>
+  <table>
+    <caption>Table 8: Laguna XS.2 ci_forensics sparse — pass@k (36 rows, 12 scenarios × 3 attempts)</caption>
+    <thead><tr><th>Pass</th><th class="num">Pub</th><th class="num">Hid</th><th class="num">FG</th><th class="num">FG%</th></tr></thead>
+    <tbody>
+      <tr><td>@1</td><td class="num">12</td><td class="num">8</td><td class="num fg">4</td><td class="num fg">33%</td></tr>
+      <tr><td>@2</td><td class="num">12</td><td class="num">9</td><td class="num fg">3</td><td class="num fg">25%</td></tr>
+      <tr><td>@3</td><td class="num">12</td><td class="num">9</td><td class="num fg">3</td><td class="num fg">25%</td></tr>
+      <tr><td><strong>best-of-3</strong></td><td class="num"><strong>12</strong></td><td class="num"><strong>9</strong></td><td class="num fg"><strong>3</strong></td><td class="num fg"><strong>25%</strong></td></tr>
+    </tbody>
+  </table>
+  <p><code>dependency_api_change</code> recovered on pass@2. The remaining 3 false-greens resisted all 3 attempts. Each attempt is an independent fresh start — new worktree, no memory of prior attempts. The marginal gain from retry is +1 hidden pass.</p>
+
+  <h3>3.6 Evaluator Verdicts</h3>
+  <p>DeepSeek V4 Pro, as evaluator, reviewed 10 Laguna false-green rows (ci_forensics sparse). All confirmed as valid false-greens. Mean confidence: 0.95.</p>
+  <table>
+    <caption>Table 9: Evaluator root-cause taxonomy (10 reviews)</caption>
+    <thead><tr><th>Root Cause</th><th class="num">Count</th><th>Definition</th></tr></thead>
+    <tbody>
+      <tr><td><code>edge_case_gap</code></td><td class="num">4</td><td>The model knew the rule, missed specific boundary cases</td></tr>
+      <tr><td><code>missed_hidden_contract</code></td><td class="num">3</td><td>The model didn't know the contract existed</td></tr>
+      <tr><td><code>incomplete_domain_policy</code></td><td class="num">3</td><td>The model knew the rule, botched the implementation</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.7 The Deterministic False-Green</h3>
+  <p><code>decimal_money_rounding</code> produced byte-identical patches on Laguna attempts 1 and 2:</p>
+  <pre><span class="del">- total = 0.0</span>
+<span class="add">+ total = Decimal("0")</span>
+<span class="del">- total += float(line["unit_price"]) * int(line["quantity"])</span>
+<span class="add">+ total += Decimal(line["unit_price"]) * int(line["quantity"])</span>
+<span class="ctx">  return int(total * 100)  ← truncates, doesn't round half-up</span></pre>
+  <p>The model independently produced the same wrong code from scratch, twice. This is not random variance. It is a stable attractor — the model converges to the same incomplete solution when the public test signal does not push it toward the hidden contract.</p>
+
+  <h3>3.8 The Second Trust Gap</h3>
+  <table>
+    <caption>Table 10: Model's own summary vs reality (Laguna ci_forensics sparse false-greens)</caption>
+    <thead><tr><th>Scenario</th><th>Model's Summary</th><th>Ending</th></tr></thead>
+    <tbody>
+      <tr><td><code>csv_header_contract</code></td><td>"Changed from sorted keys to EXPORT_COLUMNS..."</td><td class="fg">"Tests pass."</td></tr>
+      <tr><td><code>decimal_money_rounding</code></td><td>"Fixed by replacing float with Decimal..."</td><td class="fg">"CI is now green."</td></tr>
+      <tr><td><code>env_bool_parser</code></td><td>(minimal description)</td><td class="fg">"Tests pass. Fix complete."</td></tr>
+      <tr><td><code>dependency_api_change</code></td><td>"Changed from result is not True to not result.get('ok')..."</td><td style="color:#888">No verdict (just facts)</td></tr>
+    </tbody>
+  </table>
+  <p>Three of four false-green summaries declare success based on CI green. The model is factually accurate about what it changed — it is not hallucinating. But it treats the visible test signal as the definition of correctness. It has no mechanism to flag uncertainty about unstated requirements.</p>
+  <p><code>dependency_api_change</code> — the one that did not declare victory — is also the one that recovered on pass@2. The model's own restraint may be a signal worth measuring.</p>
+
+  <h3>3.9 North Mini Pass@3 Variance and Contract-Visible Comparison</h3>
+  <table>
+    <caption>Table 11: North Mini ci_forensics sparse — pass@k (36 rows, 12 scenarios × 3 attempts)</caption>
+    <thead><tr><th>Pass</th><th class="num">Pub</th><th class="num">Hid</th><th class="num">FG</th><th class="num">FG%</th></tr></thead>
+    <tbody>
+      <tr><td>@1</td><td class="num">12</td><td class="num">9</td><td class="num fg">3</td><td class="num fg">25%</td></tr>
+      <tr><td>@2</td><td class="num">12</td><td class="num">8</td><td class="num fg">4</td><td class="num fg">33%</td></tr>
+      <tr><td>@3</td><td class="num">12</td><td class="num">8</td><td class="num fg">4</td><td class="num fg">33%</td></tr>
+      <tr><td><strong>best-of-3</strong></td><td class="num"><strong>12</strong></td><td class="num"><strong>9</strong></td><td class="num fg"><strong>3</strong></td><td class="num fg"><strong>25%</strong></td></tr>
+    </tbody>
+  </table>
+  <p>Unlike Laguna, North Mini <strong>regressed</strong> on retry. Pass@1 had 3 false-greens (<code>csv_header_contract</code>, <code>decimal_money_rounding</code>, <code>dependency_api_change</code>). Pass@2 lost <code>env_bool_parser</code> (previously solved) while gaining no new solves. The model re-sampled in the wrong direction. No false-greens recovered across 3 passes. Three scenarios remain unconquered.</p>
+
+  <table>
+    <caption>Table 12: Contract-visible effect on ci_forensics (pass@1)</caption>
+    <thead><tr><th>Model</th><th class="num">Sparse FG%</th><th class="num">CV FG%</th><th class="num">Delta</th></tr></thead>
+    <tbody>
+      <tr><td>Laguna XS.2</td><td class="num fg">33%</td><td class="num hp">0%</td><td class="num hp">-33</td></tr>
+      <tr><td>North Mini</td><td class="num fg">33%</td><td class="num hp">8%</td><td class="num hp">-25</td></tr>
+      <tr><td>DeepSeek V4 Pro</td><td class="num fg">25%</td><td class="num hp">0%</td><td class="num hp">-25</td></tr>
+    </tbody>
+  </table>
+  <p>Both models benefit dramatically from explicit acceptance criteria. Laguna reaches 0% false-green, matching DeepSeek. North Mini's remaining false-green is <code>decimal_money_rounding</code> — the same cent-rounding scenario that resisted all 3 Laguna attempts in sparse mode. Both models scraped <code>env_bool_parser</code> under sparse but solved it under contract-visible — knowing the truthy/falsey matrix enables the correct implementation.</p>
+
+  <h2>4. Discussion</h2>
+  <h3>4.1 The Trust Gap Is Structural</h3>
+  <p>Five models across four model families produce the same pattern. Two 3B-active MoE coding agents from different companies (North Mini, Laguna) hit identical false-green rates on identical scenarios. The frontier model (DeepSeek) is only 1 scenario better at pass@1. The trust gap is not a function of model size, training data, or reasoning capability. It is a function of the gap between the visible test and the hidden contract.</p>
+
+  <h3>4.2 The Contract-Visible Effect</h3>
+  <p>Contract-visible prompts collapse the trust gap on mechanical and refactoring tasks (0–14% false-green) but only reduce it on business-logic tasks (9–33%). The intervention is the specification, not the model. This is consistent with the challenge design philosophy: the hidden contract is richer than the visible test, and the model cannot infer the full contract from partial evidence alone.<sup>[1]</sup></p>
+
+  <h3>4.3 The Spec Density Ceiling</h3>
+  <p>DeepSeek with contract-visible prompts reaches 0% on <code>ci_forensics</code> and <code>maintenance_value</code> but only 9% on <code>product_workflows</code>. The frontier model's ceiling is the spec density — the ratio of hidden contract to visible test. Business-logic scenarios encode policy (billing rules, audit contracts, inventory state machines) that cannot be fully specified in a prompt without revealing the hidden tests.</p>
+
+  <h3>4.4 Retries Do Not Converge</h3>
+  <p>Laguna's pass@3 data shows independent fresh attempts converge on the same incomplete solutions — <code>decimal_money_rounding</code> produced identical patches twice. North Mini's pass@3 data is more concerning: the model <strong>regressed</strong> from pass@1 to pass@2, losing a previously solved scenario without gaining new ones. Across both models, 9 independent attempts on the 3 unconquered scenarios produced zero successful escapes. The public test signal is too weak to guide either model out of its attractor. Re-sampling from a distribution of wrong answers can produce worse outcomes, not better ones.</p>
+
+  <h3>4.5 Implications for Deployment</h3>
+  <p>The evidence supports a three-zone deployment policy:</p>
+  <p style="padding-left: 20px; text-indent: -20px;"><span class="tag green">Green</span> <strong>Merge on CI green.</strong> Mechanical work. Migrations. Fixtures. Docs. All models converge at 0–14% false-green with clear specs.</p>
+  <p style="padding-left: 20px; text-indent: -20px;"><span class="tag" style="background:#fff3cd;color:#856404">Amber</span> <strong>Gate on hidden acceptance.</strong> Adapters. Validators. Edge cases. Clear specs close the gap but do not eliminate it.</p>
+  <p style="padding-left: 20px; text-indent: -20px;"><span class="tag red">Red</span> <strong>Human review or frontier model with clear specs.</strong> Billing. Discounts. Inventory. SLAs. Auth. Audit. 67–89% false-green under sparse. 9–33% even with clear specs.</p>
+  <p>The model is replaceable. The trust gate is the enduring investment.</p>
+
+  <h2>5. Limitations</h2>
+  <p style="padding-left: 20px; text-indent: -20px;">1. <strong>Pass@1 is noisy.</strong> Gemma 12B's maintenance hidden pass swung from 4/10 to 7/10 across two same-day runs. Single-attempt numbers describe an attempt, not a model. Pass@3 minimum is needed for defensible claims.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">2. <strong>System comparison, not model ranking.</strong> North Mini runs on its native tool surface. Gemma runs through a foreign agent loop on local Ollama. Speed asymmetry (17s vs 211s) confounds raw capability. We measure system behavior, not abstract model quality.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">3. <strong>33 scenarios. One evaluator. No external audit.</strong> The hidden tests and evaluator verdicts are authored by the same team. Tier 1 evidence — behavior microscope only. Tier 2 (comparative claims) needs evaluator agreement. Tier 3 (public benchmark) needs external audit.</p>
+  <p style="padding-left: 20px; text-indent: -20px;">4. <strong>Incomplete matrix.</strong> Four cells complete (ci_forensics sparse + cv for both models, 144 runs). Maintenance and product_workflows cells still running. DeepSeek product_workflows sparse is from a prior control run. Conclusions strengthen with more data.</p>
+
+  <h2>6. Related Work</h2>
+  <p>SWE-bench<sup>[5]</sup> measures resolution accuracy on real GitHub issues. Terminal-Bench<sup>[6]</sup> measures agentic task completion. This harness measures a different axis: whether public CI green can be trusted as acceptance when the visible tests under-specify the product contract. The public/hidden split is the methodological contribution — not a new benchmark, but a trust audit on top of existing agent capabilities.</p>
+
+  <h2>7. Conclusion</h2>
+  <p>The trust gap is real, structural, and cross-model. When a coding agent makes CI green, there is a 20–62% chance the bug is not actually fixed, depending on task type and prompt specificity. The gap persists across five models from four families. It collapses to 0–14% with explicit acceptance criteria on mechanical tasks but remains at 9–33% on business-logic tasks even for frontier models.</p>
+  <p>The practical implication is clear: partition your CI repair by task type, not by model. Mechanical work can be delegated with clear specs. Business logic needs hidden acceptance gates. The model is replaceable. The trust gate is not.</p>
+
+  <h2>References</h2>
+  <p class="ref">[1] Yamangil, A. (2026). Challenge Design Philosophy. <code>docs/challenge-design.md</code> in <code>anomalyco/north-mini-test</code>.</p>
+  <p class="ref">[2] Yamangil, A. (2026). CI Vibe Lab Runner. <code>ci_vibe_lab/runner.py</code> in <code>anomalyco/north-mini-test</code>.</p>
+  <p class="ref">[3] Yamangil, A. (2026). Matrix Outcome Classification. <code>ci_vibe_lab/matrix.py</code>, function <code>classify_row()</code>.</p>
+  <p class="ref">[4] Yamangil, A. (2026). Evaluator Agent with Shadow Fix Verification. <code>ci_vibe_lab/evaluator.py</code> in <code>anomalyco/north-mini-test</code>.</p>
+  <p class="ref">[5] Jimenez, C. E. et al. (2024). SWE-bench: Can Language Models Resolve Real-World GitHub Issues? <em>ICLR 2024</em>.</p>
+  <p class="ref">[6] Terminal-Bench 2.0. <a href="https://www.tbench.ai/">tbench.ai</a>.</p>
+
+  <div class="fn">
+    <strong>Data availability:</strong> All run databases, artifacts, evaluator reviews, and harness source code are available at <a href="https://github.com/anomalyco/north-mini-test">github.com/anomalyco/north-mini-test</a>. Matrix configs are in <code>configs/matrix/</code>. Reports are in <code>reports/</code>.
+  </div>
+
+  <div class="fn">
+    <strong>Model disclosures:</strong> North Mini Code (Cohere, Apache 2.0). Gemma 4 (Google, various licenses). DeepSeek V4 Pro (DeepSeek, proprietary). Laguna XS.2 (Poolside, Apache 2.0). All models accessed through free tiers or standard APIs. No fine-tuning was performed.
+  </div>
+
+</div>
+</body>
+</html>

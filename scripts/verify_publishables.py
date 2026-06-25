@@ -411,6 +411,7 @@ def verify_stale_claims(parsed_files):
         (re.compile(r"v11\.html", re.IGNORECASE), "v11.html"),
         (re.compile(r"never\s+sees\s+original\s+source", re.IGNORECASE), "never sees original source"),
         (re.compile(r"cannot\s+make\s+things\s+up", re.IGNORECASE), "cannot make things up"),
+        (re.compile(r"five\s+configurations\s+in\s+breadth", re.IGNORECASE), "five configurations in breadth (should be four)"),
         (re.compile(r"Laguna\s+matrix\s+integrity\s+not\s+yet\s+run", re.IGNORECASE), "Laguna matrix integrity not yet run")
     ]
     

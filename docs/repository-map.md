@@ -9,7 +9,6 @@ Admission rule: a file remains on public `main` only if it runs, tests, configur
 | Path | Role | Audience | Authority | Required on `main` | Maintenance | Action |
 |---|---|---|---|---|---|---|
 | `.github/` | CI and manual Pages deployment workflows | Maintainers | Source | Verifies PRs and deploys the curated site | Edit with release process changes | Keep |
-| `app/` | Small app module used by root test fixture | Contributors, CI | Source | `tests/test_dates.py` imports `app.dates.invoice_date` | Keep in sync with tests | Keep |
 | `ci_vibe_lab/` | Harness implementation | Contributors, maintainers | Source | Runs scenarios, matrices, reports, evaluator workbench, dashboard | Code review and tests | Keep |
 | `configs/` | Matrix definitions | Researchers, maintainers | Source | Defines reproducible experiment matrices | Review before new evidence runs | Keep |
 | `data/releases/v1/` | Frozen public data release | Researchers, reviewers | Source evidence | Recomputes published metrics | Regenerate only through release process | Keep |
@@ -38,6 +37,7 @@ Admission rule: a file remains on public `main` only if it runs, tests, configur
 | Dated docs plans and handovers | Development archaeology superseded by current docs | Durable content extracted into current docs |
 | Generated/intermediate reports | Overlapping historical analyses superseded by public data, paper, and final audit | Git history, archive snapshot, and release data |
 | `scripts/analyze_gemma.py`, `scripts/query_gemma.py` | One-off local analysis helpers tied to removed scratch reports | Git history and archive snapshot |
+| `app/`, `tests/test_dates.py` | Root-level leftover scenario fixture, not package API or harness implementation | Git history and archive snapshot |
 
 ## Notes
 

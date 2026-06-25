@@ -112,11 +112,23 @@ Sometimes you need 6 interconnected pages with a shared nav bar, not a single de
 **Purpose:** Reviewed false-greens with root causes
 **Structure:**
 - Glossary (what is a false-green, how reviews work)
-- Summary stats (10 reviews, 10/10 confirmed, mean confidence 0.95)
+- Summary stats (10 evaluator-agent reviews, 10 evidence-validated false-green diagnoses, shadow-fix outcomes not yet structured)
 - Review cards (per-case verdict, root cause, confidence, patch quality)
 - What's missing (91 unreviewed)
 
 **Key patterns:** Glossary before content, concrete cases, evidence tier stated.
+
+## Diagram Rules
+
+A diagram must either replace a paragraph or reveal a relationship that a table hides. Otherwise cut it.
+
+- One sentence headline per figure, one visual relationship, one short caption.
+- One truth label per figure: **Observed**, **Interpretation**, **Study Design**, **Conceptual Model**, or **Analytic Frame**.
+- Semantic colors only: green = pass, rose = false-green, amber = partial/warning, blue = neutral, gray = unknown.
+- Sans-serif labels inside figures; serif captions outside.
+- Max width ~720px. Self-contained inline SVG or HTML/CSS. No external chart libraries.
+- Add accessible `<title>` and `<desc>` to each SVG. Print-safe CSS. No text smaller than 10px (labels 8px minimum).
+- No gradients, icon soup, model logos, pie charts, donut charts, generic AI architecture diagrams, or duplicated harness diagrams.
 
 ## How to Use
 

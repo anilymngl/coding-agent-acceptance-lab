@@ -359,6 +359,22 @@ def verify_html_integrity(cells):
                     sys.exit(1)
                     
     print("All internal hyperlinks and fragment anchors resolved successfully!")
+
+    # Verify required figure IDs in paper.html
+    required_figures = [
+        "fig-flowchart",
+        "fig-design",
+        "fig-slopegraph",
+        "fig-attractor",
+        "fig-two-surfaces",
+    ]
+    paper_ids = parsed_files["paper.html"].ids
+    for fig_id in required_figures:
+        if fig_id not in paper_ids:
+            print(f"Error: Required figure ID '{fig_id}' is missing from paper.html")
+            sys.exit(1)
+    print(f"All {len(required_figures)} required figures present in paper.html!")
+
     return parsed_files
 
 def verify_stale_claims(parsed_files):

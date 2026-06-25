@@ -84,6 +84,17 @@
     .walk-outcome.fail { color: #c0392b; }
     .walk-outcome.pass { color: #27ae60; }
     @media (max-width: 580px) { .walkthrough { grid-template-columns: 1fr; } }
+
+    /* ── lists, scroll, print ── */
+    ul, ol { padding-left: 1.3rem; margin: 0 0 1rem; font-size: 0.9rem; }
+    .table-scroll { overflow-x: auto; margin: 16px 0; }
+    .case-card, .walk-col, table, .figure, h2, h3 { break-inside: avoid; }
+    h2, h3, [id] { scroll-margin-top: 24px; }
+    @media print {
+      .case-grid { grid-template-columns: repeat(2, 1fr); }
+      .table-scroll { overflow: visible; }
+      .reading-map { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -112,6 +123,16 @@
     <h2>Abstract</h2>
     <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
     <div class="sans" style="font-size:0.75rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, false-green, hidden acceptance, Pass@3, evaluation harness, contract-visible</div>
+  </div>
+
+  <div class="sans reading-map" style="font-size:0.78rem;color:#555;margin-bottom:20px;line-height:1.8">
+    <strong style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:#888">Reading map</strong><br>
+    <a href="#fig-flowchart" style="color:#2563eb">How green can lie</a> &middot;
+    <a href="#fig-flowchart" style="color:#2563eb">What agents were asked to fix</a> &middot;
+    <a href="#fig-slopegraph" style="color:#2563eb">Prompt effect</a> &middot;
+    <a href="#fig-two-surfaces" style="color:#2563eb">Two failure surfaces</a> &middot;
+    <a href="#fig-contract-mechanism" style="color:#2563eb">Evaluator workbench</a> &middot;
+    <a href="#" onclick="document.getElementById('toc-limits').scrollIntoView();return false" style="color:#2563eb">Limitations</a>
   </div>
 
   <h2>1. Plain-Language Summary</h2>
@@ -618,9 +639,9 @@
   <p style="font-size: 11px; color: #666; line-height: 1.4;">
     <sup>*</sup> North Mini product workflows routed through OpenRouter due to OpenCode Zen quota exhaustion.<br />
     <sup>†</sup> Incomplete cell: only 25 of 30 planned attempts completed due to quota limits.<br />
-    <sup>a</sup> Laguna missed 2 attempts on <code>support_sla_business_hours</code> (1 pass, 2 FGs).<br />
-    <sup>b</sup> Laguna missed 1 attempt each on <code>csv_header_contract</code> and <code>env_bool_parser</code>.<br />
-    <sup>c</sup> North Mini CV missed 10 attempts across 6 scenarios, including all 3 attempts on <code>support_sla_business_hours</code> (3 FGs).<br />
+    <sup>a</sup> Laguna produced 2 false-greens on <code>support_sla_business_hours</code> (1 pass, 2 FGs).<br />
+    <sup>b</sup> Laguna produced 1 false-green on each of <code>csv_header_contract</code> and <code>env_bool_parser</code>.<br />
+    <sup>c</sup> North Mini CV produced 10 false-greens across 6 scenarios, including all 3 retained attempts on <code>support_sla_business_hours</code> (3 FGs).<br />
     <sup>d</sup> For North Mini maintenance_value CV: 5 complete 3-attempt cells (5/5 reliable); 5 incomplete 2-attempt cells (four 2/2 hidden-pass, one 1/2 mixed).
   </p>
 
@@ -823,21 +844,39 @@
 
   <p>This layer of the evaluation pipeline closes a gap in the main study itself. A classification system can flag public-green ticks as incomplete. An evaluator workbench can turn those flags into concrete, auditable engineering artifacts — a written diagnosis, a reproduction trace, an evidence quote, and where appropriate, a shadow patch. Together they make the trust gap inspectable rather than merely countable.</p>
 
-  <h2>15. Operational Behavior and Gateway Limitations</h2>
-  <p>North Mini was routed through two gateways: OpenCode Zen (for forensics and maintenance) and OpenRouter (for product workflows). We cannot separate gateway route effects from scenario pack differences. Because the OpenCode Zen gateway enforces strict daily quotas, 5 attempts are missing from the North Mini maintenance CV cells. Operational limitations, such as rate limits and quota walls, are significant variables in agent deployment.</p>
-
-  <h2>16. Exploratory Trace and Patch Statistics</h2>
-  <p>Exploratory trace data suggests that false-green and hidden-pass attempts may differ in tool usage and tracked-file patch size. These statistics have not yet been regenerated from the final retained matrix and are excluded from the main findings.</p>
-
-  <h2>17. Threats to Validity</h2>
+  <h2 id="toc-limits">15. Threats to Validity</h2>
   <ul>
     <li><strong>Benchmark author bias:</strong> Hidden tests, templates, and baseline suites were written by the same team, which may introduce systematic omissions.</li>
     <li><strong>Incomplete evaluator coverage:</strong> Only 10 of <span data-metric="study_b.false_greens">101</span> false-green attempts have been audited by the evaluator model. <span data-metric="study_b.unreviewed_false_greens">91</span> false-greens remain unreviewed.</li>
-    <li><strong>Inference differences:</strong> OpenRouter and OpenCode Zen gateways may serve different model versions or use different temperature configurations.</li>
-    <li><strong>Code Audit Findings:</strong> The baseline test is recorded but not enforced. Incomplete runs skipped by matrix resume are assumed complete in SQLite. Evaluator fallback reviews are not currently filtered out from validation statistics.</li>
+    <li><strong>Prompt privilege:</strong> Contract-visible prompts expose expected behavior, success signals and known failure modes. This is closer to a high-quality specification than ordinary bug-report context, and the improvement observed may not transfer to weaker contract descriptions.</li>
+    <li><strong>Partial model coverage:</strong> Study A systems do not all cover every pack and lane combination. The Gemma supporting study uses separately configured local experiments not matched to Study A or B cells.</li>
+    <li><strong>Local runtime confounding:</strong> Gemma experiments mix model capacity with local hardware, Ollama behavior, timeout policy and first-output boundaries. Public-red outcomes in those experiments do not isolate a single cause.</li>
+    <li><strong>Scenario-family dependence:</strong> All 33 scenarios come from one authored benchmark suite. Generalizing to other task families, languages or domains requires additional evidence.</li>
+    <li><strong>Hidden tests are operational definitions:</strong> They encode the authors' contract, not universal production truth. A passing hidden test means the patch satisfies those specific assertions.</li>
+    <li><strong>Gateway confounding:</strong> North Mini product workflows change gateway and task pack together. Route effects and pack difficulty cannot be isolated.</li>
+    <li><strong>Attempt independence:</strong> Separate runs lack memory, but model, provider and sampling configuration may not be fully controlled or observable.</li>
+    <li><strong>Artifact provenance:</strong> Historical diffs may omit untracked files. Integrity hashes are computed after the run completes, not compared against real-time digests. Incomplete runs skipped by matrix resume are assumed complete.</li>
   </ul>
 
-  <h2>18. Data and Reproduction Manifest</h2>
+  <h2>16. Engineering Implications and Conclusion</h2>
+
+  <p>This study began with a narrow question: can public CI green be trusted as a merge gate for coding-agent patches? The answer, consistently across model families, prompt lanes and scenario packs, is that it cannot be trusted alone. But the evidence accumulated over 391 depth-attempts, five breadth configurations and supporting local experiments supports a set of more specific and actionable findings.</p>
+
+  <p><strong>Public green is not a merge gate for policy-heavy work.</strong> Across all six matched cells in Study B, the attempt-level false-green rate exceeded 24% under sparse prompts. On product workflows — where patches affect security, billing, inventory and SLA behavior — the pooled sparse false-green rate was 76.2%. Visible test success is a necessary checkpoint, not a sufficient one.</p>
+
+  <p><strong>Contract exposure is a stronger lever than blind resampling.</strong> Exposing explicit acceptance criteria reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage but did not eliminate false-greens; contract exposure did both. The <code>decimal_money_rounding</code> walkthrough demonstrates the mechanism: the agent's capability did not change; the information it received changed the search target from a local symptom to a policy.</p>
+
+  <p><strong>Any-of-k coverage should not be confused with per-attempt trust.</strong> Laguna XS.2 reached 33/33 scenarios under any-of-three with contract-visible prompts — a strong coverage result. But 33/33 any-of-three success means at least one attempt succeeded per scenario, not that the system is reliable on any single invocation. Per-attempt hidden-pass rates remain the appropriate metric for deployment decisions that cannot wait for a retry.</p>
+
+  <p><strong>Operational completion and semantic acceptance must be measured separately.</strong> The Gemma supporting study showed that the larger configuration reached public green more consistently, yet both sizes converged on the same false-green strategies. Separately, contract-visible batches in smaller configurations ended without reaching public green near first-output boundaries. A deployment pipeline must audit two distinct gates: did the system produce a viable patch, and does that patch satisfy the broader contract?</p>
+
+  <p><strong>Evaluator judgments need deterministic evidence validation.</strong> Ten evaluator-agent reviews diagnosed authored-contract violations with evidence-backed verdicts. But the evaluator is itself a model, and its workbench is not yet a fully structured measurement instrument. Shadow-fix outcomes, reproduction status and inter-evaluator agreement remain open questions for the next iteration of the evaluation pipeline.</p>
+
+  <p><strong>Deployment should be partitioned by task type, not governed by one global score.</strong> <code>ci_forensics</code> scenarios had false-green rates below 6% under contract-visible prompts for both systems. <code>product_workflows</code> remained at 32.3% for North Mini even with the contract exposed. A deployment strategy that treats all CI failures as equivalent will be simultaneously overconfident on mechanical tasks and underprepared for policy-critical ones.</p>
+
+  <p>The practical unit of evaluation is not the model. It is the deployed system, the information it receives, the acceptance boundary it must cross, and the evidence preserved when it fails. Measuring acceptance reliability requires measuring all four.</p>
+
+  <h2>17. Data and Reproduction Manifest</h2>
   <p>The reproduction files are structured in the research suite. The intermediate data files are located at:</p>
   <ul>
     <li>Source manifest: <a href="data/source-manifest.json"><code>publishables/data/source-manifest.json</code></a></li>

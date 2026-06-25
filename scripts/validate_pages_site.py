@@ -10,6 +10,7 @@ from urllib.parse import urldefrag
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PAGES = REPO_ROOT / ".pages-site"
+REPOSITORY_URL = "https://github.com/anilymngl/coding-agent-acceptance-lab"
 EXPECTED_HTML = {
     "index.html",
     "paper.html",
@@ -73,6 +74,10 @@ def parse_pages() -> dict[str, Parser]:
         for forbidden in FORBIDDEN_SUBSTRINGS:
             if forbidden in text:
                 fail(f"{name} contains forbidden text/link {forbidden}")
+        if f'href="{REPOSITORY_URL}"' not in text:
+            fail(f"{name} is missing the visible GitHub repository link")
+        if 'class="repo-source-link"' not in text:
+            fail(f"{name} is missing the prominent repository-link class")
         parser = Parser()
         parser.feed(text)
         parsed[name] = parser

@@ -721,7 +721,7 @@
       </tr>
     </tbody>
   </table>
-  <p>The retry experiments show that independent resampling from scratch can regress as well as recover. On ci_forensics sparse, North Mini solved 9/12 scenarios on attempt 1, dropped to 8/12 on attempt 2 (losing <code>env_bool_parser</code>), and plateaued at 8/12. Laguna gained one scenario on attempt 2 and held at 9/12. Neither system improved on the third independent attempt. This instability is common to both: resampling occasionally replaces a successful strategy with a failing one, and repeatedly reproduces stable errors on harder scenarios.</p>
+  <p>The retry experiments show that independent resampling from scratch can regress as well as recover. On ci_forensics sparse, North Mini solved 9/12 scenarios on attempt 1, dropped to 8/12 on attempt 2 (losing <code>env_bool_parser</code>), and plateaued at 8/12. Laguna gained one scenario on attempt 2 and held at 9/12. Neither system improved on the third independent attempt. The broader lesson applies to both systems: independent retries did not steadily improve per-attempt success. In this cell, North Mini regressed on attempt 2, while Laguna recovered one scenario and then plateaued.</p>
 
   <h2>11. Effect of Contract Exposure</h2>
   <p>Contract-visible prompts reduced the attempt-level false-green rate in every matched cell. Figure 4 shows the magnitude and variation: product workflows remained the most difficult pack under both prompt conditions, and the improvement was not uniform across systems or scenario packs.</p>
@@ -795,7 +795,7 @@
       </div>
     </div>
 
-    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates on a shared 0–100% scale. Every matched cell improved under contract-visible prompting. North Mini product workflows fell from 80.0% to 32.3% — the largest absolute reduction among all cells. North Mini maintenance CV retained 25 of 30 planned attempts.</div>
+    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates on a shared 0–100% scale. Every matched cell improved under contract-visible prompting. North Mini product workflows fell from 80.0% to 32.3%, a substantial 47.7-point reduction, while remaining the least stable contract-visible cell. North Mini maintenance CV retained 25 of 30 planned attempts.</div>
   </div>
 
   <h2>12. Failure Case Analysis</h2>

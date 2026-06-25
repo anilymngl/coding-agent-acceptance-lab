@@ -34,9 +34,10 @@ FORBIDDEN_SUBSTRINGS = [
     "/" + "Users/",
     "publishables/archive/",
     "archive/",
-    "paper_academic.html",
-    "PUBLISHABLES_PLAN.md",
-    "REVIEW_PRE_MERGE.md",
+    "paper_" + "v2.html",
+    "paper_" + "academic.html",
+    "PUBLISHABLES" + "_PLAN.md",
+    "REVIEW" + "_PRE_MERGE.md",
 ]
 
 

@@ -364,8 +364,8 @@ def verify_html_integrity(cells):
     required_figures = [
         "fig-flowchart",
         "fig-design",
+        "fig-contract-mechanism",
         "fig-slopegraph",
-        "fig-attractor",
         "fig-two-surfaces",
     ]
     paper_ids = parsed_files["paper.html"].ids
@@ -374,6 +374,26 @@ def verify_html_integrity(cells):
             print(f"Error: Required figure ID '{fig_id}' is missing from paper.html")
             sys.exit(1)
     print(f"All {len(required_figures)} required figures present in paper.html!")
+
+    # Verify 9 scenario case cards link to scenario-catalog.html
+    required_scenarios = [
+        "stale_generated_schema",
+        "dependency_api_change",
+        "decimal_money_rounding",
+        "generated_openapi_refresh",
+        "adapter_field_rename",
+        "batch_splitter_utility",
+        "audit_log_redaction",
+        "inventory_reservation_idempotency",
+        "support_sla_business_hours",
+    ]
+    with open(os.path.join(PUBLISHABLES_DIR, "paper.html"), "r", encoding="utf-8") as f:
+        paper_content = f.read()
+    for sc in required_scenarios:
+        if 'href="scenario-catalog.html' not in paper_content or ">" + sc + "<" not in paper_content:
+            print(f"Error: Scenario '{sc}' link to scenario-catalog.html is missing or malformed in paper.html")
+            sys.exit(1)
+    print(f"All {len(required_scenarios)} scenario case cards linked to catalog!")
 
     return parsed_files
 

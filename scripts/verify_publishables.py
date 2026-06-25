@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import subprocess
 import sys
 from html.parser import HTMLParser
 
@@ -340,7 +341,15 @@ def verify_html_integrity(cells):
             sys.exit(1)
             
         # Verify target file exists
-        if target_file.startswith("data/"):
+        if target_file.startswith("../data/releases/v1/"):
+            release_file = os.path.normpath(os.path.join(PUBLISHABLES_DIR, target_file))
+            if not release_file.startswith(os.path.join(REPO_ROOT, "data", "releases", "v1")):
+                print(f"Error: Link '{href}' in {source_file} escapes the public release directory")
+                sys.exit(1)
+            if not os.path.exists(release_file):
+                print(f"Error: Link '{href}' in {source_file} points to missing release file '{target_file}'")
+                sys.exit(1)
+        elif target_file.startswith("data/"):
             # check data JSON file exists
             json_file = os.path.join(PUBLISHABLES_DIR, target_file)
             if not os.path.exists(json_file):
@@ -449,14 +458,49 @@ def verify_public_reproducibility_boundary(parsed_files):
     print("--- Verifying Public Reproducibility Boundary ---")
     paper_text = " ".join(parsed_files["paper.html"].text_content)
     required_phrases = [
-        "derived publication summaries and scenario-level cell data",
-        "Raw model streams, generated worktrees, and local SQLite run databases were audited locally but are not part of the public artifact",
+        "sanitized attempt-level records, derived cells, source provenance, and checksums",
+        "Published metrics can be recomputed",
+        "uv run python scripts/verify_release_data.py",
+        "Raw provider streams, generated worktrees, and mutable local operational databases remain excluded",
     ]
     for phrase in required_phrases:
         if phrase not in paper_text:
             print(f"Error: paper.html missing public reproducibility boundary phrase: {phrase!r}")
             sys.exit(1)
     print("Public reproducibility boundary is explicit in paper.html!")
+
+
+def verify_release_data():
+    print("--- Verifying Public Release Data ---")
+    result = subprocess.run(
+        [sys.executable, os.path.join(REPO_ROOT, "scripts", "verify_release_data.py")],
+        cwd=REPO_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        print(result.stdout)
+        sys.exit(result.returncode)
+    required_output = [
+        "Study B scenarios: 33",
+        "Study B cells: 132",
+        "Planned attempts: 396",
+        "Retained attempts: 391",
+        "Public-green attempts: 385",
+        "Hidden passes: 284",
+        "False-greens: 101",
+        "SQLite integrity: PASS",
+        "CSV parity: PASS",
+        "Publication JSON parity: PASS",
+        "Publication HTML parity: PASS",
+    ]
+    for item in required_output:
+        if item not in result.stdout:
+            print(result.stdout)
+            print(f"Error: release verifier output missing {item!r}")
+            sys.exit(1)
+    print("Public release data verified successfully!")
 
 def verify_scenario_catalog(parsed_files):
     print("--- Verifying Scenario Catalog ---")
@@ -545,6 +589,7 @@ def verify_scenario_catalog(parsed_files):
 
 def main():
     print("Starting Publishables Verification Suite...")
+    verify_release_data()
     cells = verify_dataset_integrity()
     verify_metric_integrity(cells)
     parsed_files = verify_html_integrity(cells)

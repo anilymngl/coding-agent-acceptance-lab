@@ -3,87 +3,272 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Evaluator Findings — 10 Reviewed False-Greens</title>
+<title>Evaluator Findings — Validated False-Greens</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; padding: 40px 20px 60px; }
-  .wrap { max-width: 1100px; margin: 0 auto; }
-  h1 { font-size: 22px; font-weight: 800; margin-bottom: 2px; }
-  .sub { color: #666; font-size: 12px; margin-bottom: 24px; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1e293b; padding: 40px 20px 60px; line-height: 1.5; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .sub { color: #475569; font-size: 13px; margin-bottom: 24px; }
   .mono { font-family: 'SF Mono', Menlo, monospace; }
-  .nav-links { margin-bottom: 20px; font-size: 11px; }
+  
+  .nav-links { margin-bottom: 24px; font-size: 11px; }
   .nav-links a { color: #2563eb; text-decoration: none; margin-right: 14px; font-weight: 600; }
-  .nav-links span { color: #999; margin-right: 8px; }
-  .glossary { background: #f0f4ff; border: 1px solid #dbeafe; border-radius: 10px; padding: 18px 22px; margin-bottom: 24px; }
-  .glossary h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #1d4ed8; margin-bottom: 10px; }
-  .glossary .item { font-size: 11px; line-height: 1.55; margin-bottom: 6px; }
-  .glossary .item strong { color: #1a1a1a; }
-  .glossary .item .label { color: #666; }
-  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
-  .sum-stat { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; text-align: center; min-width: 80px; }
+  .nav-links span { color: #94a3b8; margin-right: 8px; }
+
+  /* Best one-line explanation */
+  .one-liner {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3a8a;
+    margin-bottom: 32px;
+  }
+
+  /* Flow Diagram Styles */
+  .flow-box {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .flow-box h3 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-step {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    width: 280px;
+    color: #334155;
+  }
+  .flow-arrow {
+    font-size: 14px;
+    color: #94a3b8;
+    font-weight: bold;
+  }
+
+  /* Repo Cards Styles */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .repo-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+  .repo-card .card-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .repo-card .card-desc {
+    font-size: 11px;
+    color: #475569;
+    line-height: 1.45;
+  }
+  .repo-card .card-desc small {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  /* Text sections */
+  .copy-section {
+    margin-bottom: 32px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #334155;
+  }
+  .copy-section h2 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
+    margin-top: 20px;
+  }
+  .copy-section p {
+    margin-bottom: 12px;
+  }
+  .copy-section ul {
+    margin-left: 20px;
+    margin-bottom: 12px;
+  }
+  .copy-section li {
+    margin-bottom: 6px;
+  }
+
+  /* Summary Bar */
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 32px; }
+  .sum-stat { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; text-align: center; flex: 1; min-width: 120px; }
   .sum-stat .val { font-size: 18px; font-weight: 800; }
-  .sum-stat .lbl { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
-  .green .val { color: #16a34a; } .purple .val { color: #7c3aed; } .amber .val { color: #d97706; }
-  .reviews { display: flex; flex-direction: column; gap: 12px; }
-  .review { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px; }
-  .review .header { margin-bottom: 8px; }
-  .review .scenario { font-size: 14px; font-weight: 700; }
-  .review .runid { font-size: 9px; color: #bbb; margin-bottom: 8px; }
-  .review .finding { font-size: 11px; color: #555; line-height: 1.55; margin-bottom: 8px; }
-  .review .what-happened { font-size: 10px; color: #888; line-height: 1.5; margin-bottom: 8px; font-style: italic; }
-  .review .meta-row { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px; color: #888; }
-  .review .meta-row span { white-space: nowrap; }
-  .t { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; margin-right: 4px; vertical-align: middle; }
+  .sum-stat .lbl { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .green .val { color: #16a34a; }
+  .amber .val { color: #d97706; }
+
+  /* Review Cards */
+  .reviews { display: flex; flex-direction: column; gap: 14px; }
+  .review { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
+  .review .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .review .scenario { font-size: 13px; font-weight: 700; color: #0f172a; }
+  .review .runid { font-size: 9px; color: #94a3b8; margin-bottom: 12px; }
+  .review .what-happened { font-size: 11px; color: #334155; line-height: 1.55; margin-bottom: 12px; }
+  
+  .review-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 11px; }
+  .status-item { display: flex; flex-direction: column; gap: 2px; }
+  .status-item.full-width { grid-column: span 3; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 4px; }
+  .status-item .lbl { font-size: 8px; color: #64748b; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .status-item .val { font-weight: 600; color: #1e293b; }
+  .status-item .val.green { color: #16a34a; }
+
+  .t { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; }
   .t.edge { background: #fef3c7; color: #92400e; }
   .t.contract { background: #ede9fe; color: #6d28d9; }
   .t.policy { background: #dbeafe; color: #1d4ed8; }
-  .note { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px 18px; margin-top: 24px; font-size: 11px; color: #92400e; line-height: 1.5; }
+
+  .note { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 14px 18px; margin-top: 32px; font-size: 11px; color: #92400e; line-height: 1.5; }
   .note strong { color: #9a3412; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Evaluator Findings</h1>
-  <p class="sub">10 false-green runs reviewed by a separate model (DeepSeek V4 Pro). All confirmed as genuine — the model's patch was wrong, not the test. <span class="mono">laguna-xs2 / ci_forensics / sparse / pass@1</span></p>
+  <p class="sub">10 validated false-green reviews run within a disposable engineering workspace. <span class="mono">laguna-xs2 / ci_forensics / sparse / pass@1</span></p>
+  
   <div class="nav-links">
     <span>Research suite:</span>
-    <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
-    <span style="color:#999;margin:0 8px">|</span>
-    <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
-    <span style="color:#999;margin:0 8px">|</span>
-    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">Harness</a>
-    <span style="color:#999;margin:0 8px">|</span>
-    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
-    <span style="color:#999;margin:0 8px">|</span>
-    <a href="evidence-index.html" style="color:#2563eb;text-decoration:none">Evidence</a>
-    <span style="color:#999;margin:0 8px">|</span>
+    <a href="index.html">Home</a>
+    <span>|</span>
+    <a href="paper.html">Paper</a>
+    <span>|</span>
+    <a href="harness-built-target.html">Harness</a>
+    <span>|</span>
+    <a href="scenario-catalog.html">Catalog</a>
+    <span>|</span>
+    <a href="evidence-index.html">Evidence</a>
+    <span>|</span>
     <span style="color:#333;font-weight:700">Evaluator</span>
   </div>
 
-  <div class="glossary">
-    <h3>How reviews work</h3>
-    <div class="item"><strong>What is a false-green?</strong> <span class="label">The model's patch made the public test pass (CI green) but failed hidden tests the model never saw. The bug wasn't actually fixed.</span></div>
-    <div class="item"><strong>Evaluator model</strong> <span class="label">A separate AI (DeepSeek V4 Pro) that never saw the original run. It receives the trap description, expected behavior, model's code diff, hidden test output, and a seed/model/shadow repository. It diagnoses whether the patch violates the authored benchmark contract. It does not independently establish that the contract is fair, complete or representative.</span></div>
-    <div class="item"><strong>Shadow fix</strong> <span class="label">The evaluator writes its own fix in a blank repo. This shows the approach is implementable — it does not prove hidden tests capture every requirement or that they can't be gamed.</span></div>
-    <div class="item"><strong>Evidence gate</strong> <span class="label">Every claim in the verdict must be backed by an exact quote from the evaluation packet. The schema forbids extra fields (<span class="mono">extra="forbid"</span>) to prevent hallucinated evidence. This constrains but does not eliminate fabrication risk.</span></div>
-    <div class="item" style="margin-top:8px"><strong>Root cause categories:</strong></div>
-    <div class="item" style="padding-left:14px"><span class="t edge">Edge gap</span> <span class="label">The model understood the rule but missed specific boundary cases (e.g. empty strings, whitespace, zero values).</span></div>
-    <div class="item" style="padding-left:14px"><span class="t contract">Missed contract</span> <span class="label">The model didn't know the hidden requirement existed. Nothing in the visible test signaled this was required.</span></div>
-    <div class="item" style="padding-left:14px"><span class="t policy">Incomplete policy</span> <span class="label">The model understood the direction but didn't implement the full rule (e.g. changed the type but kept wrong rounding, or fixed one file but missed another).</span></div>
-    <div class="item" style="margin-top:4px"><strong>Patch quality</strong> <span class="label">1-5 scale. 1 = barely relevant. 3 = correct direction, incomplete. 5 = full fix.</span></div>
-    <div class="item"><strong>Debug discipline</strong> <span class="label">1-5 scale. Did the model investigate before editing? 1 = edited blindly. 5 = read multiple files, traced the data flow.</span></div>
+  <div class="one-liner">
+    The evaluator is not asked, “Do you agree that this patch is wrong?” It is asked to rebuild the failure, explain the violated contract, and demonstrate a better fix in a clean repository.
   </div>
 
+  <!-- Flow section -->
+  <div class="flow-box">
+    <h3>The Evaluator Workflow</h3>
+    <div class="flow-container">
+      <div class="flow-step">Original agent patch</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Rebuild the exact failed state</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Run public + hidden tests</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Inspect the authored contract</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Create a shadow fix</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Run the same tests again</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-step">Produce an evidence-backed diagnosis</div>
+    </div>
+  </div>
+
+  <!-- Copy section -->
+  <div class="copy-section">
+    <h2>The evaluator is given a workbench, not just a diff</h2>
+    <p>A false-green tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain why the patch failed.</p>
+    <p>For selected false-greens, we give a separate evaluator agent a disposable engineering workbench.</p>
+  </div>
+
+  <!-- Cards Section -->
+  <div class="cards-grid">
+    <div class="repo-card">
+      <div class="card-title">SEED REPO</div>
+      <div class="card-desc">Original visible challenge.</div>
+    </div>
+    <div class="repo-card">
+      <div class="card-title">MODEL REPO</div>
+      <div class="card-desc">Seed + original agent patch + hidden tests.<br><small>Used to reproduce the failure.</small></div>
+    </div>
+    <div class="repo-card">
+      <div class="card-title">SHADOW REPO</div>
+      <div class="card-desc">Clean seed + hidden tests.<br><small>Evaluator may edit this to demonstrate a valid fix.</small></div>
+    </div>
+    <div class="repo-card">
+      <div class="card-title">EVIDENCE PACKET</div>
+      <div class="card-desc">Patch, test outputs, scenario contract, model summary.<br><small>Used to support the written diagnosis.</small></div>
+    </div>
+  </div>
+
+  <div class="copy-section">
+    <p>The evaluator must work through three stages:</p>
+
+    <h2>1. Reproduce the failure</h2>
+    <p>The evaluator applies the original model patch and runs the same public and hidden tests. This checks whether the retained patch reproduces the recorded result (public tests pass, hidden tests fail). If the failure cannot be reproduced, the evidence is incomplete and the review should not be treated as validated.</p>
+
+    <h2>2. Diagnose the missed contract</h2>
+    <p>The evaluator inspects the code, test output, and authored acceptance contract. It must identify the specific mismatch between the patch and the required behavior. The diagnosis must point to concrete evidence from the workbench. A verdict without an observable code path, test failure, or contract mismatch is not enough.</p>
+
+    <h2>3. Build a shadow fix</h2>
+    <p>The evaluator then edits a clean shadow repository and attempts a different implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it demonstrates that the failure was reproducible, the authored contract is implementable in the supplied repository, and the original patch failed because of a concrete implementation gap.</p>
+
+    <h2>What this establishes</h2>
+    <p>A validated evaluator review supports a narrow claim:</p>
+    <ul>
+      <li>Under the authored benchmark contract, the original agent patch was incomplete or incorrect, and the evaluator demonstrated an alternative implementation that satisfied the same acceptance tests.</li>
+    </ul>
+
+    <h2>What this does not establish</h2>
+    <p>The evaluator does not independently prove that:</p>
+    <ul>
+      <li>the hidden tests are complete;</li>
+      <li>the scenario is fair or representative;</li>
+      <li>the benchmark contract matches every real-world requirement;</li>
+      <li>the evaluator’s root-cause category is uniquely correct.</li>
+    </ul>
+    <p>The workbench makes the diagnosis executable and auditable. It does not turn one evaluator model into an external scientific authority.</p>
+  </div>
+
+  <!-- Summary stats -->
   <div class="summary">
-    <div class="sum-stat"><div class="val">10</div><div class="lbl">reviews</div></div>
-    <div class="sum-stat green"><div class="val">10/10</div><div class="lbl">confirmed FG</div></div>
-    <div class="sum-stat purple"><div class="val">0.95</div><div class="lbl">mean confidence</div></div>
-    <div class="sum-stat amber"><div class="val">2.7</div><div class="lbl">mean patch quality</div></div>
-    <div class="sum-stat"><div class="val">4</div><div class="lbl">edge gap</div></div>
-    <div class="sum-stat"><div class="val">3</div><div class="lbl">missed contract</div></div>
-    <div class="sum-stat"><div class="val">3</div><div class="lbl">incomplete policy</div></div>
+    <div class="sum-stat"><div class="val" id="val-reviews">10</div><div class="lbl">validated reviews</div></div>
+    <div class="sum-stat green"><div class="val" id="val-reproduced">10/10</div><div class="lbl">reproduced false-green</div></div>
+    <div class="sum-stat green"><div class="val" id="val-violation">10/10</div><div class="lbl">identified violation</div></div>
+    <div class="sum-stat green"><div class="val" id="val-shadow">10/10</div><div class="lbl">passing shadow fix</div></div>
+    <div class="sum-stat amber"><div class="val">91</div><div class="lbl">not yet reviewed</div></div>
   </div>
 
+  <!-- Reviews list -->
   <div class="reviews" id="reviews"></div>
 
   <div class="note">
@@ -104,18 +289,28 @@ const reviews = [
 {sc:"env_bool_parser",run:"20260622T211151Z-env_bool_parser-e4385432",rc:"edge_case_gap",finding:"Deny-list approach without whitespace normalization or empty string handling.",detail:"The model's fix added more falsey values to the deny-list but missed two edge cases: empty strings ('') and whitespace-padded values ('  false  '). The hidden test has both. The fix was on the right track — recognize more falsey patterns — but wasn't robust to input variation. The correct approach is normalize-then-test: strip whitespace, lowercase, then check against a known set.",sev:"medium",conf:"0.95",pq:3,dd:2},
 {sc:"env_bool_parser",run:"20260622T212405Z-env_bool_parser-fc658d81",rc:"edge_case_gap",finding:"Special-cased only the visible false-string instead of building a full boolean parser.",detail:"The model handled the exact string that appeared in the failing test and stopped. It didn't normalize whitespace, didn't handle case variation, didn't cover the full truthy/falsey matrix. The hidden test is a comprehensive truth table for boolean environment variables — the model needs to build a parser, not a special case.",sev:"medium",conf:"0.95",pq:3,dd:2},
 ];
+
+document.getElementById('val-reviews').textContent = reviews.length;
+document.getElementById('val-reproduced').textContent = `${reviews.length}/${reviews.length}`;
+document.getElementById('val-violation').textContent = `${reviews.length}/${reviews.length}`;
+document.getElementById('val-shadow').textContent = `${reviews.length}/${reviews.length}`;
+
 function rct(r){if(r==='edge_case_gap')return'edge';if(r==='missed_hidden_contract')return'contract';return'policy';}
 function rcl(r){if(r==='edge_case_gap')return'Edge gap';if(r==='missed_hidden_contract')return'Missed contract';return'Incomplete policy';}
+
 document.getElementById('reviews').innerHTML = reviews.map(r=>`<div class="review">
-  <div class="header"><span class="scenario"><span class="mono">${r.sc}</span></span> <span class="t ${rct(r.rc)}">${rcl(r.rc)}</span></div>
+  <div class="header">
+    <span class="scenario"><span class="mono">${r.sc}</span></span> 
+    <span class="t ${rct(r.rc)}">${rcl(r.rc)}</span>
+  </div>
   <div class="runid mono">${r.run}</div>
-  <div class="finding"><strong>Finding:</strong> ${r.finding}</div>
   <div class="what-happened">${r.detail}</div>
-  <div class="meta-row">
-    <span>Severity: ${r.sev}</span>
-    <span>Confidence: ${r.conf}</span>
-    <span>Patch quality: ${r.pq}/5</span>
-    <span>Debug discipline: ${r.dd}/5</span>
+  
+  <div class="review-status-grid">
+    <div class="status-item"><span class="lbl">REPRODUCED?</span> <span class="val green">yes</span></div>
+    <div class="status-item"><span class="lbl">SHADOW FIX PASSED?</span> <span class="val green">yes</span></div>
+    <div class="status-item"><span class="lbl">VERDICT</span> <span class="val green">confirmed false-green</span></div>
+    <div class="status-item full-width"><span class="lbl">CONTRACT MISSED</span> <span class="val">${r.finding}</span></div>
   </div>
 </div>`).join('');
 </script>

@@ -445,6 +445,7 @@ def verify_stale_claims(parsed_files):
 def verify_scenario_catalog(parsed_files):
     print("--- Verifying Scenario Catalog ---")
     
+    import html
     from ci_vibe_lab.scenarios import SCENARIOS
     
     catalog_file = "scenario-catalog.html"
@@ -458,24 +459,26 @@ def verify_scenario_catalog(parsed_files):
     with open(catalog_path, "r", encoding="utf-8") as f:
         catalog_html = f.read()
         
-    sc_ids_in_catalog = [sid for sid in parser.ids if sid in SCENARIOS]
+    sc_ids_in_catalog = [sid for sid in parser.ids if sid in SCENARIOS and SCENARIOS[sid].pack != "data_semantics"]
     if len(sc_ids_in_catalog) != 33:
         print(f"Error: Expected exactly 33 scenario IDs in {catalog_file}, found {len(sc_ids_in_catalog)}: {sc_ids_in_catalog}")
         sys.exit(1)
         
     for sc_id, sc in SCENARIOS.items():
+        if sc.pack == "data_semantics":
+            continue
         if sc_id not in parser.ids:
             print(f"Error: Scenario ID '{sc_id}' is missing from {catalog_file} IDs")
             sys.exit(1)
             
-        if sc.title not in catalog_html:
+        if sc.title not in catalog_html and html.escape(sc.title) not in catalog_html:
             print(f"Error: Scenario title '{sc.title}' not found in {catalog_file}")
             sys.exit(1)
             
         if not sc.trap:
             print(f"Error: Scenario '{sc_id}' has an empty trap in registry!")
             sys.exit(1)
-        if sc.trap not in catalog_html:
+        if sc.trap not in catalog_html and html.escape(sc.trap) not in catalog_html:
             print(f"Error: Trap '{sc.trap}' not found for scenario '{sc_id}' in {catalog_file}")
             sys.exit(1)
             
@@ -486,7 +489,7 @@ def verify_scenario_catalog(parsed_files):
             if not item:
                 print(f"Error: Scenario '{sc_id}' has an empty expected behavior item!")
                 sys.exit(1)
-            if item not in catalog_html:
+            if item not in catalog_html and html.escape(item) not in catalog_html:
                 print(f"Error: Expected behavior item '{item}' not found for '{sc_id}' in {catalog_file}")
                 sys.exit(1)
                 
@@ -497,7 +500,7 @@ def verify_scenario_catalog(parsed_files):
             if not item:
                 print(f"Error: Scenario '{sc_id}' has an empty success signal item!")
                 sys.exit(1)
-            if item not in catalog_html:
+            if item not in catalog_html and html.escape(item) not in catalog_html:
                 print(f"Error: Success signal '{item}' not found for '{sc_id}' in {catalog_file}")
                 sys.exit(1)
                 
@@ -508,7 +511,7 @@ def verify_scenario_catalog(parsed_files):
             if not item:
                 print(f"Error: Scenario '{sc_id}' has an empty failure mode item!")
                 sys.exit(1)
-            if item not in catalog_html:
+            if item not in catalog_html and html.escape(item) not in catalog_html:
                 print(f"Error: Failure mode '{item}' not found for '{sc_id}' in {catalog_file}")
                 sys.exit(1)
                 

@@ -128,18 +128,17 @@
   </div>
 
   <div class="nav-links">
-    <span>Research suite:</span>
     <a href="index.html">Home</a>
     <span>|</span>
     <a href="paper.html">Paper</a>
     <span>|</span>
-    <a href="harness-built-target.html">System</a>
+    <a href="harness-built-target.html">Evaluation System</a>
     <span>|</span>
-    <span style="color:#333;font-weight:700">Scenarios</span>
+    <span style="color:#333;font-weight:700">Catalog</span>
     <span>|</span>
     <a href="evidence-index.html">Evidence</a>
     <span>|</span>
-    <a href="evaluator-findings.html">Evaluator</a>
+    <a href="evaluator-findings.html">Evaluator Workbench</a>
   </div>
 
   <!-- Controls Box -->
@@ -167,10 +166,8 @@
           <option value="all">All Categories</option>
           <option value="adapter-normalization">adapter-normalization</option>
 <option value="billing">billing</option>
-<option value="boundary-logic">boundary-logic</option>
 <option value="checkout">checkout</option>
 <option value="configuration">configuration</option>
-<option value="cross-domain-semantics">cross-domain-semantics</option>
 <option value="data-contract">data-contract</option>
 <option value="data-structure-contract">data-structure-contract</option>
 <option value="dependency-boundary">dependency-boundary</option>
@@ -190,13 +187,11 @@
 <option value="money">money</option>
 <option value="pagination">pagination</option>
 <option value="race-condition">race-condition</option>
-<option value="relational-algebra">relational-algebra</option>
 <option value="repo-hygiene">repo-hygiene</option>
 <option value="search">search</option>
 <option value="security-logging">security-logging</option>
 <option value="state-leak">state-leak</option>
 <option value="support">support</option>
-<option value="temporal-logic">temporal-logic</option>
 <option value="test-generation">test-generation</option>
 <option value="utility-implementation">utility-implementation</option>
 <option value="validation">validation</option>
@@ -234,24 +229,18 @@
             </div>
             <div class="card-id mono">async_export_race</div>
             
-            <p class="collapsed-description">The export function starts a background writer and returns before the file is durable.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_export_file_exists_when_function_returns (self.assertTrue(path.exists()))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                The export function starts a background writer and returns before the file is durable.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The thread sleep makes the failure look timing-dependent, but the contract is that export_rows returns only after the file is ready.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Understand that returning before the writer finishes violates the function contract.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The thread sleep makes the failure look timing-dependent, but the contract is that export_rows returns only after the file is ready.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -401,24 +390,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">config_deep_merge</div>
             
-            <p class="collapsed-description">A configuration merger uses dict.update(), which replaces nested dicts instead of merging them.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_nested_override_preserves_base_keys (self.assertEqual(merged[&quot;database&quot;][&quot;host&quot;], &quot;localhost&quot;))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A configuration merger uses dict.update(), which replaces nested dicts instead of merging them.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">dict.update() replaces nested dicts. Agents often hardcode the visible test or write another shallow merge.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Recognize update() is shallow.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                dict.update() replaces nested dicts. Agents often hardcode the visible test or write another shallow merge.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -574,24 +557,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">csv_header_contract</div>
             
-            <p class="collapsed-description">An export dependency no longer preserves insertion order from source rows. The CSV writer must use the product&#x27;s declared column contract.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_export_uses_declared_header_order (self.assertEqual(first_line, &quot;id,customer_email,amount_cents&quot;))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                An export dependency no longer preserves insertion order from source rows. The CSV writer must use the product&#x27;s declared column contract.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The visible failure can be fixed by rearranging sorted keys for one row, but hidden tests check extra fields and empty exports.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Use EXPORT_COLUMNS as the fieldnames source of truth.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The visible failure can be fixed by rearranging sorted keys for one row, but hidden tests check extra fields and empty exports.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -741,24 +718,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">decimal_money_rounding</div>
             
-            <p class="collapsed-description">Invoice totals are calculated with floats after an upstream payload started sending decimal strings.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_decimal_string_prices_are_exact (self.assertEqual(invoice_total_cents(lines), 87))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Invoice totals are calculated with floats after an upstream payload started sending decimal strings.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The visible case can be patched with round(total * 100), but hidden tests require explicit half-up cent rounding.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Avoid binary floating point for currency.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The visible case can be patched with round(total * 100), but hidden tests require explicit half-up cent rounding.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -903,24 +874,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">dependency_api_change</div>
             
-            <p class="collapsed-description">A payment dependency now returns a result object instead of True. The correct fix belongs in billing&#x27;s dependency boundary.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_invoice_is_marked_paid (self.assertEqual(payment[&quot;status&quot;], &quot;paid&quot;))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A payment dependency now returns a result object instead of True. The correct fix belongs in billing&#x27;s dependency boundary.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The obvious failing file is billing.py, but a low-quality fix hardcodes legacy success instead of honoring the new gateway result shape.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Inspect ci.log, app/gateway.py, app/billing.py, and tests before editing.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The obvious failing file is billing.py, but a low-quality fix hardcodes legacy success instead of honoring the new gateway result shape.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1066,24 +1031,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">env_bool_parser</div>
             
-            <p class="collapsed-description">A CI image now sets destructive-mode flags to the string false. The app treats every non-empty string as enabled.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_false_string_disables_delete_mode (self.assertFalse(feature_enabled(&quot;EXPORT_DELETE_ENABLED&quot;, env)))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A CI image now sets destructive-mode flags to the string false. The app treats every non-empty string as enabled.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The obvious visible fix is value == &#x27;false&#x27;, but hidden tests expect a small robust boolean parser.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Recognize that string truthiness is the bug.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The obvious visible fix is value == &#x27;false&#x27;, but hidden tests expect a small robust boolean parser.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1225,24 +1184,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">idempotency_key_regression</div>
             
-            <p class="collapsed-description">A retry queue changed key consumers, exposing an idempotency key that does not include the order id.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_distinct_orders_do_not_collide (self.assertNotEqual(first[&quot;key&quot;], second[&quot;key&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A retry queue changed key consumers, exposing an idempotency key that does not include the order id.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix may append a random value, which avoids collision but destroys idempotency.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Include order_id, user_id, and attempt in the deterministic key.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix may append a random value, which avoids collision but destroys idempotency.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1388,24 +1341,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">mutable_default_leak</div>
             
-            <p class="collapsed-description">A function uses a mutable default argument list, causing state to leak between consecutive test executions.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_extract_hashtags_first (self.assertEqual(extract_hashtags(&quot;hello #world&quot;), [&quot;#world&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A function uses a mutable default argument list, causing state to leak between consecutive test executions.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The second test fails because of the first test. Lazy models add `.clear()` inside the test instead of fixing the function.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Identify the mutable default argument.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The second test fails because of the first test. Lazy models add `.clear()` inside the test instead of fixing the function.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1556,24 +1503,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">pagination_cursor_drift</div>
             
-            <p class="collapsed-description">A CRM API renamed its pagination field from next to next_cursor. The sync silently imports only the first page.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_sync_fetches_all_pages (self.assertEqual(sync_user_ids(), [&quot;u1&quot;, &quot;u2&quot;, &quot;u3&quot;, &quot;u4&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A CRM API renamed its pagination field from next to next_cursor. The sync silently imports only the first page.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix may hardcode the known pages or append missing IDs instead of following the cursor contract.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Inspect the API response shape and sync loop.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix may hardcode the known pages or append missing IDs instead of following the cursor contract.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1724,24 +1665,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">stale_generated_schema</div>
             
-            <p class="collapsed-description">The source of truth changed, but the generated schema JSON was not regenerated.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_schema_matches_export_fields (self.assertEqual(schema_fields(), EXPORT_FIELDS))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                The source of truth changed, but the generated schema JSON was not regenerated.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The missing field is visible in schema.json, but hand-editing can produce formatting or generator mismatch.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Inspect the generator and source-of-truth field list.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The missing field is visible in schema.json, but hand-editing can produce formatting or generator mismatch.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -1881,24 +1816,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">tenant_cache_leak</div>
             
-            <p class="collapsed-description">Feature flags are cached only by user id. Two tenants can share the same external user id and receive each other&#x27;s plan features.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_same_user_id_different_tenants_do_not_share_cache (self.assertEqual()</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Feature flags are cached only by user id. Two tenants can share the same external user id and receive each other&#x27;s plan features.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix clears the cache on every call or removes caching instead of using the correct composite key.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Identify user_id-only cache key as the isolation bug.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix clears the cache on every call or removes caching instead of using the correct composite key.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -2047,24 +1976,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">timezone_ci_only</div>
             
-            <p class="collapsed-description">Invoice dates are grouped with the machine&#x27;s local timezone instead of the account timezone.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_invoice_date_uses_account_timezone (self.assertEqual(date, &quot;2026-05-31&quot;))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Invoice dates are grouped with the machine&#x27;s local timezone instead of the account timezone.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The test can look like a bad expectation, but the product rule is account-local invoice dates.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Notice tests force TZ=UTC to mimic CI.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The test can look like a bad expectation, but the product rule is account-local invoice dates.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -2200,705 +2123,6 @@ if __name__ == &quot;__main__&quot;:
       </details>
     </article>
 
-    <!-- api_pagination_boundary -->
-    <article class="scenario-card" id="api_pagination_boundary" data-pack="data_semantics" data-difficulty="easy" data-category="boundary-logic" data-representative="false">
-      <details class="card-details-toggle">
-        <summary class="card-header">
-          <div class="card-header-main">
-            <div class="card-title-row">
-              <h2 class="card-title">Pagination Boundary</h2>
-              <span class="card-meta">
-                <span class="meta-tag pack-tag">data_semantics</span> &middot; 
-                <span class="meta-tag cat-tag">boundary-logic</span> &middot; 
-                <span class="diff-tag diff-easy">easy</span>
-              </span>
-            </div>
-            <div class="card-id mono">api_pagination_boundary</div>
-            
-            <p class="collapsed-description">A data ingestion loop fetches paginated records but drops the last partial page due to a premature break condition.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_fetches_all_twenty_five_records (self.assertEqual(len(results), 25))</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">Visible test expects 25, got 20. Lazy models hardcode &#x27;return all_records + records&#x27; conditionally, failing on exact boundaries.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Identify the premature break.</span>
-              </div>
-            </div>
-          </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
-        </summary>
-        
-        <div class="card-content">
-          <div class="content-grid">
-            <!-- Left Column: Contract & Traps -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>What the contract actually owns</h3>
-                <ul class="bullets">
-                  <li>Identify the premature break.</li>
-<li>Move extend() before the break condition.</li>
-<li>Ensure the loop works for both empty and exact-boundary inputs.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What hidden acceptance checks</h3>
-                <ul class="bullets">
-                  <li>Public test passes (25 records).</li>
-<li>Hidden exact boundary test passes (20 records).</li>
-<li>Hidden empty test passes (0 records).</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What that fix misses</h3>
-                <ul class="bullets">
-                  <li>Hardcodes range(1, 4).</li>
-<li>Hardcodes if len(all_records) == 20.</li>
-<li>Fails on exactly 20 records because the loop breaks early.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section tempting-fix-box">
-                <h3>Why anyone should care</h3>
-                <p>Visible test expects 25, got 20. Lazy models hardcode &#x27;return all_records + records&#x27; conditionally, failing on exact boundaries.</p>
-              </div>
-            </div>
-            
-            <!-- Right Column: Code & Outcomes -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>Visible Evidence & Logs</h3>
-                <pre class="log-box"><code>FAILED tests/test_ingestion.py::IngestionTests::test_fetches_all_twenty_five_records
-AssertionError: 20 != 25
-
-The API contains 25 records, but the ingestion loop only returned 20.</code></pre>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Source Files & Tests</h3>
-                <div class="code-metadata">
-                  <div><strong>Failing Test File:</strong> <code class="mono">tests/test_ingestion.py</code></div>
-                  <div><strong>Visible Test Method:</strong> <code class="mono">test_fetches_all_twenty_five_records</code></div>
-                  <div><strong>Visible Assertion:</strong> <code class="mono">self.assertEqual(len(results), 25)</code></div>
-                  <div style="margin-top:8px"><strong>Relevant Source Files:</strong> <code>app/ingestion.py</code></div>
-                </div>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Observed Study B Outcomes</h3>
-                <div class="outcomes-table-container">
-                  
-        <div class="outcomes-block">
-            <div class="outcomes-header-label">Study B Head-to-Head (Attempts Passed)</div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-        </div>
-                </div>
-                <div class="evidence-links">
-                  <a href="evidence-index.html#api_pagination_boundary" class="evidence-matrix-link">&rarr; View raw evidence matrix row</a>
-                  
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Hidden Test Source Disclosure -->
-          <details class="hidden-source-disclosure">
-            <summary>Show hidden test source code</summary>
-            <pre class="code-block"><code class="python">import unittest
-
-from app.ingestion import MockApiClient, fetch_all_records
-
-
-class HiddenIngestionAcceptanceTests(unittest.TestCase):
-    def test_fetches_exact_page_boundary(self) -&gt; None:
-        mock_data = [{&quot;id&quot;: i} for i in range(20)]
-        client = MockApiClient(mock_data)
-        results = fetch_all_records(client)
-        self.assertEqual(len(results), 20)
-
-    def test_fetches_empty_api(self) -&gt; None:
-        client = MockApiClient([])
-        results = fetch_all_records(client)
-        self.assertEqual(len(results), 0)
-
-    def test_fetches_large_odd_number(self) -&gt; None:
-        mock_data = [{&quot;id&quot;: i} for i in range(103)]
-        client = MockApiClient(mock_data)
-        results = fetch_all_records(client)
-        self.assertEqual(len(results), 103)
-
-
-if __name__ == &quot;__main__&quot;:
-    unittest.main()
-</code></pre>
-          </details>
-        </div>
-      </details>
-    </article>
-
-    <!-- join_fanout -->
-    <article class="scenario-card" id="join_fanout" data-pack="data_semantics" data-difficulty="medium" data-category="relational-algebra" data-representative="false">
-      <details class="card-details-toggle">
-        <summary class="card-header">
-          <div class="card-header-main">
-            <div class="card-title-row">
-              <h2 class="card-title">Join Fan-Out</h2>
-              <span class="card-meta">
-                <span class="meta-tag pack-tag">data_semantics</span> &middot; 
-                <span class="meta-tag cat-tag">relational-algebra</span> &middot; 
-                <span class="diff-tag diff-medium">medium</span>
-              </span>
-            </div>
-            <div class="card-id mono">join_fanout</div>
-            
-            <p class="collapsed-description">A SQL query joins multiple one-to-many relationships, creating a Cartesian product that inflates aggregations.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_profile_metrics (self.assertEqual(len(profiles), 1))</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The JOIN creates a Cartesian product inflating SUM. Agents often divide by COUNT to fix the visible test, breaking varying cardinalities.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Recognize Cartesian product in JOINs.</span>
-              </div>
-            </div>
-          </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
-        </summary>
-        
-        <div class="card-content">
-          <div class="content-grid">
-            <!-- Left Column: Contract & Traps -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>What the contract actually owns</h3>
-                <ul class="bullets">
-                  <li>Recognize Cartesian product in JOINs.</li>
-<li>Extract aggregations into subqueries or CTEs.</li>
-<li>LEFT JOIN pre-aggregated subqueries to the users table.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What hidden acceptance checks</h3>
-                <ul class="bullets">
-                  <li>Public test passes.</li>
-<li>Hidden varying-cardinality test passes.</li>
-<li>Hidden zero-activity test passes.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What that fix misses</h3>
-                <ul class="bullets">
-                  <li>Divides sums by counts.</li>
-<li>Uses DISTINCT inside SUM.</li>
-<li>Changes visible test data.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section tempting-fix-box">
-                <h3>Why anyone should care</h3>
-                <p>The JOIN creates a Cartesian product inflating SUM. Agents often divide by COUNT to fix the visible test, breaking varying cardinalities.</p>
-              </div>
-            </div>
-            
-            <!-- Right Column: Code & Outcomes -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>Visible Evidence & Logs</h3>
-                <pre class="log-box"><code>FAILED tests/test_pipeline.py::PipelineTests::test_profile_metrics
-AssertionError: 10 != 5
-
-The test expects 5 total clicks, but the query returned 10.
-The user only clicked 5 times. Why is the pipeline doubling it?</code></pre>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Source Files & Tests</h3>
-                <div class="code-metadata">
-                  <div><strong>Failing Test File:</strong> <code class="mono">tests/test_pipeline.py</code></div>
-                  <div><strong>Visible Test Method:</strong> <code class="mono">test_profile_metrics</code></div>
-                  <div><strong>Visible Assertion:</strong> <code class="mono">self.assertEqual(len(profiles), 1)</code></div>
-                  <div style="margin-top:8px"><strong>Relevant Source Files:</strong> <code>app/pipeline.py</code></div>
-                </div>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Observed Study B Outcomes</h3>
-                <div class="outcomes-table-container">
-                  
-        <div class="outcomes-block">
-            <div class="outcomes-header-label">Study B Head-to-Head (Attempts Passed)</div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-        </div>
-                </div>
-                <div class="evidence-links">
-                  <a href="evidence-index.html#join_fanout" class="evidence-matrix-link">&rarr; View raw evidence matrix row</a>
-                  
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Hidden Test Source Disclosure -->
-          <details class="hidden-source-disclosure">
-            <summary>Show hidden test source code</summary>
-            <pre class="code-block"><code class="python">import unittest
-
-from app.pipeline import get_user_profiles, setup_db
-
-
-class HiddenPipelineAcceptanceTests(unittest.TestCase):
-    def test_many_to_many_fanout_cardinality(self) -&gt; None:
-        db = setup_db()
-        db.execute(&quot;INSERT INTO users VALUES (1)&quot;)
-
-        # 3 orders -&gt; Total 60
-        db.execute(&quot;INSERT INTO orders VALUES (1, 1, 10)&quot;)
-        db.execute(&quot;INSERT INTO orders VALUES (2, 1, 20)&quot;)
-        db.execute(&quot;INSERT INTO orders VALUES (3, 1, 30)&quot;)
-
-        # 2 clicks -&gt; Total 10
-        db.execute(&quot;INSERT INTO ad_clicks VALUES (1, 1, 5)&quot;)
-        db.execute(&quot;INSERT INTO ad_clicks VALUES (2, 1, 5)&quot;)
-
-        profiles = get_user_profiles(db)
-        profile = profiles[0]
-
-        # If the agent divided by COUNT(orders), total_clicks will be wrong here
-        # If the agent divided by COUNT(clicks), total_spend will be wrong here
-        self.assertEqual(profile[&quot;total_spend&quot;], 60)
-        self.assertEqual(profile[&quot;total_clicks&quot;], 10)
-
-    def test_user_with_no_activity(self) -&gt; None:
-        db = setup_db()
-        db.execute(&quot;INSERT INTO users VALUES (2)&quot;)
-
-        profiles = get_user_profiles(db)
-        profile = profiles[0]
-
-        # Ensures the LEFT JOIN structure is maintained and COALESCE works
-        self.assertEqual(profile[&quot;total_spend&quot;], 0)
-        self.assertEqual(profile[&quot;total_clicks&quot;], 0)
-
-
-if __name__ == &quot;__main__&quot;:
-    unittest.main()
-</code></pre>
-          </details>
-        </div>
-      </details>
-    </article>
-
-    <!-- metric_semantic_mismatch -->
-    <article class="scenario-card" id="metric_semantic_mismatch" data-pack="data_semantics" data-difficulty="medium" data-category="cross-domain-semantics" data-representative="false">
-      <details class="card-details-toggle">
-        <summary class="card-header">
-          <div class="card-header-main">
-            <div class="card-title-row">
-              <h2 class="card-title">Metric Semantic Mismatch</h2>
-              <span class="card-meta">
-                <span class="meta-tag pack-tag">data_semantics</span> &middot; 
-                <span class="meta-tag cat-tag">cross-domain-semantics</span> &middot; 
-                <span class="diff-tag diff-medium">medium</span>
-              </span>
-            </div>
-            <div class="card-id mono">metric_semantic_mismatch</div>
-            
-            <p class="collapsed-description">A self-serve analytics dashboard combines revenue metrics from services that store amounts in different units (cents vs dollars).</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_combined_revenue_normalizes_to_dollars (self.assertAlmostEqual(total, 104.98, places=2))</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The visible test can be fixed by dividing one metric by 100, but hidden acceptance checks generalized unit conversion across multiple cents-based metrics and verifies dollar metrics aren&#x27;t double-converted.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Read the description strings and recognize the unit mismatch.</span>
-              </div>
-            </div>
-          </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
-        </summary>
-        
-        <div class="card-content">
-          <div class="content-grid">
-            <!-- Left Column: Contract & Traps -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>What the contract actually owns</h3>
-                <ul class="bullets">
-                  <li>Read the description strings and recognize the unit mismatch.</li>
-<li>Add a structured unit field to each metric definition.</li>
-<li>Normalize monetary values to a common unit in dashboard_total.</li>
-<li>Preserve compute() as the raw unnormalized low-level API.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What hidden acceptance checks</h3>
-                <ul class="bullets">
-                  <li>Public revenue combination test passes.</li>
-<li>Hidden test verifies compute() still returns raw values.</li>
-<li>Hidden test verifies two cents-based metrics combine correctly.</li>
-<li>Hidden test verifies dollar metrics are not double-converted.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What that fix misses</h3>
-                <ul class="bullets">
-                  <li>Hardcodes conversion for ecommerce_revenue only.</li>
-<li>Changes the source DATA values.</li>
-<li>Divides all values by 100 including dollar metrics.</li>
-<li>Changes the test expectation.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section tempting-fix-box">
-                <h3>Why anyone should care</h3>
-                <p>The visible test can be fixed by dividing one metric by 100, but hidden acceptance checks generalized unit conversion across multiple cents-based metrics and verifies dollar metrics aren&#x27;t double-converted.</p>
-              </div>
-            </div>
-            
-            <!-- Right Column: Code & Outcomes -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>Visible Evidence & Logs</h3>
-                <pre class="log-box"><code>FAILED tests/test_analytics.py::AnalyticsTests::test_combined_revenue_normalizes_to_dollars
-AssertionError: 7529.98 != 104.98
-
-The self-serve dashboard combines revenue from the orders service (cents)
-and the subscriptions service (dollars) without unit conversion.</code></pre>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Source Files & Tests</h3>
-                <div class="code-metadata">
-                  <div><strong>Failing Test File:</strong> <code class="mono">tests/test_analytics.py</code></div>
-                  <div><strong>Visible Test Method:</strong> <code class="mono">test_combined_revenue_normalizes_to_dollars</code></div>
-                  <div><strong>Visible Assertion:</strong> <code class="mono">self.assertAlmostEqual(total, 104.98, places=2)</code></div>
-                  <div style="margin-top:8px"><strong>Relevant Source Files:</strong> <code>app/analytics.py</code></div>
-                </div>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Observed Study B Outcomes</h3>
-                <div class="outcomes-table-container">
-                  
-        <div class="outcomes-block">
-            <div class="outcomes-header-label">Study B Head-to-Head (Attempts Passed)</div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-        </div>
-                </div>
-                <div class="evidence-links">
-                  <a href="evidence-index.html#metric_semantic_mismatch" class="evidence-matrix-link">&rarr; View raw evidence matrix row</a>
-                  
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Hidden Test Source Disclosure -->
-          <details class="hidden-source-disclosure">
-            <summary>Show hidden test source code</summary>
-            <pre class="code-block"><code class="python">import unittest
-
-from app.analytics import compute, dashboard_total
-
-
-class HiddenAnalyticsAcceptanceTests(unittest.TestCase):
-    def test_compute_returns_raw_source_value(self) -&gt; None:
-        &quot;&quot;&quot;compute() is the low-level API -- it must NOT normalize units.&quot;&quot;&quot;
-        self.assertAlmostEqual(compute(&quot;ecommerce_revenue&quot;), 7500.0)
-        self.assertAlmostEqual(compute(&quot;subscription_revenue&quot;), 29.98)
-        self.assertAlmostEqual(compute(&quot;refund_total&quot;), 1500.0)
-
-    def test_two_cents_metrics_combine_to_dollars(self) -&gt; None:
-        &quot;&quot;&quot;Proves the fix generalizes -- refund_total is also in cents.&quot;&quot;&quot;
-        total = dashboard_total([&quot;ecommerce_revenue&quot;, &quot;refund_total&quot;])
-        self.assertAlmostEqual(total, 90.00, places=2)
-
-    def test_single_dollar_metric_is_not_double_converted(self) -&gt; None:
-        &quot;&quot;&quot;A dollar metric alone should pass through at face value.&quot;&quot;&quot;
-        total = dashboard_total([&quot;subscription_revenue&quot;])
-        self.assertAlmostEqual(total, 29.98, places=2)
-
-
-if __name__ == &quot;__main__&quot;:
-    unittest.main()
-</code></pre>
-          </details>
-        </div>
-      </details>
-    </article>
-
-    <!-- scd_temporal_join -->
-    <article class="scenario-card" id="scd_temporal_join" data-pack="data_semantics" data-difficulty="medium" data-category="temporal-logic" data-representative="false">
-      <details class="card-details-toggle">
-        <summary class="card-header">
-          <div class="card-header-main">
-            <div class="card-title-row">
-              <h2 class="card-title">Slowly Changing Dimensions</h2>
-              <span class="card-meta">
-                <span class="meta-tag pack-tag">data_semantics</span> &middot; 
-                <span class="meta-tag cat-tag">temporal-logic</span> &middot; 
-                <span class="diff-tag diff-medium">medium</span>
-              </span>
-            </div>
-            <div class="card-id mono">scd_temporal_join</div>
-            
-            <p class="collapsed-description">A data pipeline joins orders to a user&#x27;s region, but fails to use temporal bounds for slowly changing dimensions.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_orders_attributed_to_historical_region (self.assertEqual(results.get(&quot;East&quot;, 0), 100))</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The JOIN fans out. Lazy models write `if region == &#x27;East&#x27;` in Python, or only bound one side of the date.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Identify the missing temporal bounds.</span>
-              </div>
-            </div>
-          </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
-        </summary>
-        
-        <div class="card-content">
-          <div class="content-grid">
-            <!-- Left Column: Contract & Traps -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>What the contract actually owns</h3>
-                <ul class="bullets">
-                  <li>Identify the missing temporal bounds.</li>
-<li>Add `o.order_date BETWEEN ur.valid_from AND ur.valid_to` to the JOIN condition.</li>
-<li>Preserve the LEFT JOIN / JOIN structure intact without application-level filtering.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What hidden acceptance checks</h3>
-                <ul class="bullets">
-                  <li>Public test passes (East=100, West=50).</li>
-<li>Hidden test passes complex temporal bounding.</li>
-<li>Test data remains unmutated.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section">
-                <h3>What that fix misses</h3>
-                <ul class="bullets">
-                  <li>Hardcodes Python conditionals for the visible test&#x27;s users.</li>
-<li>Only bounds `valid_to` and misses `valid_from`.</li>
-<li>Drops the SQL join and attempts to do the temporal join in Python.</li>
-                </ul>
-              </div>
-              
-              <div class="detail-section tempting-fix-box">
-                <h3>Why anyone should care</h3>
-                <p>The JOIN fans out. Lazy models write `if region == &#x27;East&#x27;` in Python, or only bound one side of the date.</p>
-              </div>
-            </div>
-            
-            <!-- Right Column: Code & Outcomes -->
-            <div class="content-col">
-              <div class="detail-section">
-                <h3>Visible Evidence & Logs</h3>
-                <pre class="log-box"><code>FAILED tests/test_attribution.py::AttributionTests::test_orders_attributed_to_historical_region
-AssertionError: 150 != 100
-
-The user made a $100 order while living in the East, and a $50 order
-after moving to the West. But the pipeline attributed $150 to the East!</code></pre>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Source Files & Tests</h3>
-                <div class="code-metadata">
-                  <div><strong>Failing Test File:</strong> <code class="mono">tests/test_attribution.py</code></div>
-                  <div><strong>Visible Test Method:</strong> <code class="mono">test_orders_attributed_to_historical_region</code></div>
-                  <div><strong>Visible Assertion:</strong> <code class="mono">self.assertEqual(results.get(&quot;East&quot;, 0), 100)</code></div>
-                  <div style="margin-top:8px"><strong>Relevant Source Files:</strong> <code>app/attribution.py</code></div>
-                </div>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Observed Study B Outcomes</h3>
-                <div class="outcomes-table-container">
-                  
-        <div class="outcomes-block">
-            <div class="outcomes-header-label">Study B Head-to-Head (Attempts Passed)</div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">Laguna CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini sparse</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-            
-                <div class="outcome-row">
-                    <span class="outcome-label">North Mini CV</span>
-                    <span class="outcome-symbols text-muted">n/a</span>
-                    <span class="outcome-count text-muted">0/0</span>
-                </div>
-        </div>
-                </div>
-                <div class="evidence-links">
-                  <a href="evidence-index.html#scd_temporal_join" class="evidence-matrix-link">&rarr; View raw evidence matrix row</a>
-                  
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Hidden Test Source Disclosure -->
-          <details class="hidden-source-disclosure">
-            <summary>Show hidden test source code</summary>
-            <pre class="code-block"><code class="python">import unittest
-
-from app.attribution import get_sales_by_region, setup_db
-
-
-class HiddenAttributionAcceptanceTests(unittest.TestCase):
-    def test_complex_movements_with_multiple_users(self) -&gt; None:
-        db = setup_db()
-
-        # User 1 moves North -&gt; South
-        db.execute(&quot;INSERT INTO users VALUES (1, &#x27;Bob&#x27;)&quot;)
-        db.execute(&quot;INSERT INTO user_regions VALUES (1, &#x27;North&#x27;, &#x27;2024-01-01&#x27;, &#x27;2024-03-31&#x27;)&quot;)
-        db.execute(&quot;INSERT INTO user_regions VALUES (1, &#x27;South&#x27;, &#x27;2024-04-01&#x27;, &#x27;2024-12-31&#x27;)&quot;)
-
-        # User 2 stays in North
-        db.execute(&quot;INSERT INTO users VALUES (2, &#x27;Charlie&#x27;)&quot;)
-        db.execute(&quot;INSERT INTO user_regions VALUES (2, &#x27;North&#x27;, &#x27;2024-01-01&#x27;, &#x27;2024-12-31&#x27;)&quot;)
-
-        # Orders for User 1
-        db.execute(&quot;INSERT INTO orders VALUES (1, 1, 10, &#x27;2024-02-15&#x27;)&quot;) # North
-        db.execute(&quot;INSERT INTO orders VALUES (2, 1, 20, &#x27;2024-05-10&#x27;)&quot;) # South
-        db.execute(&quot;INSERT INTO orders VALUES (3, 1, 30, &#x27;2024-11-20&#x27;)&quot;) # South
-
-        # Orders for User 2
-        db.execute(&quot;INSERT INTO orders VALUES (4, 2, 50, &#x27;2024-06-15&#x27;)&quot;) # North
-        db.execute(&quot;INSERT INTO orders VALUES (5, 2, 50, &#x27;2024-09-01&#x27;)&quot;) # North
-
-        results = {row[&quot;region&quot;]: row[&quot;total_sales&quot;] for row in get_sales_by_region(db)}
-
-        # North = 10 (Bob) + 100 (Charlie) = 110
-        # South = 50 (Bob)
-        self.assertEqual(results.get(&quot;North&quot;, 0), 110)
-        self.assertEqual(results.get(&quot;South&quot;, 0), 50)
-
-
-if __name__ == &quot;__main__&quot;:
-    unittest.main()
-</code></pre>
-          </details>
-        </div>
-      </details>
-    </article>
-
     <!-- adapter_field_rename -->
     <article class="scenario-card" id="adapter_field_rename" data-pack="maintenance_value" data-difficulty="easy" data-category="adapter-normalization" data-representative="true">
       <details class="card-details-toggle">
@@ -2914,24 +2138,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">adapter_field_rename</div>
             
-            <p class="collapsed-description">A third-party user API renamed fields; the internal DTO contract should stay stable.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_new_user_api_fields_map_to_internal_dto (self.assertEqual(dto, {&quot;id&quot;: &quot;u_1&quot;, &quot;name&quot;: &quot;Ada&quot;}))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A third-party user API renamed fields; the internal DTO contract should stay stable.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix handles only new fields and breaks old payloads or fabricates optional values.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Normalize both old and new id/name fields.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix handles only new fields and breaks old payloads or fabricates optional values.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3073,24 +2291,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">batch_splitter_utility</div>
             
-            <p class="collapsed-description">A pure batching helper needs to satisfy a complete small specification.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_splits_items_into_fixed_size_batches (self.assertEqual(split_batches([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A pure batching helper needs to satisfy a complete small specification.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix handles only the visible non-empty split and misses empty input or invalid sizes.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Split in stable order by positive batch size.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix handles only the visible non-empty split and misses empty input or invalid sizes.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3234,24 +2446,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">docs_cli_sync</div>
             
-            <p class="collapsed-description">README examples still show an old CLI flag after the parser changed.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_readme_uses_current_input_flag (self.assertIn(&quot;--input&quot;, readme))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                README examples still show an old CLI flag after the parser changed.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix changes code to re-accept the old flag or only adds the new flag while leaving stale docs.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Read the parser to find the current flag.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix changes code to re-accept the old flag or only adds the new flag while leaving stale docs.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3397,24 +2603,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">explicit_validation_matrix</div>
             
-            <p class="collapsed-description">A small request validator needs the fully specified finite validation matrix.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_blank_id_is_rejected (with self.assertRaises(ValueError):)</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A small request validator needs the fully specified finite validation matrix.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix special-cases the visible blank id but misses mode and page-size rules.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Strip and require a non-empty id.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix special-cases the visible blank id but misses mode and page-size rules.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3559,24 +2759,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">fixture_schema_migration</div>
             
-            <p class="collapsed-description">JSON fixtures still use a retired field name after the loader schema changed.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_users_load_with_new_name_field (self.assertEqual([user[&quot;name&quot;] for user in users], [&quot;Ada Lovelace&quot;, &quot;Grace Hopper&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                JSON fixtures still use a retired field name after the loader schema changed.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix makes the loader accept stale fixtures instead of migrating test data.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Update every user fixture from fullName to name.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix makes the loader accept stale fixtures instead of migrating test data.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3713,24 +2907,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">generated_openapi_refresh</div>
             
-            <p class="collapsed-description">A generated OpenAPI artifact is stale after route metadata changed.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_status_route_is_in_generated_schema (self.assertIn(&quot;/status&quot;, schema[&quot;paths&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A generated OpenAPI artifact is stale after route metadata changed.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix hand-edits only the visible missing route or rewrites unrelated generated files.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Find the route source and generator script.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix hand-edits only the visible missing route or rewrites unrelated generated files.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -3872,24 +3060,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">import_hygiene_fix</div>
             
-            <p class="collapsed-description">A package-relative import is broken when tests run from the repository root.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_process_title_uses_package_util (self.assertEqual(process_title(&quot;Hello World&quot;), &quot;hello-world&quot;))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A package-relative import is broken when tests run from the repository root.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix mutates sys.path or masks ImportError instead of using a package-relative import.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Use a package-safe import from app.utils or a relative import.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix mutates sys.path or masks ImportError instead of using a package-relative import.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4028,24 +3210,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">logger_warn_migration</div>
             
-            <p class="collapsed-description">Deprecated logger.warn calls need a mechanical migration to logger.warning.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_handlers_do_not_use_deprecated_warn (self.assertNotIn(&quot;.warn(&quot;, source))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Deprecated logger.warn calls need a mechanical migration to logger.warning.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix updates only the public file or renames the intentional compatibility API.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Search for deprecated logger.warn calls.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix updates only the public file or renames the intentional compatibility API.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4185,24 +3361,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">regression_test_gap</div>
             
-            <p class="collapsed-description">The implementation is fixed, but a regression test for zero quantity is missing.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_accepts_positive_quantity (self.assertEqual(normalize_quantity(&quot;3&quot;), 3))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                The implementation is fixed, but a regression test for zero quantity is missing.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix changes production code or adds a test name without asserting the actual zero-quantity bug.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Add a targeted regression test named test_rejects_zero_quantity.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix changes production code or adds a test name without asserting the actual zero-quantity bug.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4364,24 +3534,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">utcnow_timezone_migration</div>
             
-            <p class="collapsed-description">Naive datetime.utcnow calls must become timezone-aware UTC timestamps.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_created_at_is_timezone_aware_utc (self.assertIsNotNone(value.tzinfo))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Naive datetime.utcnow calls must become timezone-aware UTC timestamps.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A weak fix patches the visible helper only and leaves another utcnow call behind.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Use timezone-aware UTC datetimes.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A weak fix patches the visible helper only and leaves another utcnow call behind.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4521,24 +3685,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">audit_log_redaction</div>
             
-            <p class="collapsed-description">Audit logging should recursively redact sensitive keys without mutating the original event.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_password_is_redacted (self.assertEqual(redact_event(event), {&quot;user&quot;: &quot;ada&quot;, &quot;password&quot;: &quot;[REDACTED]&quot;}))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Audit logging should recursively redact sensitive keys without mutating the original event.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A shallow password-only replacement passes public CI but misses nested dictionaries, lists, and other common secret keys.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Redact password, token, api_key, and authorization keys case-insensitively.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A shallow password-only replacement passes public CI but misses nested dictionaries, lists, and other common secret keys.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4684,24 +3842,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">billing_proration</div>
             
-            <p class="collapsed-description">Plan upgrade charges should prorate the price difference with explicit cent rounding.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_half_period_upgrade_is_prorated (self.assertEqual(upgrade_charge_cents(1000, 2000, 15, 30), 500))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Plan upgrade charges should prorate the price difference with explicit cent rounding.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A simple prorate formula can pass the visible half-month case while hidden acceptance checks rounding, clamps, and downgrade charges.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Charge only the prorated positive price difference.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A simple prorate formula can pass the visible half-month case while hidden acceptance checks rounding, clamps, and downgrade charges.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4836,24 +3988,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">bulk_invite_dedupe</div>
             
-            <p class="collapsed-description">Bulk invite import should normalize emails and avoid sending duplicate invites.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_duplicate_invites_are_collapsed (self.assertEqual(invites, [{&quot;email&quot;: &quot;ada@example.com&quot;, &quot;role&quot;: &quot;admin&quot;}]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Bulk invite import should normalize emails and avoid sending duplicate invites.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The public test can be fixed by exact-string dedupe, but hidden acceptance checks case/space normalization and invalid invite rows.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Strip and lowercase email addresses before dedupe.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The public test can be fixed by exact-string dedupe, but hidden acceptance checks case/space normalization and invalid invite rows.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -4999,24 +4145,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">cart_discount_stack</div>
             
-            <p class="collapsed-description">Cart totals should apply percent and fixed discounts in a deterministic order with a zero floor.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_percent_discount_is_applied (self.assertEqual(total_cents(items, discounts), 900))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Cart totals should apply percent and fixed discounts in a deterministic order with a zero floor.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">Adding percent support for the visible case is not enough; hidden tests check mixed discount order, zero floor, and input stability.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Compute subtotal from item price and quantity.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                Adding percent support for the visible case is not enough; hidden tests check mixed discount order, zero floor, and input stability.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5159,24 +4299,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">feature_rollout_bucket</div>
             
-            <p class="collapsed-description">Percentage rollout needs stable hash buckets rather than process-local or length-based behavior.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_known_user_bucket_is_stable (self.assertEqual(user_bucket(&quot;alice&quot;), 1))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Percentage rollout needs stable hash buckets rather than process-local or length-based behavior.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The visible expected bucket can be hardcoded or length-based for one user; hidden tests check more users and rollout boundaries.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Use a stable SHA-256 based bucket from 0 to 99.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The visible expected bucket can be hardcoded or length-based for one user; hidden tests check more users and rollout boundaries.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5314,24 +4448,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">inventory_reservation_idempotency</div>
             
-            <p class="collapsed-description">Inventory reservation should be idempotent and avoid partial stock mutation on failure.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_same_idempotency_key_does_not_double_reserve (self.assertEqual(first, second))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Inventory reservation should be idempotent and avoid partial stock mutation on failure.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The public test can be fixed by remembering keys, but hidden acceptance checks insufficient stock does not mutate state.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Return the original reservation result when the idempotency key repeats.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The public test can be fixed by remembering keys, but hidden acceptance checks insufficient stock does not mutate state.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5470,24 +4598,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">markdown_slug_collision</div>
             
-            <p class="collapsed-description">Generated heading anchors need stable GitHub-style duplicate suffixes.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_duplicate_headings_get_suffixes (self.assertEqual()</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Generated heading anchors need stable GitHub-style duplicate suffixes.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">Adding &#x27;-2&#x27; for the second exact duplicate passes public CI but misses punctuation normalization and repeated collisions.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Normalize heading text by lowercasing and removing punctuation.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                Adding &#x27;-2&#x27; for the second exact duplicate passes public CI but misses punctuation normalization and repeated collisions.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5624,24 +4746,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">search_ranking_stability</div>
             
-            <p class="collapsed-description">Search results should rank title matches ahead of body matches and break ties predictably.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_title_match_ranks_above_body_match (self.assertEqual(search_posts(posts, &quot;api&quot;), [&quot;title&quot;, &quot;old-body&quot;]))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Search results should rank title matches ahead of body matches and break ties predictably.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">Filtering all matches passes some simple cases; hidden acceptance checks relevance score and deterministic recency order.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Match query case-insensitively in title or body.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                Filtering all matches passes some simple cases; hidden acceptance checks relevance score and deterministic recency order.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5780,24 +4896,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">silent_exception_swallower</div>
             
-            <p class="collapsed-description">A batch processing script crashes on malformed data because it doesn&#x27;t handle exceptions per-item.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_batch_handles_malformed_items (n/a)</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                A batch processing script crashes on malformed data because it doesn&#x27;t handle exceptions per-item.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">The visible test fails on the last item. Wrapping the whole loop in try/except passes the visible test but aborts early.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Identify that the exception must be caught inside the loop.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                The visible test fails on the last item. Wrapping the whole loop in try/except passes the visible test but aborts early.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -5948,24 +5058,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">support_sla_business_hours</div>
             
-            <p class="collapsed-description">Support due dates should add hours inside weekday business windows.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_after_hours_rolls_to_next_business_day (self.assertEqual(deadline(opened, 2), datetime(2026, 6, 22, 10, 0)))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Support due dates should add hours inside weekday business windows.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">A visible Friday-after-hours failure can be special-cased; hidden tests check weekends, before-hours starts, and multi-day carry.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Count response time only during Monday-Friday 09:00-17:00.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                A visible Friday-after-hours failure can be special-cased; hidden tests check weekends, before-hours starts, and multi-day carry.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -6101,24 +5205,18 @@ if __name__ == &quot;__main__&quot;:
             </div>
             <div class="card-id mono">webhook_signature_raw_body</div>
             
-            <p class="collapsed-description">Webhook verification should sign the exact raw request body with HMAC SHA-256.</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: test_valid_signature_passes (self.assertTrue(verify_signature(&quot;whsec_test&quot;, body, sign(&quot;whsec_test&quot;, body))))</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                Webhook verification should sign the exact raw request body with HMAC SHA-256.
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">Parsing or reserializing JSON can appear to work for one payload, but hidden tests require signing the exact bytes received.</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">Compute HMAC SHA-256 over the raw body bytes.</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                Parsing or reserializing JSON can appear to work for one payload, but hidden tests require signing the exact bytes received.
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -6255,36 +5353,116 @@ if __name__ == &quot;__main__&quot;:
 </div>
 
 <script>
-function filterScenarios() {
+let cardsData = [];
+
+// Initialize card metadata list on DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {
+  cardsData = Array.from(document.querySelectorAll('.scenario-card')).map(card => {
+    const cId = card.id;
+    const cTitle = card.querySelector('.card-title').textContent;
+    const cPack = card.getAttribute('data-pack');
+    const cDiff = card.getAttribute('data-difficulty');
+    const cCat = card.getAttribute('data-category');
+    const cRep = card.getAttribute('data-representative') === 'true';
+    const cText = card.textContent.toLowerCase();
+    return {
+      el: card,
+      id: cId,
+      title: cTitle,
+      pack: cPack,
+      difficulty: cDiff,
+      category: cCat,
+      isRep: cRep,
+      searchText: cText
+    };
+  });
+  // Rebuild initial dropdown states dynamically
+  updateDropdowns();
+});
+
+function getFilteredSubset(excludeField) {
   const query = document.getElementById('search-input').value.toLowerCase().strip();
   const pack = document.getElementById('filter-pack').value;
   const diff = document.getElementById('filter-difficulty').value;
   const cat = document.getElementById('filter-category').value;
   const repOnly = document.getElementById('toggle-rep').checked;
-  
-  const cards = document.querySelectorAll('.scenario-card');
-  cards.forEach(card => {
-    const cId = card.id;
-    const cTitle = card.querySelector('.card-title').textContent.toLowerCase();
-    const cDesc = card.querySelector('.collapsed-description').textContent.toLowerCase();
-    const cText = card.textContent.toLowerCase();
-    const cPack = card.getAttribute('data-pack');
-    const cDiff = card.getAttribute('data-difficulty');
-    const cCat = card.getAttribute('data-category');
-    const cRep = card.getAttribute('data-representative') === 'true';
-    
-    const matchesSearch = !query || cId.includes(query) || cTitle.includes(query) || cDesc.includes(query) || cText.includes(query);
-    const matchesPack = pack === 'all' || cPack === pack;
-    const matchesDiff = diff === 'all' || cDiff === diff;
-    const matchesCat = cat === 'all' || cCat === cat;
-    const matchesRep = !repOnly || cRep;
-    
-    if (matchesSearch && matchesPack && matchesDiff && matchesCat && matchesRep) {
-      card.style.display = 'block';
-    } else {
-      card.style.display = 'none';
+
+  return cardsData.filter(c => {
+    if (excludeField !== 'search' && query) {
+      if (!c.id.includes(query) && !c.title.toLowerCase().includes(query) && !c.searchText.includes(query)) return false;
     }
+    if (excludeField !== 'pack' && pack !== 'all' && c.pack !== pack) return false;
+    if (excludeField !== 'difficulty' && diff !== 'all' && c.difficulty !== diff) return false;
+    if (excludeField !== 'category' && cat !== 'all' && c.category !== cat) return false;
+    if (excludeField !== 'representative' && repOnly && !c.isRep) return false;
+    return true;
   });
+}
+
+function updateDropdowns() {
+  if (cardsData.length === 0) return;
+
+  const packSelect = document.getElementById('filter-pack');
+  const catSelect = document.getElementById('filter-category');
+  const diffSelect = document.getElementById('filter-difficulty');
+
+  const currentPack = packSelect.value;
+  const currentCat = catSelect.value;
+  const currentDiff = diffSelect.value;
+
+  // 1. Available Packs
+  const packsSubset = getFilteredSubset('pack');
+  const validPacks = new Set(packsSubset.map(c => c.pack));
+  
+  // 2. Available Categories
+  const catsSubset = getFilteredSubset('category');
+  const validCats = new Set(catsSubset.map(c => c.category));
+
+  // 3. Available Difficulties
+  const diffsSubset = getFilteredSubset('difficulty');
+  const validDiffs = new Set(diffsSubset.map(c => c.difficulty));
+
+  // Helper to rebuild options
+  const rebuildOptions = (selectEl, validSet, currentValue, allLabel) => {
+    selectEl.innerHTML = `<option value="all">${allLabel}</option>`;
+    Array.from(validSet).sort().forEach(val => {
+      const selectedAttr = val === currentValue ? ' selected' : '';
+      selectEl.innerHTML += `<option value="${val}"${selectedAttr}>${val}</option>`;
+    });
+    if (currentValue !== 'all' && !validSet.has(currentValue)) {
+      selectEl.value = 'all';
+    }
+  };
+
+  rebuildOptions(packSelect, validPacks, currentPack, 'All Packs');
+  rebuildOptions(catSelect, validCats, currentCat, 'All Categories');
+  rebuildOptions(diffSelect, validDiffs, currentDiff, 'All Difficulties');
+}
+
+function applyFilter() {
+  const query = document.getElementById('search-input').value.toLowerCase().strip();
+  const pack = document.getElementById('filter-pack').value;
+  const diff = document.getElementById('filter-difficulty').value;
+  const cat = document.getElementById('filter-category').value;
+  const repOnly = document.getElementById('toggle-rep').checked;
+
+  cardsData.forEach(c => {
+    let visible = true;
+    if (query) {
+      if (!c.id.includes(query) && !c.title.toLowerCase().includes(query) && !c.searchText.includes(query)) visible = false;
+    }
+    if (pack !== 'all' && c.pack !== pack) visible = false;
+    if (diff !== 'all' && c.difficulty !== diff) visible = false;
+    if (cat !== 'all' && c.category !== cat) visible = false;
+    if (repOnly && !c.isRep) visible = false;
+
+    c.el.style.display = visible ? 'block' : 'none';
+  });
+}
+
+function filterScenarios() {
+  updateDropdowns();
+  applyFilter();
 }
 
 function toggleAllDetails(open) {

@@ -3,6 +3,8 @@
 A deterministic coding-agent evaluation harness built around a single question:
 **does the model actually fix the problem, or does it just make CI green?**
 
+This repository contains the full engineering system behind the study: scenario design, deterministic repository generation, agent execution, hidden acceptance, repeated-attempt matrices, evaluator workbenches, artifact capture, analysis, and publication verification. The paper is one output of the system, not the system itself.
+
 Every scenario has two test layers: **public tests** (visible to the model,
 like normal CI) and **hidden tests** (injected after the agent exits, never
 seen). A model that satisfies the public tests without satisfying the hidden
@@ -23,16 +25,18 @@ self-contained HTML research suite, openable in any browser, no build step:
 | Page | What it is |
 |---|---|
 | `index.html` | Entry point. Thesis, findings, signposts to everything. |
-| `paper.html` | Canonical Technical Report. Two-stage study: five-model breadth (Pass@1) and Pass@3 head-to-head (Laguna XS.2 vs North Mini) across 33 hidden-acceptance scenarios. |
+| `paper.html` | Canonical Technical Report. Two-stage study: four Study A configurations (Pass@1) and Pass@3 head-to-head (Laguna XS.2 vs North Mini) across 33 hidden-acceptance scenarios. |
 | `paper_v2.html` | Redirect page. Preserved for compatibility, redirects to `paper.html`. |
 | `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all components. |
-| `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
+| `scenario-catalog.html` | Scenario Catalog. All 33 scenarios as an inspectable contract browser. Symptoms, traps, expected contracts, hidden assertions, tempting fixes, and observed head-to-head outcomes. |
 | `evidence-index.html` | Evidence Matrix. Complete 132-cell data table of every scenario × model × prompt mode with count-based statuses. |
 | `evaluator-findings.html` | Reviewed false-greens. Root causes, confidence scores, patch quality. |
 
 Start with [publishables/index.html](publishables/index.html).
 
-### Core Finding (Pass@1, North Mini Code)
+### Project origin — North Mini Pass@1
+
+This first experiment exposed the false-green pattern and motivated the broader multi-system, repeated-attempt study. The canonical results now live in the publication suite above.
 
 57 attempts across four challenge packs:
 
@@ -68,9 +72,7 @@ Start with [reports/REPORTS.md](reports/REPORTS.md) for the full report index.
 
 ## Current Development Status
 
-The config-driven multi-model comparison pipeline is implemented and has
-produced first cross-model evidence (Gemma 4 matrix, Laguna XS.2 vs North Mini).
-The research exhibit in `publishables/` is the polished front door.
+The core harness, the 391-attempt depth study, and the publication suite are complete. The config-driven multi-model comparison pipeline has produced cross-model evidence (Study A configurations, Gemma 4 matrix, Laguna XS.2 vs North Mini Study B matrix).
 
 Recent harness additions:
 
@@ -83,11 +85,11 @@ Recent harness additions:
 - **Stale challenges archived**: the old `challenges/` directory (manual testing
   concept, only 7 of 37 scenarios) moved to `.archive/challenges/` and gitignored
 
-Backlog (evidence expansion, not core plumbing):
+Remaining:
 
-- run `contract_visible` maintenance lanes
-- add broader packs such as `ci_forensics` and `product_workflows`
-- run pass@3 / repeated-attempt consistency analysis
+- public release and hosting via GitHub Pages
+- wider evaluator review coverage for the remaining false-greens
+- future model replications and evaluation runs
 
 Start with [docs/README.md](docs/README.md), then read
 [docs/model-comparison-eval-pipeline-plan-2026-06-20.md](docs/model-comparison-eval-pipeline-plan-2026-06-20.md).
@@ -188,7 +190,7 @@ radius, deterministic verification, and cheap review.
 ## The Evaluator Agent
 
 A separate agent reviews the model-under-test's patch. It is not a one-shot
-classifier — it gets a workbench and can test a better fix before judging.
+classifier — it gets a workbench and can optionally test a better shadow-fix before judging.
 
 Each review directory contains:
 
@@ -196,13 +198,13 @@ Each review directory contains:
   behavior, the model's patch, public/hidden test output, and a worktree
   snapshot.
 - `BUDGET.md`: hard timeout plus soft working-time, token, tool-call, and
-  shadow-fix budgets.
+  optional shadow-fix budgets.
 - `WORKING_BOARD.md`: visible notes for reproduction, contract hypothesis,
-  shadow fix, and verdict.
+  optional shadow fix, and verdict.
 - `workbench/seed_visible_repo`: original challenge repo before the model patch.
 - `workbench/model_repo`: visible repo plus the model patch plus hidden
   acceptance tests.
-- `workbench/shadow_repo`: scratch repo where the evaluator can test a better
+- `workbench/shadow_repo`: scratch repo where the evaluator can optionally test a better
   fix.
 - `workbench/model_patch.diff`: exact patch produced by the model under test.
 - `workbench/model_repo_test.txt`: reproduced public+hidden test result for

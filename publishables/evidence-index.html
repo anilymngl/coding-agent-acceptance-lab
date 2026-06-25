@@ -14,12 +14,15 @@
   .nav-links { margin-bottom: 20px; font-size: 11px; }
   .nav-links a { color: #2563eb; text-decoration: none; margin-right: 14px; font-weight: 600; }
   .nav-links span { color: #999; margin-right: 8px; }
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-  .filters button { padding: 5px 12px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-size: 11px; cursor: pointer; color: #555; font-family: inherit; }
-  .filters button.on { background: #1a1a1a; color: white; border-color: #1a1a1a; }
-  .filters .sep { color: #ddd; align-self: center; font-size: 18px; }
+  .filters-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; font-size: 11px; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+  .filter-group button { padding: 4px 12px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; font-size: 11px; cursor: pointer; color: #334155; font-family: inherit; font-weight: 500; transition: all 0.15s; }
+  .filter-group button:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .filter-group button.on { background: #1e293b; color: white; border-color: #1e293b; }
   table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-  th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 2px solid #e5e7eb; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.06em; }
+  th { text-align: left; padding: 8px 10px; background: #f8fafc; border-bottom: 2px solid #e5e7eb; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.06em; user-select: none; }
+  th.sort-asc .sort-indicator::after { content: " ▲"; font-size: 8px; color: #2563eb; }
+  th.sort-desc .sort-indicator::after { content: " ▼"; font-size: 8px; color: #2563eb; }
+  th:hover { background-color: #f1f5f9; color: #333; }
   td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
   tr:hover td { background: #fafafa; }
   .n { text-align: right; font-variant-numeric: tabular-nums; }
@@ -52,38 +55,60 @@
     <span><strong>Avg s</strong> = mean duration in seconds</span>
   </div>
   <div class="nav-links">
-    <span>Research suite:</span>
     <a href="index.html" style="color:#2563eb;text-decoration:none">Home</a>
     <span style="color:#999;margin:0 8px">|</span>
     <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
     <span style="color:#999;margin:0 8px">|</span>
-    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">System</a>
+    <a href="harness-built-target.html" style="color:#2563eb;text-decoration:none">Evaluation System</a>
     <span style="color:#999;margin:0 8px">|</span>
-    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Scenarios</a>
+    <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
     <span style="color:#999;margin:0 8px">|</span>
     <span style="color:#333;font-weight:700">Evidence</span>
     <span style="color:#999;margin:0 8px">|</span>
-    <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none">Evaluator</a>
+    <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none">Evaluator Workbench</a>
   </div>
-  <div class="filters">
-    <button class="on" onclick="filter('all')">All</button>
-    <span class="sep">|</span>
-    <button onclick="filter('pack-cf')">ci_forensics</button>
-    <button onclick="filter('pack-mv')">maintenance</button>
-    <button onclick="filter('pack-pw')">product</button>
-    <span class="sep">|</span>
-    <button onclick="filter('lane-sparse')">sparse</button>
-    <button onclick="filter('lane-cv')">contract</button>
-    <span class="sep">|</span>
-    <button onclick="filter('hp-all')">all attempts passed</button>
-    <button onclick="filter('mixed')">mixed</button>
-    <button onclick="filter('fail-all')">no hidden pass</button>
-    <button onclick="filter('public-red')">contains public-red</button>
-    <button onclick="filter('incomplete')">incomplete</button>
+  <div class="filters-container">
+    <div class="filter-group" id="filter-group-pack" style="display:flex; align-items:center; gap:8px;">
+      <span style="font-weight:600; color:#64748b; width:90px; text-transform:uppercase; font-size:9px; letter-spacing:0.04em;">Pack:</span>
+      <button class="on" onclick="setFilter('pack', 'all')">All Packs</button>
+      <button onclick="setFilter('pack', 'cf')">ci_forensics</button>
+      <button onclick="setFilter('pack', 'mv')">maintenance</button>
+      <button onclick="setFilter('pack', 'pw')">product</button>
+    </div>
+    <div class="filter-group" id="filter-group-lane" style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+      <span style="font-weight:600; color:#64748b; width:90px; text-transform:uppercase; font-size:9px; letter-spacing:0.04em;">Prompt Lane:</span>
+      <button class="on" onclick="setFilter('lane', 'all')">All Lanes</button>
+      <button onclick="setFilter('lane', 'sparse')">sparse</button>
+      <button onclick="setFilter('lane', 'cv')">contract</button>
+    </div>
+    <div class="filter-group" id="filter-group-status" style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+      <span style="font-weight:600; color:#64748b; width:90px; text-transform:uppercase; font-size:9px; letter-spacing:0.04em;">Cell Status:</span>
+      <button class="on" onclick="setFilter('status', 'all')">All Statuses</button>
+      <button onclick="setFilter('status', 'hp-all')">all attempts passed</button>
+      <button onclick="setFilter('status', 'mixed')">mixed</button>
+      <button onclick="setFilter('status', 'fail-all')">no hidden pass</button>
+      <button onclick="setFilter('status', 'public-red')">contains public-red</button>
+      <button onclick="setFilter('status', 'incomplete')">incomplete</button>
+    </div>
   </div>
 
 <table>
-<thead><tr><th>Scenario</th><th>Pack</th><th>Prompt</th><th>Model</th><th>System Route</th><th class="n">Runs</th><th class="n">Public</th><th class="n">Hidden</th><th class="n">FG</th><th class="n">Hid%</th><th class="n">Avg s</th><th>Cell Status</th></tr></thead>
+<thead>
+  <tr>
+    <th id="th-sc" onclick="sortBy('sc')" style="cursor:pointer">Scenario <span class="sort-indicator"></span></th>
+    <th id="th-pack" onclick="sortBy('pack')" style="cursor:pointer">Pack <span class="sort-indicator"></span></th>
+    <th id="th-lane" onclick="sortBy('lane')" style="cursor:pointer">Prompt <span class="sort-indicator"></span></th>
+    <th id="th-model" onclick="sortBy('model')" style="cursor:pointer">Model <span class="sort-indicator"></span></th>
+    <th id="th-gw" onclick="sortBy('gw')" style="cursor:pointer">System Route <span class="sort-indicator"></span></th>
+    <th id="th-r" class="n" onclick="sortBy('r')" style="cursor:pointer">Runs <span class="sort-indicator"></span></th>
+    <th id="th-p" class="n" onclick="sortBy('p')" style="cursor:pointer">Public <span class="sort-indicator"></span></th>
+    <th id="th-h" class="n" onclick="sortBy('h')" style="cursor:pointer">Hidden <span class="sort-indicator"></span></th>
+    <th id="th-fg" class="n" onclick="sortBy('fg')" style="cursor:pointer">FG <span class="sort-indicator"></span></th>
+    <th id="th-hidPct" class="n" onclick="sortBy('hidPct')" style="cursor:pointer">Hid% <span class="sort-indicator"></span></th>
+    <th id="th-s" class="n" onclick="sortBy('s')" style="cursor:pointer">Avg s <span class="sort-indicator"></span></th>
+    <th id="th-status" onclick="sortBy('status')" style="cursor:pointer">Cell Status <span class="sort-indicator"></span></th>
+  </tr>
+</thead>
 <tbody id="rows">
 <script>
 const data = [
@@ -221,29 +246,118 @@ const data = [
 {sc:"webhook_signature_raw_body",pack:"product_workflows",lane:"cv",model:"north-mini",gw:"or",r:3,p:3,h:3,fg:0,s:23,verdict:"hidden_pass"}
 ];
 
-function render(filter){
-  document.getElementById('rows').innerHTML = data.filter(r => {
-    const planned = 3;
-    if(filter==='all')return true;
-    if(filter==='pack-cf')return r.pack==='ci_forensics';
-    if(filter==='pack-mv')return r.pack==='maintenance_value';
-    if(filter==='pack-pw')return r.pack==='product_workflows';
-    if(filter==='lane-sparse')return r.lane==='sparse';
-    if(filter==='lane-cv')return r.lane==='cv';
+let currentSortKey = 'sc';
+let currentSortDir = 'asc';
+let activePackFilter = 'all';
+let activeLaneFilter = 'all';
+let activeStatusFilter = 'all';
 
+function sortBy(key) {
+  if (currentSortKey === key) {
+    currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortKey = key;
+    currentSortDir = 'asc';
+  }
+  
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+  });
+  const th = document.getElementById('th-' + key);
+  if (th) {
+    th.classList.add(currentSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  }
+  
+  render();
+}
+
+function setFilter(type, value) {
+  if (type === 'pack') activePackFilter = value;
+  if (type === 'lane') activeLaneFilter = value;
+  if (type === 'status') activeStatusFilter = value;
+
+  const groupEl = document.getElementById('filter-group-' + type);
+  if (groupEl) {
+    groupEl.querySelectorAll('button').forEach(btn => btn.classList.remove('on'));
+    groupEl.querySelectorAll('button').forEach(btn => {
+      if (btn.getAttribute('onclick').includes(`'${value}'`)) {
+        btn.classList.add('on');
+      }
+    });
+  }
+
+  render();
+}
+
+function render() {
+  const filtered = data.filter(r => {
+    const planned = 3;
+    
+    // Pack filter
+    if (activePackFilter === 'cf' && r.pack !== 'ci_forensics') return false;
+    if (activePackFilter === 'mv' && r.pack !== 'maintenance_value') return false;
+    if (activePackFilter === 'pw' && r.pack !== 'product_workflows') return false;
+
+    // Lane filter
+    if (activeLaneFilter === 'sparse' && r.lane !== 'sparse') return false;
+    if (activeLaneFilter === 'cv' && r.lane !== 'cv') return false;
+
+    // Status filter
     const isAllPass = (r.h === r.r && r.r === planned);
     const isMixed = (r.h > 0 && r.h < r.r);
     const isAllHiddenFail = (r.h === 0 && r.p > 0);
     const isPublicRed = (r.p < r.r);
     const isIncomplete = (r.r < planned);
 
-    if(filter==='hp-all')return isAllPass;
-    if(filter==='mixed')return isMixed;
-    if(filter==='fail-all')return isAllHiddenFail || (r.h === 0 && r.r > 0);
-    if(filter==='public-red')return isPublicRed;
-    if(filter==='incomplete')return isIncomplete;
+    if (activeStatusFilter === 'hp-all' && !isAllPass) return false;
+    if (activeStatusFilter === 'mixed' && !isMixed) return false;
+    if (activeStatusFilter === 'fail-all' && !(isAllHiddenFail || (r.h === 0 && r.r > 0))) return false;
+    if (activeStatusFilter === 'public-red' && !isPublicRed) return false;
+    if (activeStatusFilter === 'incomplete' && !isIncomplete) return false;
+
     return true;
-  }).map(r=>{
+  });
+
+  filtered.sort((a, b) => {
+    let valA, valB;
+    if (currentSortKey === 'hidPct') {
+      valA = a.r > 0 ? a.h / a.r : 0;
+      valB = b.r > 0 ? b.h / b.r : 0;
+    } else if (currentSortKey === 'status') {
+      const getStatusLabel = (r) => {
+        const planned = 3;
+        const isAllPass = (r.h === r.r && r.r === planned);
+        const isMixed = (r.h > 0 && r.h < r.r);
+        const isAllHiddenFail = (r.h === 0 && r.p > 0);
+        const isPublicRed = (r.p < r.r);
+        const isIncomplete = (r.r < planned);
+        let statuses = [];
+        if (isAllPass) statuses.push("all passed");
+        if (isMixed) statuses.push("mixed");
+        if (isAllHiddenFail) statuses.push("all failed");
+        if (isPublicRed) statuses.push("public-red");
+        if (isIncomplete) statuses.push("incomplete");
+        return statuses.join(" + ") || "unrun";
+      };
+      valA = getStatusLabel(a);
+      valB = getStatusLabel(b);
+    } else {
+      valA = a[currentSortKey];
+      valB = b[currentSortKey];
+    }
+
+    if (typeof valA === 'string') {
+      return currentSortDir === 'asc' 
+        ? valA.localeCompare(valB) 
+        : valB.localeCompare(valA);
+    } else {
+      return currentSortDir === 'asc' 
+        ? valA - valB 
+        : valB - valA;
+    }
+  });
+
+  document.getElementById('rows').innerHTML = filtered.map(r=>{
     const planned = 3;
     const isAllPass = (r.h === r.r && r.r === planned);
     const isMixed = (r.h > 0 && r.h < r.r);
@@ -291,12 +405,10 @@ function render(filter){
     </tr>`;
   }).join('');
 }
-function filter(f){
-  document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on'));
-  event.target.classList.add('on');
-  render(f);
-}
-render('all');
+
+// Set initial sort indicator on the default sorted column
+document.getElementById('th-sc').classList.add('sort-asc');
+render();
 </script>
 </tbody>
 </table>

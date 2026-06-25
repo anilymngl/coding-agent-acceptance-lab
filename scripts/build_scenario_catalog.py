@@ -72,13 +72,16 @@ def build_catalog():
     with open(cells_path, "r", encoding="utf-8") as f:
         cells = json.load(f)
 
+    # Filter scenarios to the 33 canonical ones (excluding data_semantics)
+    canonical_scenarios = {sc_id: sc for sc_id, sc in SCENARIOS.items() if sc.pack != "data_semantics"}
+
     # Gather all unique categories for filtering
-    categories = sorted(list({sc.category for sc in SCENARIOS.values()}))
+    categories = sorted(list({sc.category for sc in canonical_scenarios.values()}))
 
     # Generate scenario cards HTML
     cards_html = []
     
-    for sc_id, sc in sorted(SCENARIOS.items(), key=lambda item: (item[1].pack, item[0])):
+    for sc_id, sc in sorted(canonical_scenarios.items(), key=lambda item: (item[1].pack, item[0])):
         is_rep = "true" if sc_id in REPRESENTATIVE_SCENARIOS else "false"
         
         # 1. Parse visible test name and assertion
@@ -191,24 +194,18 @@ def build_catalog():
             </div>
             <div class="card-id mono">{sc_id}</div>
             
-            <p class="collapsed-description">{escape(sc.description)}</p>
-            
-            <div class="collapsed-summary-points">
-              <div class="collapsed-point">
-                <span class="lbl">What the agent saw</span>
-                <span class="val">CI failure: {escape(visible_test_name)} ({escape(visible_assertion)})</span>
+            <div class="collapsed-symptom-trap" style="margin-top: 10px; font-size: 12px; line-height: 1.5; color: #334155;">
+              <div style="margin-bottom: 6px;">
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Visible symptom:</strong><br>
+                {escape(sc.description)}
               </div>
-              <div class="collapsed-point">
-                <span class="lbl">The obvious fix</span>
-                <span class="val">{escape(sc.trap)}</span>
-              </div>
-              <div class="collapsed-point">
-                <span class="lbl">What the contract actually demands</span>
-                <span class="val">{escape(sc.expected_behavior[0] if sc.expected_behavior else 'n/a')}</span>
+              <div>
+                <strong style="color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Core trap:</strong><br>
+                {escape(sc.trap)}
               </div>
             </div>
           </div>
-          <div class="inspect-action-badge">Inspect &darr;</div>
+          <div class="inspect-action-badge">[Inspect scenario]</div>
         </summary>
         
         <div class="card-content">
@@ -416,18 +413,17 @@ def build_catalog():
   </div>
 
   <div class="nav-links">
-    <span>Research suite:</span>
     <a href="index.html">Home</a>
     <span>|</span>
     <a href="paper.html">Paper</a>
     <span>|</span>
-    <a href="harness-built-target.html">System</a>
+    <a href="harness-built-target.html">Evaluation System</a>
     <span>|</span>
-    <span style="color:#333;font-weight:700">Scenarios</span>
+    <span style="color:#333;font-weight:700">Catalog</span>
     <span>|</span>
     <a href="evidence-index.html">Evidence</a>
     <span>|</span>
-    <a href="evaluator-findings.html">Evaluator</a>
+    <a href="evaluator-findings.html">Evaluator Workbench</a>
   </div>
 
   <!-- Controls Box -->
@@ -481,36 +477,116 @@ def build_catalog():
 </div>
 
 <script>
-function filterScenarios() {{
+let cardsData = [];
+
+// Initialize card metadata list on DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {{
+  cardsData = Array.from(document.querySelectorAll('.scenario-card')).map(card => {{
+    const cId = card.id;
+    const cTitle = card.querySelector('.card-title').textContent;
+    const cPack = card.getAttribute('data-pack');
+    const cDiff = card.getAttribute('data-difficulty');
+    const cCat = card.getAttribute('data-category');
+    const cRep = card.getAttribute('data-representative') === 'true';
+    const cText = card.textContent.toLowerCase();
+    return {{
+      el: card,
+      id: cId,
+      title: cTitle,
+      pack: cPack,
+      difficulty: cDiff,
+      category: cCat,
+      isRep: cRep,
+      searchText: cText
+    }};
+  }});
+  // Rebuild initial dropdown states dynamically
+  updateDropdowns();
+}});
+
+function getFilteredSubset(excludeField) {{
   const query = document.getElementById('search-input').value.toLowerCase().strip();
   const pack = document.getElementById('filter-pack').value;
   const diff = document.getElementById('filter-difficulty').value;
   const cat = document.getElementById('filter-category').value;
   const repOnly = document.getElementById('toggle-rep').checked;
-  
-  const cards = document.querySelectorAll('.scenario-card');
-  cards.forEach(card => {{
-    const cId = card.id;
-    const cTitle = card.querySelector('.card-title').textContent.toLowerCase();
-    const cDesc = card.querySelector('.collapsed-description').textContent.toLowerCase();
-    const cText = card.textContent.toLowerCase();
-    const cPack = card.getAttribute('data-pack');
-    const cDiff = card.getAttribute('data-difficulty');
-    const cCat = card.getAttribute('data-category');
-    const cRep = card.getAttribute('data-representative') === 'true';
-    
-    const matchesSearch = !query || cId.includes(query) || cTitle.includes(query) || cDesc.includes(query) || cText.includes(query);
-    const matchesPack = pack === 'all' || cPack === pack;
-    const matchesDiff = diff === 'all' || cDiff === diff;
-    const matchesCat = cat === 'all' || cCat === cat;
-    const matchesRep = !repOnly || cRep;
-    
-    if (matchesSearch && matchesPack && matchesDiff && matchesCat && matchesRep) {{
-      card.style.display = 'block';
-    }} else {{
-      card.style.display = 'none';
+
+  return cardsData.filter(c => {{
+    if (excludeField !== 'search' && query) {{
+      if (!c.id.includes(query) && !c.title.toLowerCase().includes(query) && !c.searchText.includes(query)) return false;
     }}
+    if (excludeField !== 'pack' && pack !== 'all' && c.pack !== pack) return false;
+    if (excludeField !== 'difficulty' && diff !== 'all' && c.difficulty !== diff) return false;
+    if (excludeField !== 'category' && cat !== 'all' && c.category !== cat) return false;
+    if (excludeField !== 'representative' && repOnly && !c.isRep) return false;
+    return true;
   }});
+}}
+
+function updateDropdowns() {{
+  if (cardsData.length === 0) return;
+
+  const packSelect = document.getElementById('filter-pack');
+  const catSelect = document.getElementById('filter-category');
+  const diffSelect = document.getElementById('filter-difficulty');
+
+  const currentPack = packSelect.value;
+  const currentCat = catSelect.value;
+  const currentDiff = diffSelect.value;
+
+  // 1. Available Packs
+  const packsSubset = getFilteredSubset('pack');
+  const validPacks = new Set(packsSubset.map(c => c.pack));
+  
+  // 2. Available Categories
+  const catsSubset = getFilteredSubset('category');
+  const validCats = new Set(catsSubset.map(c => c.category));
+
+  // 3. Available Difficulties
+  const diffsSubset = getFilteredSubset('difficulty');
+  const validDiffs = new Set(diffsSubset.map(c => c.difficulty));
+
+  // Helper to rebuild options
+  const rebuildOptions = (selectEl, validSet, currentValue, allLabel) => {{
+    selectEl.innerHTML = `<option value="all">${{allLabel}}</option>`;
+    Array.from(validSet).sort().forEach(val => {{
+      const selectedAttr = val === currentValue ? ' selected' : '';
+      selectEl.innerHTML += `<option value="${{val}}"${{selectedAttr}}>${{val}}</option>`;
+    }});
+    if (currentValue !== 'all' && !validSet.has(currentValue)) {{
+      selectEl.value = 'all';
+    }}
+  }};
+
+  rebuildOptions(packSelect, validPacks, currentPack, 'All Packs');
+  rebuildOptions(catSelect, validCats, currentCat, 'All Categories');
+  rebuildOptions(diffSelect, validDiffs, currentDiff, 'All Difficulties');
+}}
+
+function applyFilter() {{
+  const query = document.getElementById('search-input').value.toLowerCase().strip();
+  const pack = document.getElementById('filter-pack').value;
+  const diff = document.getElementById('filter-difficulty').value;
+  const cat = document.getElementById('filter-category').value;
+  const repOnly = document.getElementById('toggle-rep').checked;
+
+  cardsData.forEach(c => {{
+    let visible = true;
+    if (query) {{
+      if (!c.id.includes(query) && !c.title.toLowerCase().includes(query) && !c.searchText.includes(query)) visible = false;
+    }}
+    if (pack !== 'all' && c.pack !== pack) visible = false;
+    if (diff !== 'all' && c.difficulty !== diff) visible = false;
+    if (cat !== 'all' && c.category !== cat) visible = false;
+    if (repOnly && !c.isRep) visible = false;
+
+    c.el.style.display = visible ? 'block' : 'none';
+  }});
+}}
+
+function filterScenarios() {{
+  updateDropdowns();
+  applyFilter();
 }}
 
 function toggleAllDetails(open) {{

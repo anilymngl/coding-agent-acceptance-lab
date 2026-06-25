@@ -85,6 +85,38 @@
     .walk-outcome.pass { color: #27ae60; }
     @media (max-width: 580px) { .walkthrough { grid-template-columns: 1fr; } }
 
+    /* ── dumbbell chart ── */
+    .dumbbell { max-width: 720px; margin-top: 14px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    .db-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 12px; color: #64748b; font-size: 0.68rem; }
+    .db-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .db-key, .db-dot { display: block; width: 11px; height: 11px; border-radius: 50%; }
+    .db-key.sparse, .db-dot.sparse { background: #c0392b; border: 2px solid #c0392b; }
+    .db-key.cv, .db-dot.cv { background: #fff; border: 3px solid #2563eb; }
+    .db-axis, .db-row { display: grid; grid-template-columns: minmax(150px, 1.35fr) minmax(260px, 3fr) 102px 72px; gap: 12px; align-items: center; }
+    .db-axis { margin-bottom: 3px; color: #94a3b8; font-size: 0.6rem; }
+    .db-axis-track { position: relative; height: 20px; }
+    .db-axis-track::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 1px; background: #cbd5e1; }
+    .db-axis-track span { position: absolute; bottom: 5px; transform: translateX(-50%); white-space: nowrap; }
+    .db-axis-track span:first-child { transform: none; }
+    .db-axis-track span:last-child { transform: translateX(-100%); }
+    .db-header { font-weight: 700; color: #64748b; text-align: right; }
+    .db-row { min-height: 48px; padding: 5px 4px; border-bottom: 1px solid #eef2f7; }
+    .db-row.product { background: #fffaf0; border-radius: 5px; }
+    .db-label { line-height: 1.2; }
+    .db-label strong { display: block; color: #1e293b; font-size: 0.72rem; }
+    .db-label span { display: block; margin-top: 3px; color: #64748b; font-size: 0.63rem; }
+    .db-track { position: relative; height: 28px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background: linear-gradient(to right, transparent 24.8%, #eef2f7 25%, transparent 25.2%, transparent 49.8%, #eef2f7 50%, transparent 50.2%, transparent 74.8%, #eef2f7 75%, transparent 75.2%); }
+    .db-line { position: absolute; top: 13px; left: var(--cv); right: calc(100% - var(--sparse)); height: 2px; background: #94a3b8; }
+    .db-dot { position: absolute; top: 8px; transform: translateX(-50%); box-sizing: border-box; }
+    .db-dot.sparse { left: var(--sparse); }
+    .db-dot.cv { left: var(--cv); }
+    .db-values, .db-change { text-align: right; font-size: 0.67rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .db-values { color: #475569; }
+    .db-change { color: #16803c; font-weight: 700; }
+    .db-change.warning { color: #a16207; }
+    .db-separator { grid-column: 1 / -1; height: 7px; border-bottom: 2px solid #cbd5e1; margin-bottom: 7px; }
+    @media (max-width: 680px) { .db-axis { display: none; } .db-row { grid-template-columns: 1fr 72px; gap: 5px 10px; padding: 10px 4px; } .db-label { grid-column: 1 / -1; } .db-track { grid-column: 1; } .db-values { display: none; } .db-change { grid-column: 2; } }
+
     /* ── lists, scroll, print ── */
     ul, ol { padding-left: 1.3rem; margin: 0 0 1rem; font-size: 0.9rem; }
     .table-scroll { overflow-x: auto; margin: 16px 0; }
@@ -689,19 +721,74 @@
 
   <div class="figure" id="fig-slopegraph">
     <span class="fgl observed">OBSERVED — ATTEMPT-LEVEL FG RATE</span>
-    <div class="fig-headline">Every line falls. Product workflows stay hard.</div>
-    <table style="max-width:620px;font-size:0.82rem">
-      <thead><tr><th></th><th class="num">Sparse FG Rate</th><th></th><th class="num">Contract-Visible FG Rate</th><th class="num">Change</th></tr></thead>
-      <tbody>
-        <tr><td style="color:#2563eb;font-weight:600">Laguna XS.2 · CI</td><td class="num fg">27.8%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">5.6%</td><td class="num hp">−22.2pp</td></tr>
-        <tr><td style="color:#2563eb;font-weight:600">Laguna XS.2 · Maintenance</td><td class="num fg">26.7%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">0.0%</td><td class="num hp">−26.7pp</td></tr>
-        <tr style="border-bottom:2px solid #fde68a"><td style="color:#2563eb;font-weight:600;font-style:italic">Laguna XS.2 · Product</td><td class="num fg">72.7%</td><td style="text-align:center;color:#94a3b8">●────────●</td><td class="num fg">6.1%</td><td class="num hp">−66.6pp</td></tr>
-        <tr><td style="color:#c0392b;font-weight:600">North Mini · CI</td><td class="num fg">30.6%</td><td style="text-align:center;color:#94a3b8">●──────●</td><td class="num hp">5.6%</td><td class="num hp">−25.0pp</td></tr>
-        <tr><td style="color:#c0392b;font-weight:600">North Mini · Maintenance <sup>&dagger;</sup></td><td class="num fg">24.1%</td><td style="text-align:center;color:#94a3b8">●─────●</td><td class="num hp">4.0%</td><td class="num hp">−20.1pp</td></tr>
-        <tr style="border-top:2px solid #fde68a"><td style="color:#c0392b;font-weight:600;font-style:italic">North Mini · Product</td><td class="num fg">80.0%</td><td style="text-align:center;color:#94a3b8">●─────────●</td><td class="num fg">32.3%</td><td class="num fg">−47.7pp</td></tr>
-      </tbody>
-    </table>
-    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates under sparse and contract-visible prompts. Solid rows represent <code>ci_forensics</code> and <code>maintenance_value</code>. Separated rows represent <code>product_workflows</code>. The proportional reduction in false-greens is large, but product workflows remain meaningfully above zero for North Mini. <sup>&dagger;</sup> North Mini maintenance CV retained 25/30 attempts; missing quota-interrupted runs may bias the rate.</div>
+    <div class="fig-headline">Every marker moves left. Product workflows remain the difficult edge.</div>
+
+    <div class="dumbbell" role="img" aria-label="False-green rates under sparse and contract-visible prompting for six matched Study B cells. All rates decreased under contract-visible prompting.">
+      <div class="db-legend">
+        <span><i class="db-key sparse"></i> Sparse</span>
+        <span><i class="db-key cv"></i> Contract-visible</span>
+        <span>Lower is better</span>
+      </div>
+
+      <div class="db-axis">
+        <div></div>
+        <div class="db-axis-track">
+          <span style="left:0%">0%</span>
+          <span style="left:25%">25%</span>
+          <span style="left:50%">50%</span>
+          <span style="left:75%">75%</span>
+          <span style="left:100%">100%</span>
+        </div>
+        <div class="db-header">Sparse → CV</div>
+        <div class="db-header">Change</div>
+      </div>
+
+      <div class="db-row" style="--sparse:27.8%; --cv:5.6%;">
+        <div class="db-label"><strong>Laguna XS.2</strong><span>CI forensics</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">27.8% → 5.6%</div>
+        <div class="db-change">−22.2 pp</div>
+      </div>
+
+      <div class="db-row" style="--sparse:26.7%; --cv:0%;">
+        <div class="db-label"><strong>Laguna XS.2</strong><span>Maintenance</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">26.7% → 0.0%</div>
+        <div class="db-change">−26.7 pp</div>
+      </div>
+
+      <div class="db-row product" style="--sparse:72.7%; --cv:6.1%;">
+        <div class="db-label"><strong>Laguna XS.2</strong><span>Product workflows</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">72.7% → 6.1%</div>
+        <div class="db-change">−66.6 pp</div>
+      </div>
+
+      <div class="db-separator"></div>
+
+      <div class="db-row" style="--sparse:30.6%; --cv:5.6%;">
+        <div class="db-label"><strong>North Mini</strong><span>CI forensics</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">30.6% → 5.6%</div>
+        <div class="db-change">−25.0 pp</div>
+      </div>
+
+      <div class="db-row" style="--sparse:24.1%; --cv:4.0%;">
+        <div class="db-label"><strong>North Mini</strong><span>Maintenance · CV 25/30 retained</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">24.1% → 4.0%</div>
+        <div class="db-change">−20.1 pp</div>
+      </div>
+
+      <div class="db-row product" style="--sparse:80%; --cv:32.3%;">
+        <div class="db-label"><strong>North Mini</strong><span>Product workflows</span></div>
+        <div class="db-track"><div class="db-line"></div><i class="db-dot sparse"></i><i class="db-dot cv"></i></div>
+        <div class="db-values">80.0% → 32.3%</div>
+        <div class="db-change warning">−47.7 pp</div>
+      </div>
+    </div>
+
+    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates on a shared 0–100% scale. Every matched cell improved under contract-visible prompting. North Mini product workflows still produced a 32.3% false-green rate. North Mini maintenance CV retained 25 of 30 planned attempts.</div>
   </div>
 
   <h2>12. Failure Case Analysis</h2>

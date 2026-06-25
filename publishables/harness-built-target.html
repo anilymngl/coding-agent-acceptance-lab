@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Harness — Data Flow, Components, Gaps</title>
+<title>Evaluation System — How Runs Become Evidence</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; padding: 44px 20px 80px; }
@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
 
-  <h1>The Harness: Built, Not Built, Target</h1>
+  <h1>Evaluation System — How Runs Become Evidence</h1>
   <p class="sub">Data flow, component roles, evidence status, and what comes next. Hover dotted terms for detail.</p>
 
   <div style="text-align:center;font-size:10px;margin-bottom:24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
@@ -104,7 +104,7 @@
     <span style="color:#999;margin:0 10px">|</span>
     <a href="paper.html" style="color:#2563eb;text-decoration:none">Paper</a>
     <span style="color:#999;margin:0 10px">|</span>
-    <span style="color:#333;font-weight:700">Harness</span>
+    <span style="color:#333;font-weight:700">Evaluation System</span>
     <span style="color:#999;margin:0 10px">|</span>
     <a href="scenario-catalog.html" style="color:#2563eb;text-decoration:none">Catalog</a>
     <span style="color:#999;margin:0 10px">|</span>
@@ -118,7 +118,7 @@
     <div style="flex:1; min-width:240px">
       <div style="font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#999; margin-bottom:4px">Research Paper</div>
       <div style="font-size:15px; font-weight:700; margin-bottom:4px">Measuring Acceptance Reliability in Coding-Agent CI Repair</div>
-      <div style="font-size:11px; color:#666">Five-model breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios. Structural trust-gap analysis, retry variance, and spec recovery.</div>
+      <div style="font-size:11px; color:#666">Four-configuration breadth evidence and a 391-attempt depth study across 33 hidden-acceptance scenarios. Structural trust-gap analysis, retry variance, and spec recovery.</div>
     </div>
     <a href="paper.html" style="display:inline-block; background:#2563eb; color:white; font-size:12px; font-weight:700; padding:10px 20px; border-radius:8px; text-decoration:none; white-space:nowrap">Open paper &rarr;</a>
   </div>
@@ -142,7 +142,7 @@
     .pconn .pln { width: 100%; height: 1.5px; background: #d1d5db; position: relative; }
     .pconn .pln::after { content: ''; position: absolute; right: -1px; top: -3px; width: 0; height: 0; border-left: 6px solid #d1d5db; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
   </style>
-  <p class="section-title">Pipeline — How one run works</p>
+  <p class="section-title" id="run-lifecycle">Pipeline — How one run works</p>
   <div class="pflow">
     <div class="pblock"><div class="pstep"><div class="num">1</div><div class="ptitle">Write Scenario</div><div class="pdesc">Fresh worktree from templates</div></div></div><div class="pconn"><div class="pln"></div></div>
     <div class="pblock"><div class="pstep"><div class="num">2</div><div class="ptitle">Baseline Test</div><div class="pdesc">Confirm red CI (recorded, not enforced)</div></div></div><div class="pconn"><div class="pln"></div></div>
@@ -213,7 +213,7 @@
   </div>
 
   <!-- ======== COMPONENT DETAIL CARDS ======== -->
-  <p class="section-title">Components — What each file does</p>
+  <p class="section-title" id="component-map">Components — What each file does</p>
   <div class="comp-grid">
 
     <!-- scenarios.py -->
@@ -301,7 +301,7 @@
     </div>
 
     <!-- evaluator.py -->
-    <div class="comp">
+    <div class="comp" id="evaluator-handoff">
       <div class="header"><span class="fname mono">evaluator.py</span><span class="lines">1,310 lines</span> <span class="t g">Built</span></div>
       <div class="role">Evaluator-agent workbench. Reviews false-greens.
         <span class="tip">Builds evaluation packet<span class="tt multi">Markdown: trap, expected behavior, success/failure signals, model's patch, public output, hidden output. Evaluator reads this — it can see original source under shadow repository.</span></span>
@@ -351,7 +351,7 @@
   </div>
 
   <!-- ======== NOT BUILT + TARGET ======== -->
-  <p class="section-title">Not Built <span class="t r">6 gaps</span> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Target <span class="t a">5 items</span></p>
+  <p class="section-title" id="known-limitations">Not Built <span class="t r">6 gaps</span> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Target <span class="t a">5 items</span></p>
   <div style="display:flex; gap:24px; flex-wrap:wrap">
     <div style="flex:1; min-width:300px">
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">External audit workflow</strong><br><span style="font-size:10px;color:#666">No third-party verification of hidden tests, evaluator verdicts, or artifacts. Tier 1 only.</span></div>
@@ -362,7 +362,7 @@
       <div style="background:#fff; border:1px solid #e5e7eb; border-left:3px solid #e11d48; border-radius:8px; padding:12px 14px; margin-bottom:8px; font-size:12px"><strong style="color:#9f1239">Continuous monitoring</strong><br><span style="font-size:10px;color:#666">On-demand only. No scheduled re-runs when providers update or models change.</span></div>
     </div>
     <div style="flex:0 0 400px; min-width:300px">
-      <table class="targ">
+      <table class="targ" id="target-state">
         <thead><tr><th>What (Target Behavior)</th><th>Effort</th><th>Blocks</th></tr></thead>
         <tbody>
           <tr><td style="font-weight:700">Complete active matrix</td><td class="eff">~2h</td><td>full 396-run comparison</td></tr>

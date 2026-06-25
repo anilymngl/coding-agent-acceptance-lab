@@ -111,7 +111,7 @@ const scenarios = [
 ];
 function renderPack(pack,elId){
   document.getElementById(elId).innerHTML = scenarios.filter(s=>s.p===pack).map(s=>{
-    return `<div class="card">
+    return `<div class="card" id="${s.sc}">
       <div class="title">${s.title}</div>
       <div class="mono-title mono">${s.sc}</div>
       <div class="trap">${s.trap}</div>

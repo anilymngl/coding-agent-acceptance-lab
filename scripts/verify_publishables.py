@@ -355,8 +355,16 @@ def verify_html_integrity(cells):
             if fragment:
                 target_parser = parsed_files[target_file]
                 if fragment not in target_parser.ids:
-                    print(f"Error: Link '{href}' in {source_file} points to missing anchor ID '{fragment}' in target {target_file}")
-                    sys.exit(1)
+                    is_valid_dynamic = False
+                    if target_file == "scenario-catalog.html":
+                        with open(os.path.join(PUBLISHABLES_DIR, "scenario-catalog.html"), "r", encoding="utf-8") as f:
+                            cat_src = f.read()
+                        if f"sc:'{fragment}'" in cat_src or f'sc:"{fragment}"' in cat_src:
+                            is_valid_dynamic = True
+                            
+                    if not is_valid_dynamic:
+                        print(f"Error: Link '{href}' in {source_file} points to missing anchor ID '{fragment}' in target {target_file}")
+                        sys.exit(1)
                     
     print("All internal hyperlinks and fragment anchors resolved successfully!")
 

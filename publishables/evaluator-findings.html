@@ -45,27 +45,104 @@
     margin-bottom: 16px;
     text-align: center;
   }
-  .flow-container {
+  .flow-grid {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .flow-col {
+    flex: 1;
+    border-radius: 10px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   }
-  .flow-step {
+  .flow-col.prepares {
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 10px 18px;
-    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    border-top: 4px solid #64748b;
+  }
+  .flow-col.investigates {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-top: 4px solid #2563eb;
+  }
+  .flow-col.validates {
+    background: #f0fdf4;
+    border: 1px solid #a7f3d0;
+    border-top: 4px solid #10b981;
+  }
+  .flow-col-title {
     font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .flow-col.prepares .flow-col-title { color: #475569; }
+  .flow-col.investigates .flow-col-title { color: #1e40af; }
+  .flow-col.validates .flow-col-title { color: #065f46; }
+  
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+  }
+  .flow-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 10px;
     font-weight: 600;
     text-align: center;
-    width: 280px;
-    color: #334155;
+    color: #475569;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.01);
   }
-  .flow-arrow {
-    font-size: 14px;
-    color: #94a3b8;
-    font-weight: bold;
+  .flow-col.prepares .flow-item {
+    border-color: #e2e8f0;
+    color: #475569;
+  }
+  .flow-col.investigates .flow-item {
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+  }
+  .flow-col.validates .flow-item {
+    border-color: #a7f3d0;
+    color: #064e3b;
+  }
+  .flow-arrow-horizontal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cbd5e1;
+    font-size: 20px;
+    font-weight: 700;
+    width: 20px;
+  }
+  .flow-intellectual-point {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .flow-intellectual-point strong {
+    color: #2563eb;
+  }
+  @media (max-width: 768px) {
+    .flow-grid { flex-direction: column; }
+    .flow-arrow-horizontal { transform: rotate(90deg); margin: 6px auto; }
   }
 
   /* Repo Cards Styles */
@@ -162,7 +239,7 @@
 <body>
 <div class="wrap">
   <h1>Evaluator Findings</h1>
-  <p class="sub">10 validated false-green reviews run within a disposable engineering workspace. <span class="mono">laguna-xs2 / ci_forensics / sparse / pass@1</span></p>
+  <p class="sub">10 validated false-green reviews run within a disposable engineering workspace. <span class="mono">ci_forensics / sparse / pass@1</span></p>
   
   <div class="nav-links">
     <span>Research suite:</span>
@@ -185,21 +262,51 @@
 
   <!-- Flow section -->
   <div class="flow-box">
-    <h3>The Evaluator Workflow</h3>
-    <div class="flow-container">
-      <div class="flow-step">Original agent patch</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Rebuild the exact failed state</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Run public + hidden tests</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Inspect the authored contract</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Create a shadow fix</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Run the same tests again</div>
-      <div class="flow-arrow">&darr;</div>
-      <div class="flow-step">Produce an evidence-backed diagnosis</div>
+    <h3>The Evaluator Enclosure Flow</h3>
+    <div class="flow-grid">
+      <!-- Harness Prepares -->
+      <div class="flow-col prepares">
+        <div class="flow-col-title">1. Harness Prepares</div>
+        <div class="flow-steps">
+          <div class="flow-item">Rebuild repositories</div>
+          <div class="flow-item">Apply original model patch</div>
+          <div class="flow-item">Inject hidden acceptance tests</div>
+          <div class="flow-item">Reproduce failed state</div>
+          <div class="flow-item">Assemble evaluation packet</div>
+        </div>
+      </div>
+      
+      <!-- Arrow -->
+      <div class="flow-arrow-horizontal">&rarr;</div>
+      
+      <!-- Evaluator Investigates -->
+      <div class="flow-col investigates">
+        <div class="flow-col-title">2. Evaluator Investigates</div>
+        <div class="flow-steps">
+          <div class="flow-item">Inspect code & test failures</div>
+          <div class="flow-item">Hypothesize root cause</div>
+          <div class="flow-item">Diagnose violated contract</div>
+          <div class="flow-item">Demonstrate shadow fix on clean seed</div>
+        </div>
+      </div>
+      
+      <!-- Arrow -->
+      <div class="flow-arrow-horizontal">&rarr;</div>
+      
+      <!-- Harness Validates -->
+      <div class="flow-col validates">
+        <div class="flow-col-title">3. Harness Validates</div>
+        <div class="flow-steps">
+          <div class="flow-item">Enforce Pydantic schema constraints</div>
+          <div class="flow-item">Verify verdict consistency</div>
+          <div class="flow-item">Assert exact evidence quotes</div>
+          <div class="flow-item">Persist to database or reject</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flow-intellectual-point">
+      💡 <strong>Intellectual point:</strong> Agentic judgment is enclosed by deterministic preparation and deterministic validation. Rather than treating an LLM reviewer as a subjective opinion, the harness provides a reproducible workbench environment to prove or disprove failures.
     </div>
   </div>
 

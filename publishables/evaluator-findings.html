@@ -240,7 +240,7 @@
     <p>The evaluator inspects the code, test output, and authored acceptance contract. It must identify the specific mismatch between the patch and the required behavior. The diagnosis must point to concrete evidence from the workbench. A verdict without an observable code path, test failure, or contract mismatch is not enough.</p>
 
     <h2>3. Build a shadow fix</h2>
-    <p>The evaluator then edits a clean shadow repository and attempts a different implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it demonstrates that the failure was reproducible, the authored contract is implementable in the supplied repository, and the original patch failed because of a concrete implementation gap.</p>
+    <p>The evaluator then edits a clean shadow repository and attempts a different implementation. The shadow fix is tested against the same visible and hidden suites. When the shadow fix passes, it shows that the authored contract is implementable in the supplied repository and supports the evaluator&rsquo;s diagnosis of a concrete gap in the original patch.</p>
 
     <h2>What this establishes</h2>
     <p>A validated evaluator review supports a narrow claim:</p>
@@ -261,10 +261,10 @@
 
   <!-- Summary stats -->
   <div class="summary">
-    <div class="sum-stat"><div class="val" id="val-reviews">10</div><div class="lbl">validated reviews</div></div>
-    <div class="sum-stat green"><div class="val" id="val-reproduced">10/10</div><div class="lbl">reproduced false-green</div></div>
-    <div class="sum-stat green"><div class="val" id="val-violation">10/10</div><div class="lbl">identified violation</div></div>
-    <div class="sum-stat green"><div class="val" id="val-shadow">10/10</div><div class="lbl">passing shadow fix</div></div>
+    <div class="sum-stat"><div class="val" id="val-reviews">10</div><div class="lbl">evaluator-agent reviews</div></div>
+    <div class="sum-stat green"><div class="val" id="val-violation">10/10</div><div class="lbl">diagnosed authored-contract violations</div></div>
+    <div class="sum-stat green"><div class="val" id="val-validated">10/10</div><div class="lbl">evidence-validated verdicts</div></div>
+    <div class="sum-stat"><div class="val" id="val-shadow">--</div><div class="lbl">shadow-fix outcomes not yet structured</div></div>
     <div class="sum-stat amber"><div class="val">91</div><div class="lbl">not yet reviewed</div></div>
   </div>
 
@@ -291,9 +291,8 @@ const reviews = [
 ];
 
 document.getElementById('val-reviews').textContent = reviews.length;
-document.getElementById('val-reproduced').textContent = `${reviews.length}/${reviews.length}`;
 document.getElementById('val-violation').textContent = `${reviews.length}/${reviews.length}`;
-document.getElementById('val-shadow').textContent = `${reviews.length}/${reviews.length}`;
+document.getElementById('val-validated').textContent = `${reviews.length}/${reviews.length}`;
 
 function rct(r){if(r==='edge_case_gap')return'edge';if(r==='missed_hidden_contract')return'contract';return'policy';}
 function rcl(r){if(r==='edge_case_gap')return'Edge gap';if(r==='missed_hidden_contract')return'Missed contract';return'Incomplete policy';}
@@ -307,9 +306,9 @@ document.getElementById('reviews').innerHTML = reviews.map(r=>`<div class="revie
   <div class="what-happened">${r.detail}</div>
   
   <div class="review-status-grid">
-    <div class="status-item"><span class="lbl">REPRODUCED?</span> <span class="val green">yes</span></div>
-    <div class="status-item"><span class="lbl">SHADOW FIX PASSED?</span> <span class="val green">yes</span></div>
-    <div class="status-item"><span class="lbl">VERDICT</span> <span class="val green">confirmed false-green</span></div>
+    <div class="status-item"><span class="lbl">REPRODUCTION</span> <span class="val">Workbench generated; detailed status not published</span></div>
+    <div class="status-item"><span class="lbl">SHADOW FIX</span> <span class="val">Not recorded in structured review data</span></div>
+    <div class="status-item"><span class="lbl">VERDICT</span> <span class="val green">Validated false-green diagnosis</span></div>
     <div class="status-item full-width"><span class="lbl">CONTRACT MISSED</span> <span class="val">${r.finding}</span></div>
   </div>
 </div>`).join('');

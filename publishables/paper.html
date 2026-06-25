@@ -153,7 +153,7 @@
 
   <div class="abstract">
     <h2>Abstract</h2>
-    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini Code, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. For Laguna XS.2 / OpenRouter, the attempt-level false-green rate fell to 4.0% across contract-visible cells, and no maintenance or product scenario remained unsolved under any-of-three attempts. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
+    <p>We present a two-stage empirical study investigating the "trust gap" in coding-agent CI repair — the difference between visible test success (public green) and actual correctness under hidden acceptance tests. In Stage A (Breadth), we evaluate four model configurations across four model families (Cohere North Mini Code, Google Gemma 4 12B, DeepSeek V4 Pro, Poolside Laguna XS.2) at Pass@1. In Stage B (Depth), we conduct a head-to-head Pass@3 evaluation involving <span data-metric="study_b.retained_attempts">391</span> retained attempts across 33 scenarios and two deployed agent systems. Across all packs, contract exposure reduced the pooled attempt-level false-green rate from 43.3% to 8.9%. Both systems achieved identical scenario-level results on ci_forensics under contract-visible prompts. Product workflows remained harder: 76.2% under sparse prompts and 18.8% under contract-visible prompts. Contract exposure recovered broad product coverage for North Mini, moving from 2/11 to 10/11 scenarios solved at least once. Retries do not monotonically improve outcomes: independent resampling occasionally regressed, replacing correct solutions with incorrect ones. We analyze stable attractors and implementation limitations to outline engineering guidelines for coding-agent deployment.</p>
     <div class="sans" style="font-size:0.75rem; color:#888; margin-top:10px"><strong>Keywords:</strong> coding agents, CI repair, trust gap, false-green, hidden acceptance, Pass@3, evaluation harness, contract-visible</div>
   </div>
 
@@ -676,7 +676,7 @@
     <sup>†</sup> Incomplete cell: only 25 of 30 planned attempts completed due to quota limits.<br />
     <sup>a</sup> Laguna produced 2 false-greens on <code>support_sla_business_hours</code> (1 pass, 2 FGs).<br />
     <sup>b</sup> Laguna produced 1 false-green on each of <code>csv_header_contract</code> and <code>env_bool_parser</code>.<br />
-    <sup>c</sup> North Mini CV produced 10 false-greens across 6 scenarios, including all 3 retained attempts on <code>support_sla_business_hours</code> (3 FGs).<br />
+    <sup>c</sup> North Mini CV produced 10 false-greens across 6 scenarios, including all 3 retained attempts on <code>support_sla_business_hours</code> (3 FGs). Under sparse prompting the same cell produced 24 false-greens across 9 scenarios.<br />
     <sup>d</sup> For North Mini maintenance_value CV: 5 complete 3-attempt cells (5/5 reliable); 5 incomplete 2-attempt cells (four 2/2 hidden-pass, one 1/2 mixed).
   </p>
 
@@ -685,10 +685,10 @@
   </div>
 
   <h2>8. Attempt-Level Reliability</h2>
-  <p>The attempt-level metrics reflect the chance that any individual run produces a correct patch. Under sparse conditions, attempt-level false-green rates are consistently high across both models (ranging from 24% to 80%). The contract-visible treatment lowers this rate substantially, but residual errors remain. For instance, in product workflows under contract-visible mode, Laguna's attempt-level false-green rate dropped to 6.1%, whereas North Mini's stayed at 32.3% (partly due to persistent failure attractors in <code>support_sla_business_hours</code> and billing scenarios).</p>
+  <p>The attempt-level metrics reflect the chance that any individual run produces a correct patch. Under sparse conditions, attempt-level false-green rates are consistently high across both models (ranging from 24% to 80%). The contract-visible treatment lowers this rate substantially for both systems. In the hardest pack, product workflows, North Mini's false-green rate fell from 80.0% to 32.3% — a 47.7 point reduction — while Laguna's fell from 72.7% to 6.1%. The remaining gap between the two systems on product policy tasks reflects differences in per-attempt stability rather than an inability to reach correct solutions.</p>
 
   <h2>9. Scenario Coverage and Stability</h2>
-  <p>Any-of-three scenario success treats a scenario as solved if at least one attempt passes hidden tests. Laguna XS.2 reached 33/33 any-of-three success under contract-visible conditions, and North Mini reached 32/33 (failing to solve <code>support_sla_business_hours</code>). However, this any-of-three metric obscures instability. The all-of-three metric reveals how consistently the agent reproduces a fix: Laguna fell to 29/33 all-of-three reliability in CV, and North Mini reached 21/28 complete cells (with 32/33 any-of-observed scenario coverage, including five incomplete cells), showing that even with clear specifications, agents fluctuate between correct and incorrect strategies.</p>
+  <p>Any-of-three scenario success treats a scenario as solved if at least one attempt passes hidden tests. Laguna XS.2 reached 33/33 any-of-three success under contract-visible conditions, and North Mini reached 32/33 any-of-observed (with one scenario unsolved and five cells incomplete due to quota limits). However, this any-of-three metric obscures instability. The all-of-three metric reveals how consistently the agent reproduces a fix: Laguna reached 29/33 all-of-three reliability in CV, and within North Mini's 28 completed cells the all-of-three reliability was 21/28, showing that even with clear specifications, both systems fluctuate between correct and incorrect strategies.</p>
 
   <h2>10. Independent Retries Are Not Monotonically Better</h2>
   <p>A cumulative Pass@k metric cannot mathematically regress, but individual attempts can. Table 4 demonstrates that resampling independently from a model's generation distribution does not guarantee improvement and can result in regression.</p>
@@ -721,7 +721,7 @@
       </tr>
     </tbody>
   </table>
-  <p>In attempt 2, North Mini failed on <code>env_bool_parser</code> (which it solved in attempt 1) without gaining any new solved scenarios. This shows independent resampling occasionally recovered a failure, occasionally replaced a successful strategy with a failing one, and repeatedly reproduced stable errors.</p>
+  <p>The retry experiments show that independent resampling from scratch can regress as well as recover. On ci_forensics sparse, North Mini solved 9/12 scenarios on attempt 1, dropped to 8/12 on attempt 2 (losing <code>env_bool_parser</code>), and plateaued at 8/12. Laguna gained one scenario on attempt 2 and held at 9/12. Neither system improved on the third independent attempt. This instability is common to both: resampling occasionally replaces a successful strategy with a failing one, and repeatedly reproduces stable errors on harder scenarios.</p>
 
   <h2>11. Effect of Contract Exposure</h2>
   <p>Contract-visible prompts reduced the attempt-level false-green rate in every matched cell. Figure 4 shows the magnitude and variation: product workflows remained the most difficult pack under both prompt conditions, and the improvement was not uniform across systems or scenario packs.</p>
@@ -795,7 +795,7 @@
       </div>
     </div>
 
-    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates on a shared 0–100% scale. Every matched cell improved under contract-visible prompting. North Mini product workflows still produced a 32.3% false-green rate. North Mini maintenance CV retained 25 of 30 planned attempts.</div>
+    <div class="fig-caption"><strong>Figure 4:</strong> Study B attempt-level false-green rates on a shared 0–100% scale. Every matched cell improved under contract-visible prompting. North Mini product workflows fell from 80.0% to 32.3% — the largest absolute reduction among all cells. North Mini maintenance CV retained 25 of 30 planned attempts.</div>
   </div>
 
   <h2>12. Failure Case Analysis</h2>
@@ -970,7 +970,7 @@
 
   <p><strong>Evaluator judgments need deterministic evidence validation.</strong> Ten evaluator-agent reviews diagnosed authored-contract violations with evidence-backed verdicts. But the evaluator is itself a model, and its workbench is not yet a fully structured measurement instrument. Shadow-fix outcomes, reproduction status and inter-evaluator agreement remain open questions for the next iteration of the evaluation pipeline.</p>
 
-  <p><strong>Deployment should be partitioned by task type, not governed by one global score.</strong> <code>ci_forensics</code> scenarios had false-green rates below 6% under contract-visible prompts for both systems. <code>product_workflows</code> remained at 32.3% for North Mini even with the contract exposed. A deployment strategy that treats all CI failures as equivalent will be simultaneously overconfident on mechanical tasks and underprepared for policy-critical ones.</p>
+  <p><strong>Deployment should be partitioned by task type, not governed by one global score.</strong> <code>ci_forensics</code> scenarios had false-green rates below 6% under contract-visible prompts for both systems. <code>product_workflows</code> fell to 6.1% for Laguna and 32.3% for North Mini under contract-visible prompts — a substantial improvement for both systems from their sparse baselines of 72.7% and 80.0%. A deployment strategy that treats all CI failures as equivalent will be simultaneously overconfident on mechanical tasks and underprepared for policy-critical ones.</p>
 
   <p>North Mini is also the clearest argument against collapsing agent evaluation into one leaderboard position. The same deployed system matched its comparator on constrained debugging, remained competitive on maintenance work, and recovered most product scenarios once the contract became visible. Its remaining weakness was not universal inability, but unstable policy reconstruction on the hardest task family. For deployment, that distinction matters more than the aggregate rank: it tells us where North Mini can be trusted directly, where better specifications unlock its capability, and where an independent acceptance gate must continue to own the final decision.</p>
 

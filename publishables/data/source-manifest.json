@@ -15,7 +15,7 @@
     "files": [
       {
         "path": "data/releases/v1/checksums.sha256",
-        "sha256": "67875053d132a510496a263f11def6eeeda61d537607806a1201a7a82ee0632c"
+        "sha256": "d4591d0a2c6319483bf2152629a0d9d0ef5944b4d6782c4d7dd380eaaa3f0964"
       },
       {
         "path": "data/releases/v1/evaluator-reviews.sqlite",
@@ -51,7 +51,7 @@
       },
       {
         "path": "data/releases/v1/provenance.json",
-        "sha256": "4358fdd51f24505009ce53bae2c2f8015b457c7e62e6baa56583e516f967cfcf"
+        "sha256": "5a8864b1936ccd7d60f2fa68b9df1c634b4df157412f61e74e9caea90d893cb7"
       },
       {
         "path": "data/releases/v1/schema.sql",

@@ -28,6 +28,7 @@ EXPORT_DIR_NAME = "exports"
 RELEASE_ID = "coding-agent-acceptance-lab-v1"
 RELEASE_DATE = "2026-06-25"
 SCHEMA_VERSION = "1"
+AUDITED_SOURCE_COMMIT = "87319ed04df9c5f2b7658c9643666fcdbd2ad077"
 
 REPRESENTATIVE_SCENARIOS = {
     "stale_generated_schema",
@@ -281,10 +282,9 @@ def create_schema(con: sqlite3.Connection) -> None:
 
 
 def insert_metadata(con: sqlite3.Connection, study_name: str, description: str) -> None:
-    git_commit = os.popen("git rev-parse HEAD").read().strip()
     con.execute(
         "insert into release_metadata values (?, ?, ?, ?, ?, ?)",
-        (RELEASE_ID, RELEASE_DATE, git_commit, SCHEMA_VERSION, study_name, description),
+        (RELEASE_ID, RELEASE_DATE, AUDITED_SOURCE_COMMIT, SCHEMA_VERSION, study_name, description),
     )
 
 
@@ -576,7 +576,7 @@ def write_provenance(out_dir: Path) -> None:
         "release_id": RELEASE_ID,
         "release_date": RELEASE_DATE,
         "schema_version": SCHEMA_VERSION,
-        "git_commit": os.popen("git rev-parse HEAD").read().strip(),
+        "audited_source_commit": AUDITED_SOURCE_COMMIT,
         "canonical_inputs": {
             "authored_contracts": "ci_vibe_lab/scenarios.py",
             "attempt_evidence": "local SQLite databases under data/matrix/ and selected Study A source DBs",

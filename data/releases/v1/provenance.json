@@ -1,11 +1,11 @@
 {
+  "audited_source_commit": "87319ed04df9c5f2b7658c9643666fcdbd2ad077",
   "canonical_inputs": {
     "attempt_evidence": "local SQLite databases under data/matrix/ and selected Study A source DBs",
     "authored_contracts": "ci_vibe_lab/scenarios.py",
     "public_release_evidence": "data/releases/v1/*.sqlite and exports/*.csv",
     "publication_derivations": "publishables/data/*.json"
   },
-  "git_commit": "87319ed04df9c5f2b7658c9643666fcdbd2ad077",
   "release_date": "2026-06-25",
   "release_id": "coding-agent-acceptance-lab-v1",
   "sanitization": [

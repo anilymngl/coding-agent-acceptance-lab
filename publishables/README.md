@@ -1,41 +1,44 @@
-# Publishables — Trust Gap Research Suite
+# Publishables
 
-Self-contained HTML research exhibit. No build step. No CDN dependencies (Georgia is a system font). Open any file in a browser.
+Canonical HTML source for the public research site.
 
-## What's here
+The supported public site contains exactly six HTML pages:
 
-| File/Dir | What it is |
+| File | Role |
 |---|---|
-| `index.html` | Entry point. Thesis, findings, signposts to everything. |
-| `paper.html` | Canonical two-stage report. Pass@1 breadth and Pass@3 depth studies. |
-| `paper_v2.html` | Compatibility redirect to `paper.html`. |
-| `archive/` | Superseded historical snapshots retained for provenance. |
-| `data/` | Machine-readable publication snapshot (JSON). |
-| `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all 10 components with I/O, 6 gaps named, 5 targets. |
-| `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
-| `evidence-index.html` | 132-row matrix. Every scenario × model × prompt mode as a cell. Filterable by pack, lane, outcome. |
-| `evaluator-findings.html` | 10 reviewed false-greens. Root causes, confidence scores, patch quality. Evidence-validated verdicts. |
+| `index.html` | Entry point, thesis, and navigation |
+| `paper.html` | Canonical technical report |
+| `harness-built-target.html` | Harness inventory and system flow |
+| `scenario-catalog.html` | Inspectable scenario catalog |
+| `evidence-index.html` | Study B evidence matrix |
+| `evaluator-findings.html` | Reviewed false-green diagnostics |
 
-## How to use
+Machine-readable publication summaries live in `data/`.
 
-Open `index.html` in a browser. Every page links to every other page via the nav bar at the top. Current page is bolded.
+## Build And Verify
 
-## Design
+Regenerate the scenario catalog before release checks:
 
-- **Signal style**: truth labels on every claim (Built, Observed, Not built, Target, Recommendation). No filler words. Plain language. Honest about what's missing.
-- **System font stack**: Inter, SF Mono. No external font CDNs.
-- **Color as semantics**: green = pass/good, rose = fail/false-green, blue = info, amber = warning, gray = missing/not-run.
+```bash
+uv run python scripts/build_scenario_catalog.py
+git diff --exit-code publishables/scenario-catalog.html
+```
 
-## Evidence status
+Verify publication consistency:
 
-- **Tier 1**: behavior microscope. 33 scenarios, one harness, one team. Hidden tests and evaluator verdicts from same authors.
-- **Tier 2** (comparative claims): needs evaluator agreement on false-greens. Only 10/101 reviewed.
-- **Tier 3** (public benchmark): needs external audit. Not yet.
+```bash
+uv run python scripts/verify_publishables.py
+```
 
-## Data source
+Build the curated Pages artifact:
 
-All numbers from two matrix configs: `data/matrix/laguna-xs2-vs-north-mini-2026-06-22/` (ci_forensics + maintenance_value) and `data/matrix/north-mini-openrouter-completion/` (product_workflows). Run databases in 12+ SQLite files.
+```bash
+uv run python scripts/build_pages_site.py
+uv run python scripts/validate_pages_site.py
+```
 
-## Prior work
+Do not edit `.pages-site/` by hand.
 
-Older slide decks and presentations live in `presentation/`. The Gemma 4 matrix reports are in `reports/`. Methodology docs in `docs/`.
+## Data Boundary
+
+The empirical source is `data/releases/v1/`. The JSON files in `publishables/data/` are publication summaries and must match the release data.

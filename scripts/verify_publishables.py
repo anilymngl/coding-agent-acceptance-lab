@@ -224,7 +224,6 @@ def verify_html_integrity(cells):
     html_files = [
         "index.html",
         "paper.html",
-        "paper_v2.html",
         "evidence-index.html",
         "evaluator-findings.html",
         "harness-built-target.html",
@@ -246,11 +245,6 @@ def verify_html_integrity(cells):
         parser = PublishablesParser(filename)
         parser.feed(content)
         parsed_files[filename] = parser
-        
-    # Check meta-refresh in paper_v2.html
-    if not parsed_files["paper_v2.html"].is_redirect:
-        print("Error: paper_v2.html does not redirect to paper.html via meta-refresh")
-        sys.exit(1)
         
     # Validate data-metric tags in paper.html
     paper_metrics = parsed_files["paper.html"].metrics

@@ -7,7 +7,7 @@ Date: 2026-06-25
 - Current branch: `audit/final-public-release`
 - Current `HEAD`: `b809763a97945319dc3646e04a0726706e985ab2`
 - Current `origin/main`: `b809763a97945319dc3646e04a0726706e985ab2`
-- Remote: `origin https://github.com/anilymngl/north-mini-test.git`
+- Remote: `origin https://github.com/anilymngl/coding-agent-acceptance-lab.git`
 - Worktree root: local repository checkout path redacted from the public release branch.
 
 ## Branch State

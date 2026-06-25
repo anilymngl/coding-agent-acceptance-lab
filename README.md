@@ -1,4 +1,4 @@
-# North Mini Test
+# Coding Agent Acceptance Lab
 
 A deterministic coding-agent evaluation harness built around a single question:
 **does the model actually fix the problem, or does it just make CI green?**
@@ -87,7 +87,7 @@ Recent harness additions:
 
 Remaining:
 
-- public repository rename and visibility change
+- repository visibility change
 - GitHub Pages enablement after explicit review
 - wider evaluator review coverage for the remaining false-greens
 - future model replications and evaluation runs
@@ -139,7 +139,7 @@ GitHub Pages is not enabled by this repository state. The included workflow is m
 
 ## Citation
 
-Use [CITATION.cff](CITATION.cff) for citation metadata. The future public repository name is expected to be `coding-agent-acceptance-lab`; historical experiment names and provenance paths may still mention `north-mini-test`.
+Use [CITATION.cff](CITATION.cff) for citation metadata. The repository is `coding-agent-acceptance-lab`; historical experiment names and provenance paths may still mention `north-mini-test`.
 
 ## License
 

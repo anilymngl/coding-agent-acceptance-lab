@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "north-mini-test"
+name = "coding-agent-acceptance-lab"
 version = "0.1.0"
 description = "Local OpenCode vibe eval harness for small CI-forensics coding-agent tasks."
 requires-python = ">=3.11"

@@ -1,8 +1,8 @@
 # Repository Rename Checklist
 
-Target future name: `coding-agent-acceptance-lab`
+Completed repository name: `coding-agent-acceptance-lab`
 
-Do not rename automatically. Use this checklist after `release/open-source-v1` is reviewed and merged.
+Use this checklist after `release/open-source-v1` is reviewed and merged.
 
 ## GitHub UI
 
@@ -51,7 +51,7 @@ Current repository identity:
 - `reports/audit-snapshots/final-public-release-audit-pre-data.md` preserves the pre-data audit remote.
 - `publishables/harness-built-target.html` footer shows the current repository.
 - `scripts/build_scenario_catalog.py` generates the current repository footer in `publishables/scenario-catalog.html`.
-- `pyproject.toml` and `uv.lock` still use package name `north-mini-test`.
+- `pyproject.toml` and `uv.lock` represented the current package identity and should use `coding-agent-acceptance-lab` after cleanup.
 
 Historical project origin or archived provenance:
 

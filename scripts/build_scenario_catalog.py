@@ -471,7 +471,7 @@ def build_catalog():
   </div>
 
   <div class="foot">
-    <span class="mono">github.com/anilymngl/north-mini-test</span> &middot; June 2026 &middot; Behavior microscope scenario cards
+    <span class="mono">github.com/anilymngl/coding-agent-acceptance-lab</span> &middot; June 2026 &middot; Behavior microscope scenario cards
   </div>
 
 </div>

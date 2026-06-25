@@ -1301,7 +1301,7 @@ Recommended defaults:
 Use this prompt to hand the next implementation phase to an agent:
 
 ```text
-You are working in /Users/anilyamangil/Projects/north-mini-test on the CI Vibe Lab harness.
+You are working in the repository root on the CI Vibe Lab harness.
 
 Implement the general model-comparison evaluation pipeline described in
 docs/model-comparison-eval-pipeline-plan-2026-06-20.md.

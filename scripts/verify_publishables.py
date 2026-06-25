@@ -426,7 +426,9 @@ def verify_stale_claims(parsed_files):
         (re.compile(r"never\s+sees\s+original\s+source", re.IGNORECASE), "never sees original source"),
         (re.compile(r"cannot\s+make\s+things\s+up", re.IGNORECASE), "cannot make things up"),
         (re.compile(r"five\s+configurations\s+in\s+breadth", re.IGNORECASE), "five configurations in breadth (should be four)"),
-        (re.compile(r"Laguna\s+matrix\s+integrity\s+not\s+yet\s+run", re.IGNORECASE), "Laguna matrix integrity not yet run")
+        (re.compile(r"Laguna\s+matrix\s+integrity\s+not\s+yet\s+run", re.IGNORECASE), "Laguna matrix integrity not yet run"),
+        (re.compile(r"raw\s+run\s+artifacts\s+are\s+maintained\s+at\s+.*github", re.IGNORECASE), "raw run artifacts claimed as public GitHub artifact"),
+        (re.compile(r"all\s+confirmed", re.IGNORECASE), "evaluator reviews described as confirmed rather than evidence-validated"),
     ]
     
     failed = False
@@ -441,6 +443,20 @@ def verify_stale_claims(parsed_files):
         sys.exit(1)
         
     print("Stale-claim check passed successfully!")
+
+
+def verify_public_reproducibility_boundary(parsed_files):
+    print("--- Verifying Public Reproducibility Boundary ---")
+    paper_text = " ".join(parsed_files["paper.html"].text_content)
+    required_phrases = [
+        "derived publication summaries and scenario-level cell data",
+        "Raw model streams, generated worktrees, and local SQLite run databases were audited locally but are not part of the public artifact",
+    ]
+    for phrase in required_phrases:
+        if phrase not in paper_text:
+            print(f"Error: paper.html missing public reproducibility boundary phrase: {phrase!r}")
+            sys.exit(1)
+    print("Public reproducibility boundary is explicit in paper.html!")
 
 def verify_scenario_catalog(parsed_files):
     print("--- Verifying Scenario Catalog ---")
@@ -533,6 +549,7 @@ def main():
     verify_metric_integrity(cells)
     parsed_files = verify_html_integrity(cells)
     verify_stale_claims(parsed_files)
+    verify_public_reproducibility_boundary(parsed_files)
     verify_scenario_catalog(parsed_files)
     print("\nSUCCESS: All verification checks passed!")
 

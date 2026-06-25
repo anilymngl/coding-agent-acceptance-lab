@@ -39,6 +39,8 @@
   .pack-cf { background: #dbeafe; color: #1d4ed8; } .pack-mv { background: #dcfce7; color: #166534; } .pack-pw { background: #fef3c7; color: #92400e; }
   .model-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-weight: 700; margin-left: 4px; }
   .model-l { background: #ede9fe; color: #6d28d9; } .model-n { background: #ffe4e6; color: #9f1239; }
+  .scenario-anchors { position: relative; height: 0; overflow: hidden; }
+  .row-target td { box-shadow: inset 0 0 0 2px #2563eb; }
 </style>
 </head>
 <body>
@@ -66,6 +68,41 @@
     <span style="color:#333;font-weight:700">Evidence</span>
     <span style="color:#999;margin:0 8px">|</span>
     <a href="evaluator-findings.html" style="color:#2563eb;text-decoration:none">Evaluator Workbench</a>
+  </div>
+  <div class="scenario-anchors" aria-hidden="true">
+    <span id="adapter_field_rename"></span>
+    <span id="async_export_race"></span>
+    <span id="audit_log_redaction"></span>
+    <span id="batch_splitter_utility"></span>
+    <span id="billing_proration"></span>
+    <span id="bulk_invite_dedupe"></span>
+    <span id="cart_discount_stack"></span>
+    <span id="config_deep_merge"></span>
+    <span id="csv_header_contract"></span>
+    <span id="decimal_money_rounding"></span>
+    <span id="dependency_api_change"></span>
+    <span id="docs_cli_sync"></span>
+    <span id="env_bool_parser"></span>
+    <span id="explicit_validation_matrix"></span>
+    <span id="feature_rollout_bucket"></span>
+    <span id="fixture_schema_migration"></span>
+    <span id="generated_openapi_refresh"></span>
+    <span id="idempotency_key_regression"></span>
+    <span id="import_hygiene_fix"></span>
+    <span id="inventory_reservation_idempotency"></span>
+    <span id="logger_warn_migration"></span>
+    <span id="markdown_slug_collision"></span>
+    <span id="mutable_default_leak"></span>
+    <span id="pagination_cursor_drift"></span>
+    <span id="regression_test_gap"></span>
+    <span id="search_ranking_stability"></span>
+    <span id="silent_exception_swallower"></span>
+    <span id="stale_generated_schema"></span>
+    <span id="support_sla_business_hours"></span>
+    <span id="tenant_cache_leak"></span>
+    <span id="timezone_ci_only"></span>
+    <span id="utcnow_timezone_migration"></span>
+    <span id="webhook_signature_raw_body"></span>
   </div>
   <div class="filters-container">
     <div class="filter-group" id="filter-group-pack" style="display:flex; align-items:center; gap:8px;">
@@ -290,6 +327,7 @@ function setFilter(type, value) {
 }
 
 function render() {
+  const hashScenario = decodeURIComponent((window.location.hash || '').slice(1));
   const filtered = data.filter(r => {
     const planned = 3;
     
@@ -389,7 +427,9 @@ function render() {
     const vCls = isAllPass ? 'hp' : (isMixed ? 'amber' : 'fg');
     const gwName = r.gw === 'or' ? 'OpenRouter' : 'OpenCode Zen';
 
-    return `<tr class="${cls}">
+    if (r.sc === hashScenario) cls += ' row-target';
+
+    return `<tr class="${cls}" data-sc="${r.sc}">
       <td><span class="mono">${r.sc}</span></td>
       <td><span class="pack-tag ${packCls}">${r.pack==='ci_forensics'?'cf':(r.pack==='maintenance_value'?'mv':'pw')}</span></td>
       <td>${r.lane==='sparse'?'sparse':'contract'}</td>
@@ -404,11 +444,20 @@ function render() {
       <td class="${vCls}" style="font-size:9px;font-weight:700">${statusLabel}</td>
     </tr>`;
   }).join('');
+
+  if (hashScenario) {
+    const targetRow = Array.from(document.querySelectorAll('tr[data-sc]'))
+      .find(row => row.dataset.sc === hashScenario);
+    if (targetRow) {
+      window.requestAnimationFrame(() => targetRow.scrollIntoView({ block: 'center' }));
+    }
+  }
 }
 
 // Set initial sort indicator on the default sorted column
 document.getElementById('th-sc').classList.add('sort-asc');
 render();
+window.addEventListener('hashchange', render);
 </script>
 </tbody>
 </table>

@@ -174,6 +174,6 @@ not a universal law — but they are the kind of signal pass@1 cannot surface.
   not a reason to avoid the model. It is a reason to put a hidden-acceptance
   gate before merge and use it confidently inside that gate.
 
-See [reports/north-mini-analysis.md](../reports/north-mini-analysis.md) for
-the full opinionated analysis and the deployment policy it supports.
-
+The current canonical analysis is the public technical report in
+[publishables/paper.html](../publishables/paper.html), backed by the release
+data in [data/releases/v1/](../data/releases/v1/).

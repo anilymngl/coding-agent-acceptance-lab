@@ -1,13 +1,14 @@
 # Public Release Model
 
-This repository separates mutable harness operations from public research evidence.
+This repository separates supported public artifacts from mutable operational evidence.
 
 ## Branches
 
-- `main`: canonical public source after release review and merge.
-- `dev/pre-open-source-main-2026-06-25`: frozen copy of pre-release `main`.
-- `dev/final-public-release-audit-2026-06-25`: frozen copy of the completed pre-data audit.
-- `release/open-source-v1`: active open-source release work.
+- `main`: stable public release branch and GitHub default branch.
+- `develop`: integrated next-release work; must pass CI and must not accumulate runtime debris.
+- `feature/*`: short-lived implementation branches from `develop`.
+- `hotfix/*`: emergency fixes from `main`, merged back to `main` and then `develop`.
+- `archive/*` and annotated tags: historical checkpoints only.
 
 ## Data Layers
 
@@ -15,18 +16,15 @@ This repository separates mutable harness operations from public research eviden
 - `runs/`: raw prompts, model streams, generated worktrees, and artifacts. Ignored.
 - `data/releases/`: frozen public reproducibility datasets. Committed.
 - `publishables/data/`: derived publication JSON. Committed, but not the empirical source.
-- `publishables/*.html`: generated publication pages.
-
-## Presentation Layers
-
+- `publishables/*.html`: canonical publication pages.
 - `.pages-site/`: generated deployment artifact. Ignored and never edited by hand.
-- GitHub Pages: public presentation surface after owner-controlled enablement.
-- GitHub Releases: optional future home for large source snapshots after separate review.
 
-## Rule
+## Release Rule
 
-Every central published number must recompute from `data/releases/v1/` with:
+Every central published number must recompute from `data/releases/v1/`:
 
 ```bash
 uv run python scripts/verify_release_data.py
 ```
+
+Raw provider streams, generated worktrees, mutable operational databases, local absolute paths, and private credentials are outside the public release boundary.

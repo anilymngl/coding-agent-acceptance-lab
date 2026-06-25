@@ -1,46 +1,39 @@
-# Final Open-Source Release Audit
+# Final Public Release Audit
 
 Date: 2026-06-25
 
-Branch audited: `release/open-source-v1`
+Repository: `anilymngl/coding-agent-acceptance-lab`
 
-Base audit snapshot: `87319ed04df9c5f2b7658c9643666fcdbd2ad077`
+Final release branch merged: `release/open-source-v1`
 
-Preserved old main: `dev/pre-open-source-main-2026-06-25` at `b809763a97945319dc3646e04a0726706e985ab2`
+Rename cleanup merged: `chore/repository-rename`
 
-Preserved pre-data audit: `dev/final-public-release-audit-2026-06-25` at `87319ed04df9c5f2b7658c9643666fcdbd2ad077`
-
-Pre-data audit copy: `reports/audit-snapshots/final-public-release-audit-pre-data.md`
+Public-tree cleanup snapshot: `archive/pre-main-cleanup-2026-06-25` and annotated tag `pre-main-cleanup-2026-06-25`
 
 ## Verdict
 
-**READY AFTER LISTED MANUAL ACTIONS.**
+**READY FOR FINAL PAGES DEPLOYMENT AND `v1.0.0` TAG AFTER THE PUBLIC-TREE CLEANUP PR LANDS.**
 
-The repository is ready for release-branch review and merge. It is not yet ready to call public because the owner-controlled actions remain incomplete: merge to `main`, repository rename, visibility change, Pages enablement, live-site verification, and final URL update.
+The software, public data, publication source, CI verification, license, citation metadata, and release audit are present. The remaining release operations are:
 
-| Area | Verdict |
-|---|---|
-| Methodology | Ready for review and merge |
-| Harness implementation | Ready for review and merge |
-| Attempt-level data integrity | Ready for review and merge |
-| Public reproducibility | Ready for review and merge |
-| Evaluator integrity | Ready for review and merge as diagnostic evidence |
-| Publication integrity | Ready for review and merge |
-| Security | Ready for review and merge |
-| Open-source readiness | Ready after listed manual actions |
-| Repository rename readiness | Ready after listed manual actions |
-| GitHub Pages readiness | Ready after listed manual actions |
+1. merge the public-tree cleanup PR
+2. create `develop` from cleaned `main`
+3. configure GitHub Pages to deploy from GitHub Actions
+4. run the manual Pages workflow
+5. verify the live site
+6. add the live URL to `README.md`
+7. tag `v1.0.0`
 
-## Data-Release Architecture
+## Public Evidence Boundary
 
 - Authored contracts: `ci_vibe_lab/scenarios.py`
 - Mutable operational evidence: ignored local `data/matrix/` and `runs/`
 - Public release evidence: `data/releases/v1/*.sqlite` and `data/releases/v1/exports/*.csv`
 - Derived publication JSON: `publishables/data/*.json`
-- Publication pages: `publishables/*.html`
+- Publication pages: six canonical HTML pages in `publishables/`
 - Pages artifact: generated `.pages-site/`
 
-The public release supersedes the pre-data audit boundary. Central empirical results can now be recomputed from committed sanitized data under `data/releases/v1/`. Raw provider streams, generated worktrees, mutable operational DBs, prompts, stdout/stderr, artifact paths, and local worktree paths remain excluded.
+Raw provider streams, generated worktrees, mutable operational DBs, prompts, stdout/stderr, artifact paths, and local worktree paths remain excluded from the public release.
 
 ## Public Databases
 
@@ -53,17 +46,11 @@ The public release supersedes the pre-data audit boundary. Central empirical res
 
 Release directory size: `968K`.
 
-Schema file: `data/releases/v1/schema.sql`
-
-Checksums: `data/releases/v1/checksums.sha256`
-
-Provenance: `data/releases/v1/provenance.json`
-
 ## Row Counts
 
 | Dataset | Attempts | Cells | Exclusions | Notes |
 |---|---:|---:|---:|---|
-| Study A | 222 | 222 | 0 | Pass@1 breadth evidence matching `study-a-summary.json` |
+| Study A | 222 | 222 | 0 | Pass@1 breadth evidence |
 | Study B | 391 | 132 | 5 | Laguna XS.2 vs North Mini pass@3 depth matrix |
 | Evaluator reviews | 10 | n/a | n/a | Diagnostic review coverage, not external truth |
 | Supporting Gemma | 60 | 50 | 0 | Separate local evidence, not pooled with Study A/B |
@@ -103,73 +90,51 @@ Publication JSON parity: PASS
 Publication HTML parity: PASS
 ```
 
-FPR-006 is resolved: central empirical results are publicly recomputable from `data/releases/v1/`.
+Central empirical results are publicly recomputable from `data/releases/v1/`.
 
 ## Publication Integrity
 
-- `publishables/paper.html` and `publishables/paper_academic.html` now state the public release-data boundary.
+- `publishables/paper.html` is the canonical technical report.
 - `publishables/index.html` links to Study B SQLite, attempt CSV, cell CSV, provenance, and checksums.
 - `publishables/evidence-index.html` links to the same release artifacts and declares release ID `coding-agent-acceptance-lab-v1`.
 - `publishables/data/source-manifest.json` includes release-data paths and hashes.
-- `scripts/verify_publishables.py` now runs `scripts/verify_release_data.py` as part of the standard publication verification chain.
-
-## Pages Readiness
-
-FPR-005 is resolved as implementation readiness, not live enablement:
-
-- `.pages-site/` is generated by `scripts/build_pages_site.py`.
+- `scripts/verify_publishables.py` runs `scripts/verify_release_data.py` as part of publication verification.
 - `scripts/validate_pages_site.py` validates exactly six primary HTML pages, required data files, links, fragments, excluded pages, and local-path leaks.
-- `.github/workflows/pages.yml` is manual-only (`workflow_dispatch`) and uploads only `.pages-site/`.
-- GitHub Pages has not been enabled in GitHub settings.
 
-Local staged-site validation:
+## Repository Information Architecture
 
-- 6 HTML pages.
-- 114 links.
-- Scenario hashes resolve.
-- Evidence hashes resolve.
-- Required release-data files exist.
-- No local-path or excluded-archive links.
-- Browser smoke on localhost: homepage, paper, Evaluation System, scenario browser, direct scenario hashes from each pack, Evidence Matrix direct hash, evaluator page, dataset links, and mobile width all passed.
-- Browser console errors: none.
+The public-tree cleanup removed unsupported current-tree artifacts rather than moving them into an archive directory on `main`.
+
+The retained/removed path rationale is in `docs/repository-map.md`.
+
+Preservation is through:
+
+- Git history
+- `archive/pre-main-cleanup-2026-06-25`
+- `pre-main-cleanup-2026-06-25`
 
 ## Security
 
-- `gitleaks git . --redact --no-banner`: 78 commits scanned, no leaks found.
-- Current-tree scan via temp `rsync` excluding `.git`, `.venv`, and `.pages-site`: no leaks found.
-- Local path scan over `README.md`, `AGENTS.md`, `docs`, `reports`, `publishables`, `data/releases`, `scripts`, and `.github`: no matches for local absolute user paths or local file URLs.
-- No mutable operational DBs or raw `runs/` artifacts are tracked outside `data/releases/`.
+Release verification includes:
 
-## Repository Rename Readiness
+```bash
+gitleaks git . --redact
+```
 
-Target future name: `coding-agent-acceptance-lab`.
+No mutable operational DBs or raw `runs/` artifacts are tracked outside `data/releases/`.
 
-Prepared:
+## Required Final Gate
 
-- `docs/repository-rename-checklist.md`
-- `CITATION.cff`
-- README rename and citation notes
-- Manual-action sequence below
+Before tagging `v1.0.0`, run:
 
-Not performed:
-
-- GitHub repository rename
-- local remote URL update
-- old-name replacement sweep
-- Pages URL update
-
-## Remaining Manual Actions
-
-Do these in order after reviewing this branch:
-
-1. Review `release/open-source-v1`.
-2. Merge it into `main`.
-3. Rename repository in GitHub Settings.
-4. Update local remote.
-5. Run `docs/repository-rename-checklist.md`.
-6. Tag `v1.0.0`.
-7. Change visibility to public.
-8. Enable GitHub Pages with GitHub Actions.
-9. Verify the live site.
-10. Add the live URL to README.
-
+```bash
+uv run python scripts/build_release_data.py --check
+uv run python scripts/verify_release_data.py
+uv run python scripts/build_scenario_catalog.py
+git diff --exit-code publishables/scenario-catalog.html
+uv run python scripts/verify_publishables.py
+uv run python scripts/build_pages_site.py
+uv run python scripts/validate_pages_site.py
+uv run python -m unittest discover -s tests -v
+gitleaks git . --redact
+```

@@ -114,7 +114,7 @@ These 3 scenarios are the wall. Same wall for a free coding model, a laptop mode
 
 ## DeepSeek Evaluator Verdicts — Judging Laguna's False-Greens
 
-7 of 10 reviews complete. All confirmed as valid false-greens. Mean confidence: **0.96**.
+7 of 10 reviews complete. All produced evidence-validated false-green verdicts. Mean confidence: **0.96**.
 
 | Scenario | Attempt | Root Cause | Detail (DeepSeek's words) |
 |---|---|---|---|

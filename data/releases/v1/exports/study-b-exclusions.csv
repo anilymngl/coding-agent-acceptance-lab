@@ -1,0 +1,6 @@
+attempt_id,scenario_id,system_id,prompt_lane,attempt_index,reason,source_id,audit_note
+study-b:b_north_maint_cv:north-mini:contract_visible:explicit_validation_matrix:3,explicit_validation_matrix,north-mini,contract_visible,3,missing_attempt,b_north_maint_cv,Operational quota/rate-limit boundary preserved from audited source evidence.
+study-b:b_north_maint_cv:north-mini:contract_visible:import_hygiene_fix:3,import_hygiene_fix,north-mini,contract_visible,3,missing_attempt,b_north_maint_cv,Operational quota/rate-limit boundary preserved from audited source evidence.
+study-b:b_north_maint_cv:north-mini:contract_visible:logger_warn_migration:3,logger_warn_migration,north-mini,contract_visible,3,missing_attempt,b_north_maint_cv,Operational quota/rate-limit boundary preserved from audited source evidence.
+study-b:b_north_maint_cv:north-mini:contract_visible:regression_test_gap:3,regression_test_gap,north-mini,contract_visible,3,missing_attempt,b_north_maint_cv,Operational quota/rate-limit boundary preserved from audited source evidence.
+study-b:b_north_maint_cv:north-mini:contract_visible:utcnow_timezone_migration:3,utcnow_timezone_migration,north-mini,contract_visible,3,missing_attempt,b_north_maint_cv,Operational quota/rate-limit boundary preserved from audited source evidence.

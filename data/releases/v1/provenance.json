@@ -1,0 +1,462 @@
+{
+  "audited_source_commit": "87319ed04df9c5f2b7658c9643666fcdbd2ad077",
+  "canonical_inputs": {
+    "attempt_evidence": "local SQLite databases under data/matrix/ and selected Study A source DBs",
+    "authored_contracts": "ci_vibe_lab/scenarios.py",
+    "public_release_evidence": "data/releases/v1/*.sqlite and exports/*.csv",
+    "publication_derivations": "publishables/data/*.json"
+  },
+  "release_date": "2026-06-25",
+  "release_id": "coding-agent-acceptance-lab-v1",
+  "sanitization": [
+    "Excluded prompts, stdout/stderr, local worktree paths, artifact paths, provider payloads, and raw credentials.",
+    "Preserved model, provider, route, prompt lane, scenario ID, retained/excluded state, pass/fail values, timestamps, duration, and evidence hashes."
+  ],
+  "schema_version": "1",
+  "study_a_sources": [
+    {
+      "experiment_ids": "20260620T015124Z-ci_forensics-df995f95",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "opencode-zen",
+      "schema_version": 27,
+      "sha256": "6a16eff10f2a500c9c036ace313c517cd6d992e2470111bc1570355fb01055c0",
+      "source_id": "a_north_ci_sparse",
+      "source_label": "data/ci-forensics-v2.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-north-mini-ci_forensics-contract_visible",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "b25c13f4ff47e188f7b35aded8669c9b8289645930bdbd0c1075047607461541",
+      "source_id": "a_north_ci_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/north-mini/ci_forensics-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-ci_forensics-sparse",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "a03a2d771a8dcf70f448d38893bc131524382f475e4ac93e113d9f85c5ebb9e0",
+      "source_id": "a_gemma_ci_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/ci_forensics-sparse.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-ci_forensics-contract_visible",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "9bf05f4b1ba9000906da59082b006c10a0b52f0112cb32cf9f6fc52b46efba78",
+      "source_id": "a_gemma_ci_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/ci_forensics-contract_visible.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "20260620T015920Z-ci_forensics-ed815c64",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "deepseek-api",
+      "schema_version": 27,
+      "sha256": "f2ec7405ac21ca74de2333777df8b5d298109e4e6795f44a26421905300a138e",
+      "source_id": "a_deepseek_ci_sparse",
+      "source_label": "data/ci-forensics-deepseek.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    },
+    {
+      "experiment_ids": "20260622T143348Z-ci_forensics-a8519fb6",
+      "included_row_count": 12,
+      "original_row_count": 12,
+      "route_notes": "deepseek-api",
+      "schema_version": 14,
+      "sha256": "3bbd8c8d17ca6b74eec029bdf0d35dcdedfb6d35c84ffd2c0b4359b10a0c803e",
+      "source_id": "a_deepseek_ci_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/deepseek-v4-pro/ci_forensics-contract_visible.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-ci_forensics-sparse",
+      "included_row_count": 12,
+      "original_row_count": 36,
+      "route_notes": "openrouter",
+      "schema_version": 16,
+      "sha256": "417b5ecb67da8d621b6f9fab8b4b65cdf53b42b6480ef4efc902acaad1d3faca",
+      "source_id": "a_laguna_ci_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/ci_forensics-sparse.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-ci_forensics-contract_visible",
+      "included_row_count": 12,
+      "original_row_count": 36,
+      "route_notes": "openrouter",
+      "schema_version": 16,
+      "sha256": "d4ac03c4b2c87a9f5e82245ca751e773c29348929cf31480de75dd81025d4e2e",
+      "source_id": "a_laguna_ci_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/ci_forensics-contract_visible.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-north-mini-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "5fdd79d145568385babf44f3d7c498514501f17b955f9ff1d15b3d7fa613ea7a",
+      "source_id": "a_north_maint_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/north-mini/maintenance_value-sparse.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-north-mini-maintenance_value-contract_visible",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "6c907f1c0bcc667a0aee09e7265469036fd23158f26d9f014dbebe1e2cd54f4f",
+      "source_id": "a_north_maint_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/north-mini/maintenance_value-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "1e6176d72bcb6692dcd8b3b82831927574c0aa071d886bb1e83ccc97bbc3e984",
+      "source_id": "a_gemma_maint_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/maintenance_value-sparse.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-maintenance_value-contract_visible",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "062b67059ca6383296c064ef8764c3e72015ed959050d094ebe300fef6b2090f",
+      "source_id": "a_gemma_maint_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/maintenance_value-contract_visible.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "20260622T144022Z-maintenance_value-4f24e488",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "deepseek-api",
+      "schema_version": 14,
+      "sha256": "382228ee5ba63fb0b2a60569168f3082000e6c6f21b4aea4884c00610e376e7e",
+      "source_id": "a_deepseek_maint_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/deepseek-v4-pro/maintenance_value-sparse.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    },
+    {
+      "experiment_ids": "20260622T144619Z-maintenance_value-24724804",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "deepseek-api",
+      "schema_version": 14,
+      "sha256": "d4174f85a26bf72e3569771552117cbeeccc35512fad3dfa6161543b08f913db",
+      "source_id": "a_deepseek_maint_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/deepseek-v4-pro/maintenance_value-contract_visible.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-north-mini-product_workflows-sparse",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "5d47cd6950bd7721b4e98c0a43d8c66b55d8001d7a4d3a51464b188833a74da3",
+      "source_id": "a_north_product_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/north-mini/product_workflows-sparse.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-north-mini-product_workflows-contract_visible",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "fa477a60e462a0155f2be7c9153aa9e17b080b3e90ce80fc343862eb25c55df5",
+      "source_id": "a_north_product_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/north-mini/product_workflows-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-product_workflows-sparse",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "6d2ef9f1fea67489be6b0d1b6bdc7c8c2715464d7e81bcea0a1f3617c42abd04",
+      "source_id": "a_gemma_product_sparse",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/product_workflows-sparse.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "north-mini-vs-gemma4-12b-2026-06-21-gemma4-12b-product_workflows-contract_visible",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "70f6b84c1c3ecf2d8d7736c83581969a4be180261d826a9b2db1e0f25e6d4207",
+      "source_id": "a_gemma_product_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/gemma4-12b/product_workflows-contract_visible.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "deepseek-api",
+      "schema_version": 35,
+      "sha256": "14d372ccdaa873fcd661a137ba8df4e9d3fb859e87b128712601c7748c81d092",
+      "source_id": "a_deepseek_product_sparse",
+      "source_label": "data/control-results.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    },
+    {
+      "experiment_ids": "20260622T135238Z-product_workflows-b38d704f",
+      "included_row_count": 11,
+      "original_row_count": 11,
+      "route_notes": "deepseek-api",
+      "schema_version": 14,
+      "sha256": "ce446f50ef7047bbc2c137365d06992ee5ed7369bb2935841c8a13e75e5387a7",
+      "source_id": "a_deepseek_product_cv",
+      "source_label": "data/matrix/north-mini-vs-gemma4-12b-2026-06-21/deepseek-v4-pro/product_workflows-contract_visible.sqlite",
+      "system_notes": "deepseek-v4-pro"
+    }
+  ],
+  "study_b_sources": [
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-ci_forensics-contract_visible",
+      "included_row_count": 36,
+      "original_row_count": 36,
+      "route_notes": "openrouter",
+      "schema_version": 16,
+      "sha256": "d4ac03c4b2c87a9f5e82245ca751e773c29348929cf31480de75dd81025d4e2e",
+      "source_id": "b_laguna_ci_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/ci_forensics-contract_visible.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-ci_forensics-sparse",
+      "included_row_count": 36,
+      "original_row_count": 36,
+      "route_notes": "openrouter",
+      "schema_version": 16,
+      "sha256": "417b5ecb67da8d621b6f9fab8b4b65cdf53b42b6480ef4efc902acaad1d3faca",
+      "source_id": "b_laguna_ci_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/ci_forensics-sparse.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-maintenance_value-contract_visible",
+      "included_row_count": 30,
+      "original_row_count": 30,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "ccc0544ce7972b1097477fd771de283c53dca07f10021f3027d870df39c4b4b7",
+      "source_id": "b_laguna_maint_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/maintenance_value-contract_visible.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-maintenance_value-sparse",
+      "included_row_count": 30,
+      "original_row_count": 30,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "145e7beac32c51c315136bc2fd0a683f9f1328330427642585e7e0bd2a7a4d28",
+      "source_id": "b_laguna_maint_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/maintenance_value-sparse.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-product_workflows-contract_visible",
+      "included_row_count": 33,
+      "original_row_count": 33,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "c9494017b4088147dccdd7f78fbeb5cd87297ce10ca2170aa4ed127e27021e95",
+      "source_id": "b_laguna_product_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/product_workflows-contract_visible.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-laguna-xs2-product_workflows-sparse",
+      "included_row_count": 33,
+      "original_row_count": 33,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "234adaa11dde36796abc776c560e244113d9fc3d5a651b490d39a4b68e72eedf",
+      "source_id": "b_laguna_product_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/laguna-xs2/product_workflows-sparse.sqlite",
+      "system_notes": "laguna-xs2"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-north-mini-ci_forensics-contract_visible",
+      "included_row_count": 36,
+      "original_row_count": 36,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "6ea34e8564a820bb18921f9686270cdd8373f7a8dbe3f9fb2418634b83f91e16",
+      "source_id": "b_north_ci_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/ci_forensics-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-north-mini-ci_forensics-sparse",
+      "included_row_count": 36,
+      "original_row_count": 36,
+      "route_notes": "opencode-zen",
+      "schema_version": 16,
+      "sha256": "a5bf61f497d6b4091bf403b27b174e6d21a0be157951cde1c4c676761212e184",
+      "source_id": "b_north_ci_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/ci_forensics-sparse.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-north-mini-maintenance_value-contract_visible",
+      "included_row_count": 25,
+      "original_row_count": 25,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "3eb965e1f3e585a2144994946c14346074b1c3f56ba3936b4e7002beb552513b",
+      "source_id": "b_north_maint_cv",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/maintenance_value-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "laguna-xs2-vs-north-mini-2026-06-22-north-mini-maintenance_value-sparse",
+      "included_row_count": 30,
+      "original_row_count": 30,
+      "route_notes": "opencode-zen",
+      "schema_version": 14,
+      "sha256": "1eb1507222865ad565401521176a0368978bfcda3a513915dc69641c59a3a830",
+      "source_id": "b_north_maint_sparse",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/maintenance_value-sparse.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "",
+      "included_row_count": 0,
+      "original_row_count": 0,
+      "route_notes": "opencode-zen-placeholder",
+      "schema_version": 14,
+      "sha256": "ee38ea0d0339ed1778480c74d3042ccbaa1869cbd6731f368d6a74164369d332",
+      "source_id": "b_north_product_cv_placeholder",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/product_workflows-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "",
+      "included_row_count": 0,
+      "original_row_count": 0,
+      "route_notes": "opencode-zen-placeholder",
+      "schema_version": 14,
+      "sha256": "9478084c32cf9b2b651095928c4741e4bb5241b36ab963805d232f5ae8a74c53",
+      "source_id": "b_north_product_sparse_placeholder",
+      "source_label": "data/matrix/laguna-xs2-vs-north-mini-2026-06-22/north-mini/product_workflows-sparse.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-openrouter-completion-north-mini-product_workflows-contract_visible",
+      "included_row_count": 33,
+      "original_row_count": 33,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "9e99dc8c3783ae36fa922a0120e5b7607b7510cc116b61a7c5284d461eaf6b6f",
+      "source_id": "b_north_product_cv",
+      "source_label": "data/matrix/north-mini-openrouter-completion/north-mini/product_workflows-contract_visible.sqlite",
+      "system_notes": "north-mini"
+    },
+    {
+      "experiment_ids": "north-mini-openrouter-completion-north-mini-product_workflows-sparse",
+      "included_row_count": 33,
+      "original_row_count": 33,
+      "route_notes": "openrouter",
+      "schema_version": 14,
+      "sha256": "02a68a7920476db9aa201e54115559c785de5416c108ad244eb039c8f6f4ccc1",
+      "source_id": "b_north_product_sparse",
+      "source_label": "data/matrix/north-mini-openrouter-completion/north-mini/product_workflows-sparse.sqlite",
+      "system_notes": "north-mini"
+    }
+  ],
+  "supporting_gemma_sources": [
+    {
+      "experiment_ids": "local-gemma4-two-model-2026-06-20-gemma4-e4b-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "a1f0304f6afbe107c11b1ab5c0acd6f09f260158b6588b4e41c91faa44b0542e",
+      "source_id": "gemma_two_e4b_sparse",
+      "source_label": "data/matrix/local-gemma4-two-model-2026-06-20/gemma4-e4b/maintenance_value-sparse.sqlite",
+      "system_notes": "gemma4-e4b"
+    },
+    {
+      "experiment_ids": "local-gemma4-two-model-2026-06-20-gemma4-31b-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "93f68bb85f31219115f5f2ec07b0a6cc0893cf5ae98f1bcfbf4e6f782a351fe3",
+      "source_id": "gemma_two_31b_sparse",
+      "source_label": "data/matrix/local-gemma4-two-model-2026-06-20/gemma4-31b/maintenance_value-sparse.sqlite",
+      "system_notes": "gemma4-31b"
+    },
+    {
+      "experiment_ids": "local-gemma4-smallest-two-2026-06-20-gemma4-e4b-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "1ae0012b93db312879c8c9466541f406f9db846f2fc34bd62124dde7343aeda7",
+      "source_id": "gemma_smallest_e4b_sparse",
+      "source_label": "data/matrix/local-gemma4-smallest-two-2026-06-20/gemma4-e4b/maintenance_value-sparse.sqlite",
+      "system_notes": "gemma4-e4b"
+    },
+    {
+      "experiment_ids": "local-gemma4-smallest-two-2026-06-20-gemma4-e4b-maintenance_value-contract_visible",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "68ae694eb09c4ed93f049909070d0e7d279f70a8b0a3b3d3c33129f952d1e378",
+      "source_id": "gemma_smallest_e4b_cv",
+      "source_label": "data/matrix/local-gemma4-smallest-two-2026-06-20/gemma4-e4b/maintenance_value-contract_visible.sqlite",
+      "system_notes": "gemma4-e4b"
+    },
+    {
+      "experiment_ids": "local-gemma4-smallest-two-2026-06-20-gemma4-12b-maintenance_value-sparse",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "fb03ab726741770ad566e645263b53b571cd6018dc543ea05a3ffa600778061e",
+      "source_id": "gemma_smallest_12b_sparse",
+      "source_label": "data/matrix/local-gemma4-smallest-two-2026-06-20/gemma4-12b/maintenance_value-sparse.sqlite",
+      "system_notes": "gemma4-12b"
+    },
+    {
+      "experiment_ids": "local-gemma4-smallest-two-2026-06-20-gemma4-12b-maintenance_value-contract_visible",
+      "included_row_count": 10,
+      "original_row_count": 10,
+      "route_notes": "ollama-local",
+      "schema_version": 14,
+      "sha256": "191c9d1eb661b543e6218bd2936c9735bb2714918ae89704bf194d90178a4cb8",
+      "source_id": "gemma_smallest_12b_cv",
+      "source_label": "data/matrix/local-gemma4-smallest-two-2026-06-20/gemma4-12b/maintenance_value-contract_visible.sqlite",
+      "system_notes": "gemma4-12b"
+    }
+  ]
+}

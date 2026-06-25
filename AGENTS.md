@@ -203,3 +203,42 @@ uv run --extra app streamlit run ci_vibe_lab/dashboard.py
 - Laguna XS.2 vs North Mini: `reports/laguna-xs2-vs-north-mini-first-comparison.md`
 - Handover notes: `docs/handover-session-2026-06-21.md`
 - Scenario source of truth: `ci_vibe_lab/scenarios.py`
+
+## Public Release Rules
+
+Sources of truth:
+
+- Scenario contracts: `ci_vibe_lab/scenarios.py`
+- Attempt evidence: `data/releases/v1/*.sqlite`
+- Publication summaries: `publishables/data/*.json`
+- Generated publication: `publishables/*.html`
+- Pages staging: `.pages-site/`
+
+Generated-file rules:
+
+- Never manually edit generated catalog output.
+- Never manually edit derived release CSVs or release cells.
+- Regenerate through scripts and verify clean regeneration before committing.
+- Never edit `.pages-site/` by hand.
+
+Data rules:
+
+- Never commit mutable local matrix DBs.
+- Never commit raw `runs/` artifacts.
+- Public evidence belongs only under `data/releases/`.
+- Every release needs provenance and checksums.
+- Every published number must recompute from public data.
+
+Publication rules:
+
+- No new claim without evidence.
+- No manual metric edits.
+- Preserve provider and route attribution.
+- Preserve incomplete-cell denominators.
+- Evaluator evidence is diagnostic, not external truth.
+
+Security rules:
+
+- No secrets, private provider payloads, client material, or local absolute paths.
+- Review staged diffs before commits.
+- Pages uses a curated generated artifact.

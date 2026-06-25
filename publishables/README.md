@@ -14,7 +14,7 @@ Self-contained HTML research exhibit. No build step. No CDN dependencies (Georgi
 | `harness-built-target.html` | System inventory. Pipeline flow, data flow diagram, all 10 components with I/O, 6 gaps named, 5 targets. |
 | `scenario-catalog.html` | All 33 scenarios as cards. Trap description, difficulty, category. |
 | `evidence-index.html` | 132-row matrix. Every scenario × model × prompt mode as a cell. Filterable by pack, lane, outcome. |
-| `evaluator-findings.html` | 10 reviewed false-greens. Root causes, confidence scores, patch quality. All confirmed genuine. |
+| `evaluator-findings.html` | 10 reviewed false-greens. Root causes, confidence scores, patch quality. Evidence-validated verdicts. |
 
 ## How to use
 

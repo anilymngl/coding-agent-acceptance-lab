@@ -169,6 +169,36 @@
   <p class="section-title">Evidence boundary</p>
   <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px">The primary depth study contains 391 retained attempts across two deployed systems, two prompt lanes and 33 scenarios. The breadth study and local Gemma experiments use different configurations and scopes. They are reported separately rather than pooled into one model leaderboard. The hidden tests encode the authored benchmark contract. They are stronger than the visible tests, not universal proof of production correctness.</p>
 
+  <p class="section-title">Public research data</p>
+  <p style="font-size:12px;color:#555;line-height:1.6;margin-bottom:10px">Sanitized attempt-level release data is committed under <code class="mono">data/releases/v1/</code>. Recompute the published metrics with <code class="mono">uv run python scripts/verify_release_data.py</code>.</p>
+  <div class="routes" style="margin-top:10px">
+    <a class="route" href="../data/releases/v1/study-b.sqlite">
+      <span class="rnum">DB</span>
+      <div class="rbody"><div class="rtitle">Study B SQLite</div><div class="rdesc">Canonical public database for the 391-attempt depth study.</div></div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+    <a class="route" href="../data/releases/v1/exports/study-b-attempts.csv">
+      <span class="rnum">CSV</span>
+      <div class="rbody"><div class="rtitle">Attempt CSV</div><div class="rdesc">One retained attempt per row, with route, prompt lane, pass/fail fields and evidence hashes.</div></div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+    <a class="route" href="../data/releases/v1/exports/study-b-cells.csv">
+      <span class="rnum">CSV</span>
+      <div class="rbody"><div class="rtitle">Cell CSV</div><div class="rdesc">Derived scenario-system-prompt cells used by the Evidence Matrix.</div></div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+    <a class="route" href="../data/releases/v1/provenance.json">
+      <span class="rnum">SRC</span>
+      <div class="rbody"><div class="rtitle">Provenance</div><div class="rdesc">Source database hashes, route notes, and release-data boundary.</div></div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+    <a class="route" href="../data/releases/v1/checksums.sha256">
+      <span class="rnum">SHA</span>
+      <div class="rbody"><div class="rtitle">Checksums</div><div class="rdesc">SHA256 digest for every public release-data file.</div></div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+  </div>
+
   <div class="foot">
     <span class="mono">publishables/</span> &middot; Internal comparative evidence &middot; No external audit &middot; June 2026
   </div>

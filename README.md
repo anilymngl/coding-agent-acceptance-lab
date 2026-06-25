@@ -87,13 +87,63 @@ Recent harness additions:
 
 Remaining:
 
-- public release and hosting via GitHub Pages
+- public repository rename and visibility change
+- GitHub Pages enablement after explicit review
 - wider evaluator review coverage for the remaining false-greens
 - future model replications and evaluation runs
 
 Start with [docs/README.md](docs/README.md), then read
 [docs/model-comparison-eval-pipeline-plan-2026-06-20.md](docs/model-comparison-eval-pipeline-plan-2026-06-20.md).
 The implementation plan is now design history plus backlog.
+
+## Public Research Data
+
+Frozen public research datasets live in [data/releases/](data/releases/). Mutable local execution state remains ignored:
+
+- `data/matrix/` and `runs/` are operational evidence stores used while running the harness.
+- `data/releases/v1/` is the sanitized public recomputation layer.
+
+Release v1 includes Study A, Study B, evaluator-review diagnostics, supporting Gemma evidence, CSV exports, schema, provenance, and SHA256 checksums. It excludes raw provider streams, generated worktrees, local artifact paths, provider payloads, and credentials.
+
+## Recomputing Published Metrics
+
+Use the public release data, not `publishables/data/*.json`, as the empirical source:
+
+```bash
+uv run python scripts/build_release_data.py --check
+uv run python scripts/verify_release_data.py
+uv run python scripts/verify_publishables.py
+uv run python -m unittest discover -s tests -v
+```
+
+`scripts/verify_release_data.py` recomputes the Study B headline metrics from `data/releases/v1/study-b.sqlite`, checks CSV parity, and verifies publication JSON/HTML parity.
+
+## Release Provenance
+
+Release provenance is recorded in [data/releases/v1/provenance.json](data/releases/v1/provenance.json). File-level checksums are in [data/releases/v1/checksums.sha256](data/releases/v1/checksums.sha256). The publication manifest in [publishables/data/source-manifest.json](publishables/data/source-manifest.json) points to the release data and hashes.
+
+## Operational Data Versus Release Data
+
+Do not commit mutable local matrix DBs, raw `runs/` artifacts, provider streams, or generated worktrees. Public evidence belongs under `data/releases/`, with a schema, provenance file, checksums, and a verifier that recomputes published numbers.
+
+## GitHub Pages Site
+
+The Pages artifact is generated into `.pages-site/` by:
+
+```bash
+uv run python scripts/build_pages_site.py
+uv run python scripts/validate_pages_site.py
+```
+
+GitHub Pages is not enabled by this repository state. The included workflow is manual-only until the repository owner enables Pages in GitHub settings.
+
+## Citation
+
+Use [CITATION.cff](CITATION.cff) for citation metadata. The future public repository name is expected to be `coding-agent-acceptance-lab`; historical experiment names and provenance paths may still mention `north-mini-test`.
+
+## License
+
+Code is released under the MIT License. Public research data and documentation are released under CC BY 4.0 unless a file states otherwise.
 
 ---
 

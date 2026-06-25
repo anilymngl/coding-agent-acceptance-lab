@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/open-source-v1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Install dependencies
+        run: uv sync --extra app
+      - name: Verify release data
+        run: uv run python scripts/verify_release_data.py
+      - name: Verify publishables
+        run: uv run python scripts/verify_publishables.py
+      - name: Check generated scenario catalog
+        run: |
+          uv run python scripts/build_scenario_catalog.py
+          git diff --exit-code publishables/scenario-catalog.html
+      - name: Build and validate Pages artifact
+        run: |
+          uv run python scripts/build_pages_site.py
+          uv run python scripts/validate_pages_site.py
+      - name: Unit tests
+        run: uv run python -m unittest discover -s tests -v

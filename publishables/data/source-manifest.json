@@ -1,19 +1,84 @@
 {
-  "generated_at": "2026-06-25",
-  "planned_attempts": 396,
-  "retained_attempts": 391,
   "cell_count": 132,
   "false_greens": 101,
-  "sources": [
-    "data/matrix/laguna-xs2-vs-north-mini-2026-06-22",
-    "data/matrix/north-mini-openrouter-completion"
-  ],
   "gateway_routes": {
     "laguna-xs2": "openrouter",
     "north-mini/ci_forensics": "opencode-zen",
     "north-mini/maintenance_value": "opencode-zen",
     "north-mini/product_workflows": "openrouter"
   },
+  "generated_at": "2026-06-25",
   "harness_commit": "c04d42c",
-  "scenario_revision": "6bb5ba3"
+  "planned_attempts": 396,
+  "public_release": {
+    "boundary": "Raw provider streams, generated worktrees, and mutable local operational databases remain excluded.",
+    "files": [
+      {
+        "path": "data/releases/v1/checksums.sha256",
+        "sha256": "d4591d0a2c6319483bf2152629a0d9d0ef5944b4d6782c4d7dd380eaaa3f0964"
+      },
+      {
+        "path": "data/releases/v1/evaluator-reviews.sqlite",
+        "sha256": "8eddc84ce9ad91c013db58b0f68e9c3c6da62df15bc16923fa6be63e4167e613"
+      },
+      {
+        "path": "data/releases/v1/exports/evaluator-reviews.csv",
+        "sha256": "869aab1df508821e061e76f9ece2a67fec15d61caa851902128263de7b030457"
+      },
+      {
+        "path": "data/releases/v1/exports/study-a-attempts.csv",
+        "sha256": "d591cedc7bd84b127f3153c05d139c443357b7a8d1d95888c137ed4675539537"
+      },
+      {
+        "path": "data/releases/v1/exports/study-a-cells.csv",
+        "sha256": "08fe605e7b9cff9f0ef6e3d7fb9f70f8ceb653ebb5c4dbae62b1cac810445f7c"
+      },
+      {
+        "path": "data/releases/v1/exports/study-b-attempts.csv",
+        "sha256": "1aefc02131996a4a0581e65f078303ade9ff6b49383c25a36b3ccdcaed929230"
+      },
+      {
+        "path": "data/releases/v1/exports/study-b-cells.csv",
+        "sha256": "799fb166c6e712e87898039e028e586f5dd2b3bebbbaabe8193d11511a1bc6d6"
+      },
+      {
+        "path": "data/releases/v1/exports/study-b-exclusions.csv",
+        "sha256": "2d37c9229ad332443e6e343acf40be033a681237ae54693add9ea125b9ae9fdd"
+      },
+      {
+        "path": "data/releases/v1/exports/supporting-gemma.csv",
+        "sha256": "db37c803c84492e8c7d788c3107025f5640fb1f6cfe6e9adc54d20f93eca84a1"
+      },
+      {
+        "path": "data/releases/v1/provenance.json",
+        "sha256": "5a8864b1936ccd7d60f2fa68b9df1c634b4df157412f61e74e9caea90d893cb7"
+      },
+      {
+        "path": "data/releases/v1/schema.sql",
+        "sha256": "882cbad282c604f286894358d3cfa53426f3d635915efc2a0c8b47fe12aa2168"
+      },
+      {
+        "path": "data/releases/v1/study-a.sqlite",
+        "sha256": "89ef0d8294bd01d8e361b5dc7b7e3b3304cda2f242705cd2a9fe071b0e1ad7f6"
+      },
+      {
+        "path": "data/releases/v1/study-b.sqlite",
+        "sha256": "76baccfbdd48447c99be27a42b708cdff0907eeff932be5c98573d1894e69526"
+      },
+      {
+        "path": "data/releases/v1/supporting-gemma.sqlite",
+        "sha256": "9465bedaeecb86b987dd8272b3e622832edf55e05b7d787674080f8dd4aa1c7b"
+      }
+    ],
+    "release_date": "2026-06-25",
+    "release_id": "coding-agent-acceptance-lab-v1",
+    "root": "data/releases/v1",
+    "verify_command": "uv run python scripts/verify_release_data.py"
+  },
+  "retained_attempts": 391,
+  "scenario_revision": "6bb5ba3",
+  "sources": [
+    "data/matrix/laguna-xs2-vs-north-mini-2026-06-22",
+    "data/matrix/north-mini-openrouter-completion"
+  ]
 }

@@ -5,6 +5,9 @@ __pycache__/
 .venv/
 .DS_Store
 
-/data/
+/data/*
+!/data/releases/
+!/data/releases/**
 /runs/
 .archive/
+.pages-site/

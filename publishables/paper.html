@@ -105,7 +105,7 @@
     .db-label { line-height: 1.2; }
     .db-label strong { display: block; color: #1e293b; font-size: 0.72rem; }
     .db-label span { display: block; margin-top: 3px; color: #64748b; font-size: 0.63rem; }
-    .db-track { position: relative; height: 28px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background: linear-gradient(to right, transparent 24.8%, #eef2f7 25%, transparent 25.2%, transparent 49.8%, #eef2f7 50%, transparent 50.2%, transparent 74.8%, #eef2f7 75%, transparent 75.2%); }
+    .db-track { position: relative; height: 28px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; margin-inline: 6px; background: linear-gradient(to right, transparent 24.8%, #eef2f7 25%, transparent 25.2%, transparent 49.8%, #eef2f7 50%, transparent 50.2%, transparent 74.8%, #eef2f7 75%, transparent 75.2%); }
     .db-line { position: absolute; top: 13px; left: var(--cv); right: calc(100% - var(--sparse)); height: 2px; background: #94a3b8; }
     .db-dot { position: absolute; top: 8px; transform: translateX(-50%); box-sizing: border-box; }
     .db-dot.sparse { left: var(--sparse); }
@@ -160,11 +160,11 @@
   <div class="sans reading-map" style="font-size:0.78rem;color:#555;margin-bottom:20px;line-height:1.8">
     <strong style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;color:#888">Reading map</strong><br>
     <a href="#fig-flowchart" style="color:#2563eb">How green can lie</a> &middot;
-    <a href="#fig-flowchart" style="color:#2563eb">What agents were asked to fix</a> &middot;
+    <a href="#representative-cases" style="color:#2563eb">What agents were asked to fix</a> &middot;
     <a href="#fig-slopegraph" style="color:#2563eb">Prompt effect</a> &middot;
     <a href="#fig-two-surfaces" style="color:#2563eb">Two failure surfaces</a> &middot;
-    <a href="#fig-contract-mechanism" style="color:#2563eb">Evaluator workbench</a> &middot;
-    <a href="#" onclick="document.getElementById('toc-limits').scrollIntoView();return false" style="color:#2563eb">Limitations</a>
+    <a href="#executable-diagnosis" style="color:#2563eb">Evaluator workbench</a> &middot;
+    <a href="#toc-limits" style="color:#2563eb">Limitations</a>
   </div>
 
   <h2>1. Plain-Language Summary</h2>
@@ -341,7 +341,7 @@
     <div class="fig-caption"><strong>Figure 2:</strong> The paper's two-stage design: five configurations in breadth then a 391-attempt depth matrix between two systems. Study A demonstrates that false-greens are not model-specific. Study B measures their stability under retries and contract exposure.</div>
   </div>
 
-  <h2>5. What the Agents Were Actually Asked to Fix</h2>
+  <h2 id="representative-cases">5. What the Agents Were Actually Asked to Fix</h2>
 
   <span class="fgl design" style="margin-bottom:12px">CASE SELECTION — REPRESENTATIVE, NOT EXHAUSTIVE</span>
 
@@ -444,6 +444,8 @@
 
   <p>Why does contract exposure work? The <code>decimal_money_rounding</code> case — already introduced in the CI forensics cards — makes the mechanism concrete. In sparse mode, the agent receives the scenario description and the repository. In contract-visible mode, it additionally receives the expected behavior, success signals, and known failure modes from the authored benchmark contract. The search target becomes less ambiguous.</p>
 
+  <figure class="figure" id="fig-contract-mechanism">
+
   <div class="walkthrough">
     <div class="walk-col sparse">
       <h4>SPARSE PROMPT</h4>
@@ -463,8 +465,7 @@
     </div>
   </div>
 
-  <figure class="figure" id="fig-contract-mechanism">
-    <div class="fig-caption"><strong>Figure 3:</strong> Laguna XS.2 / OpenRouter on <code>decimal_money_rounding</code>. The model identity stayed constant; the information exposed in the prompt changed. Sparse mode provides the symptom; contract-visible mode provides the policy.</div>
+  <figcaption class="fig-caption"><strong>Figure 3:</strong> Laguna XS.2 / OpenRouter on <code>decimal_money_rounding</code>. The model identity stayed constant; the information exposed in the prompt changed. Sparse mode provides the symptom; contract-visible mode provides the policy.</figcaption>
   </figure>
 
   <h2>6. Study A — Breadth Across Four Deployed Systems</h2>
@@ -851,7 +852,7 @@
   <div class="figure" id="fig-two-surfaces">
     <span class="fgl frame">ANALYTIC FRAME</span>
     <div class="fig-headline">Reliability is staged. A system must reach a viable patch before it can survive acceptance.</div>
-    <svg viewBox="0 0 640 290" role="img" aria-labelledby="fig5-title fig5-desc">
+    <svg viewBox="0 0 640 310" role="img" aria-labelledby="fig5-title fig5-desc">
       <title id="fig5-title">Staged pipeline: from operational reachability to acceptance</title>
       <desc id="fig5-desc">A staged decision diagram showing the two evaluation gates: operational reachability (did the system produce a testable patch?) and acceptance reliability (does the patch satisfy hidden contracts?).</desc>
 
@@ -921,7 +922,7 @@
     <div class="fig-caption"><strong>Figure 5:</strong> Coding-agent reliability has at least two evaluation gates. Operational reachability determines whether a testable patch is produced at all. Acceptance reliability determines whether that patch satisfies the broader contract. A public-red patch (completed but wrong) and an operational timeout are distinct failure modes.</div>
   </div>
 
-  <h2>14. From Classification to Executable Diagnosis</h2>
+  <h2 id="executable-diagnosis">14. From Classification to Executable Diagnosis</h2>
 
   <p>A false-green run tells us that the agent made the visible tests pass but failed hidden acceptance. That identifies the symptom. It does not explain the violated contract or demonstrate a correct alternative. For selected false-greens in the Laguna <code>ci_forensics</code> sparse lane, we deployed a separate evaluator agent with a disposable engineering workbench containing three repositories and an evidence packet: the original seed repository, the patched model repository used for inspection and reproduction, a clean shadow repository where an alternative fix can be tested, and a packet containing the authored contract, patch, and recorded test evidence.</p>
 
@@ -947,11 +948,11 @@
 
   <h2>16. Engineering Implications and Conclusion</h2>
 
-  <p>This study began with a narrow question: can public CI green be trusted as a merge gate for coding-agent patches? The answer, consistently across model families, prompt lanes and scenario packs, is that it cannot be trusted alone. But the evidence accumulated over 391 depth-attempts, five breadth configurations and supporting local experiments supports a set of more specific and actionable findings.</p>
+  <p>This study began with a narrow question: can public CI green be trusted as a merge gate for coding-agent patches? The answer, consistently across model families, prompt lanes and scenario packs, is that it cannot be trusted alone. But the evidence accumulated over 391 retained depth attempts, four Study A configurations, and separately scoped local Gemma experiments supports a set of more specific and actionable findings.</p>
 
   <p><strong>Public green is not a merge gate for policy-heavy work.</strong> Across all six matched cells in Study B, the attempt-level false-green rate exceeded 24% under sparse prompts. On product workflows — where patches affect security, billing, inventory and SLA behavior — the pooled sparse false-green rate was 76.2%. Visible test success is a necessary checkpoint, not a sufficient one.</p>
 
-  <p><strong>Contract exposure is a stronger lever than blind resampling.</strong> Exposing explicit acceptance criteria reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage but did not eliminate false-greens; contract exposure did both. The <code>decimal_money_rounding</code> walkthrough demonstrates the mechanism: the agent's capability did not change; the information it received changed the search target from a local symptom to a policy.</p>
+  <p><strong>Contract exposure is a stronger lever than blind resampling.</strong> Exposing explicit acceptance criteria reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage but did not eliminate false-greens; contract exposure did both. The <code>decimal_money_rounding</code> walkthrough demonstrates the mechanism: the model identity stayed constant; the information exposed in the prompt changed the search target from a local symptom to a policy.</p>
 
   <p><strong>Any-of-k coverage should not be confused with per-attempt trust.</strong> Laguna XS.2 reached 33/33 scenarios under any-of-three with contract-visible prompts — a strong coverage result. But 33/33 any-of-three success means at least one attempt succeeded per scenario, not that the system is reliable on any single invocation. Per-attempt hidden-pass rates remain the appropriate metric for deployment decisions that cannot wait for a retry.</p>
 

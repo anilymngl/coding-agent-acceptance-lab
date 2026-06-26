@@ -9,8 +9,8 @@
   body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #FAFAFA; color: #1a1a1a; }
   .page { max-width: 1000px; margin: 0 auto; padding: 64px 24px 80px; }
   h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 10px; }
-  .thesis { font-size: 15px; font-weight: 500; color: #475569; line-height: 1.5; margin-bottom: 10px; }
-  .scope { font-size: 11px; color: #94a3b8; margin-bottom: 28px; line-height: 1.4; }
+  .thesis { font-size: 15px; font-weight: 500; color: #475569; line-height: 1.5; margin-bottom: 10px; max-width: 780px; }
+  .scope { font-size: 12px; color: #64748b; margin-bottom: 28px; line-height: 1.45; max-width: 780px; }
   .mono { font-family: 'SF Mono', Menlo, monospace; }
   .divider { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
   .section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 12px; }
@@ -22,16 +22,21 @@
   .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
   .stat { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; text-align: center; min-width: 70px; }
   .stat .val { font-size: 17px; font-weight: 800; }
-  .stat .lbl { font-size: 8px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .stat .lbl { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
   .stat.green .val { color: #16a34a; } .stat.rose .val { color: #e11d48; } .stat.blue .val { color: #2563eb; }
+  .stat.wide { min-width: 130px; }
 
   .foot { font-size: 10px; color: #bbb; text-align: center; margin-top: 40px; }
 
   /* Findings */
   .finding { margin-bottom: 30px; }
   .finding h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.01em; }
-  .finding .desc { font-size: 12px; color: #555; line-height: 1.6; margin-bottom: 6px; }
+  .finding .desc { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 6px; }
   .finding .dry-line { font-size: 11px; color: #94a3b8; font-style: italic; }
+  .example-box { background: #fff; border: 1px solid #e5e7eb; border-left: 4px solid #2563eb; border-radius: 8px; padding: 16px 20px; margin: 0 0 28px; }
+  .example-box h3 { font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+  .example-box p { font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 8px; }
+  .example-box p:last-child { margin-bottom: 0; }
 
   /* Nav */
   .nav-links { margin-bottom: 24px; font-size: 11px; }
@@ -45,7 +50,7 @@
   .route .rnum { font-size: 10px; font-weight: 700; color: #94a3b8; width: 20px; flex-shrink: 0; }
   .route .rbody { flex: 1; }
   .route .rtitle { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 1px; }
-  .route .rdesc { font-size: 10px; color: #64748b; line-height: 1.4; }
+  .route .rdesc { font-size: 12px; color: #64748b; line-height: 1.45; }
   .route .rdesc strong { color: #475569; }
   .route .rarrow { color: #94a3b8; font-size: 14px; margin-left: auto; flex-shrink: 0; }
 
@@ -59,16 +64,14 @@
 <div class="page">
 
   <h1>A coding agent can make CI green without fixing the bug.</h1>
-  <p class="thesis">This project measures how often that happens, why the wrong patch looked reasonable, and what changes when the agent can actually see the contract.</p>
-  <p class="scope">Four-system breadth study. Two-system, 391-attempt depth study. Thirty-three authored scenarios with visible tests and hidden acceptance.</p>
+  <p class="thesis">A green test suite proves that the visible checks passed. It does not always prove that the underlying business rule, policy, or acceptance contract was implemented correctly.</p>
+  <p class="scope">This project measures that gap across four model families and a 391-attempt depth study. The question is whether a coding-agent patch is actually accepted, not only whether it made public CI pass.</p>
 
   <div class="stats">
-    <div class="stat"><div class="val">4</div><div class="lbl">Study A configurations</div></div>
-    <div class="stat"><div class="val">2</div><div class="lbl">depth-study systems</div></div>
-    <div class="stat blue"><div class="val">33</div><div class="lbl">scenarios</div></div>
     <div class="stat green"><div class="val">391</div><div class="lbl">retained attempts</div></div>
+    <div class="stat blue"><div class="val">385</div><div class="lbl">public-green patches</div></div>
     <div class="stat rose"><div class="val">101</div><div class="lbl">false-greens</div></div>
-    <div class="stat blue"><div class="val">10</div><div class="lbl">evaluator reviews</div></div>
+    <div class="stat wide"><div class="val">43.3% &rarr; 8.9%</div><div class="lbl">with contract visible</div></div>
   </div>
 
   <div class="nav-links" style="margin-bottom:32px;font-size:11px">
@@ -85,43 +88,41 @@
     <a href="evaluator-findings.html">Evaluator</a>
   </div>
 
-  <p class="section-title">What we learned</p>
+  <p class="section-title">A concrete false-green</p>
+
+  <div class="example-box">
+    <h3>The symptom is fixed. The policy is not.</h3>
+    <p>A support-ticket deadline is wrong on Friday. The tempting fix is to add a Friday exception. The visible test passes, and CI turns green.</p>
+    <p>But the real product rule is broader: support time must advance correctly through business hours across weekdays and weekend boundaries. The visible symptom is gone. The acceptance contract is still broken.</p>
+  </div>
+
+  <p class="section-title">What the study found</p>
 
   <div class="finding">
     <h3>Green is only the first gate</h3>
-    <p class="desc">Public tests tell us the patch satisfied the visible assertions. Across the study, 101 public-green attempts still failed the broader authored contract.</p>
+    <p class="desc">Public tests tell us the patch satisfied the visible assertions. In the depth study, 101 public-green attempts still failed the broader authored contract.</p>
   </div>
 
   <div class="finding">
     <h3>The contract mattered more than another roll of the dice</h3>
-    <p class="desc">Contract-visible prompting reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage, but they did not make the agents steadily wiser. A later attempt sometimes lost behavior an earlier attempt had already recovered.</p>
+    <p class="desc">Contract-visible prompting reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage, but individual reruns were not progressively better. A later independent attempt could still perform worse than an earlier one.</p>
     <p class="dry-line">Three attempts are not three layers of wisdom.</p>
   </div>
 
   <div class="finding">
-    <h3>Product logic remained the dangerous edge</h3>
+    <h3>Product logic remained the hardest edge</h3>
     <p class="desc">Mechanical repairs and routine refactors became much more reliable when the contract was explicit. Billing, inventory, security, ranking and SLA workflows remained harder because the visible failure usually exposed only one edge of a larger policy.</p>
   </div>
 
   <div class="divider"></div>
 
-  <p class="section-title">What North Mini actually showed</p>
-
-  <div style="background:#f0fdf4;border:1px solid #86efac;border-left:4px solid #22c55e;border-radius:8px;padding:16px 20px;margin-bottom:8px">
-    <p style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:6px">North Mini was not a ceremonial baseline.</p>
-    <p style="font-size:11px;color:#166534;line-height:1.6;margin-bottom:6px">On CI forensics it matched Laguna&rsquo;s scenario coverage and stability. On maintenance it remained competitive, including 24 hidden passes across 25 retained contract-visible attempts. Its weakness was narrower and more informative: product-policy work. Making the contract visible recovered 10 of 11 scenarios at least once, but did not make every invocation trustworthy.</p>
-    <p style="font-size:10px;color:#166534;line-height:1.5">That is not a generic &ldquo;small model loses&rdquo; result. It is evidence that capability depends heavily on the kind of contract the system must reconstruct.</p>
-  </div>
-
-  <div class="divider"></div>
-
-  <p class="section-title">Inspect the research</p>
+  <p class="section-title">Choose your depth</p>
 
   <div class="routes">
     <a class="route" href="paper.html">
       <span class="rnum">01</span>
       <div class="rbody">
-        <div class="rtitle">Read the argument</div>
+        <div class="rtitle">Read the full argument</div>
         <div class="rdesc">The complete argument: representative cases, breadth and depth studies, prompt effects, retry instability, supporting Gemma experiments, evaluator methodology and engineering implications.</div>
       </div>
       <span class="rarrow">&rarr;</span>
@@ -130,7 +131,7 @@
     <a class="route" href="scenario-catalog.html">
       <span class="rnum">02</span>
       <div class="rbody">
-        <div class="rtitle">Inspect a scenario</div>
+        <div class="rtitle">Inspect a concrete scenario</div>
         <div class="rdesc">Open any of the 33 tasks and inspect what the agent saw, what fix looked tempting, what the authored contract required, what hidden acceptance checked and how the evaluated systems behaved.</div>
       </div>
       <span class="rarrow">&rarr;</span>
@@ -159,6 +160,14 @@
       <div class="rbody">
         <div class="rtitle">Inspect the evaluator workbench</div>
         <div class="rdesc"><strong>&ldquo;A second model agreed&rdquo; is not a validation method.</strong> The workbench reconstructs the failed run, constrains the evaluator with retained evidence, and validates the resulting review before it is admitted as evidence.</div>
+      </div>
+      <span class="rarrow">&rarr;</span>
+    </a>
+    <a class="route" href="https://github.com/anilymngl/coding-agent-acceptance-lab">
+      <span class="rnum">06</span>
+      <div class="rbody">
+        <div class="rtitle">Open the repository</div>
+        <div class="rdesc">Use the harness, scenarios, sanitized release data, provenance records, and verification scripts.</div>
       </div>
       <span class="rarrow">&rarr;</span>
     </a>
@@ -200,7 +209,7 @@
   </div>
 
   <div class="foot">
-    <span class="mono">publishables/</span> &middot; Internal comparative evidence &middot; No external audit &middot; June 2026
+    <span class="mono">publishables/</span> &middot; Independent comparative evidence &middot; No external audit &middot; June 2026
   </div>
 
 </div>

@@ -72,13 +72,14 @@
   .route .rarrow { margin-top: auto; padding-top: 18px; color: #2563eb; font-size: 18px; font-weight: 900; }
   .secondary-links { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; }
   .secondary-links a { color: #2563eb; text-decoration: none; font-weight: 750; }
-  .boundary { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); gap: 36px; padding-top: 24px; border-top: 1px solid #cbd5e1; }
+  .boundary { padding-top: 24px; border-top: 1px solid #cbd5e1; }
   .boundary p { font-size: 13px; color: #475569; line-height: 1.65; margin-bottom: 12px; }
-  details.artifacts { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px; }
+  .boundary > div { max-width: 820px; }
+  details.artifacts { margin-top: 18px; background: transparent; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 12px 0; }
   details.artifacts { scroll-margin-top: 24px; }
   details.artifacts summary { cursor: pointer; color: #0f172a; font-weight: 850; font-size: 14px; }
-  .artifact-note { margin-top: 10px; font-size: 12px; color: #64748b; line-height: 1.45; }
-  .artifact-links { display: grid; gap: 8px; margin-top: 14px; font-size: 12px; }
+  .artifact-note { margin-top: 8px; font-size: 12px; color: #64748b; line-height: 1.45; }
+  .artifact-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12px; }
   .artifact-links a { color: #2563eb; text-decoration: none; font-weight: 700; }
   .download-warning[hidden] { display: none; }
   .download-warning { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, 0.32); }
@@ -94,7 +95,7 @@
   @media (max-width: 880px) {
     .topline { padding-right: 0; }
     .topline nav { display: none; }
-    .hero, .case-row, .boundary { grid-template-columns: 1fr; }
+    .hero, .case-row { grid-template-columns: 1fr; }
     .hero { min-height: auto; gap: 34px; }
     .result-panel { border-left: 0; border-top: 5px solid #0f172a; padding: 24px 0 0; }
     .mechanism { grid-template-columns: 1fr; }
@@ -153,12 +154,9 @@
   </section>
 
   <div class="terms" aria-label="Plain-language term definitions">
-    <div class="term"><strong>CI:</strong> automated checks that say whether a code change appears safe.</div>
-    <div class="term"><strong>Public tests:</strong> checks the agent can see and run while fixing the repo.</div>
     <div class="term"><strong>Hidden acceptance:</strong> checks injected after the agent exits.</div>
     <div class="term"><strong>False-green:</strong> public tests pass, hidden acceptance fails.</div>
     <div class="term"><strong>Acceptance contract:</strong> the behavior or policy the fix actually has to satisfy.</div>
-    <div class="term"><strong>Trust gap:</strong> public pass rate minus hidden pass rate.</div>
   </div>
 
   <section class="section" aria-labelledby="mechanism-title">
@@ -216,23 +214,23 @@
     <p class="section-title">A concrete scenario</p>
     <div class="case-row">
       <div class="case-intro">
-        <h3>The symptom is fixed. The policy is not.</h3>
-        <p>A support-ticket deadline is wrong on Friday. The tempting patch adds a Friday exception. That can make the visible test pass while still missing the product rule the scenario owns.</p>
+        <h3>The type changed. The rounding policy did not.</h3>
+        <p>In <span class="mono">decimal_money_rounding</span>, a patch can move money math from <span class="mono">float</span> to <span class="mono">Decimal</span> and still keep truncating half-cents.</p>
       </div>
       <div class="case-compare">
         <div class="case-panel bad">
           <div class="kicker">Tempting fix</div>
-          <h4>Patch the Friday case</h4>
-          <p>This follows the failing assertion closely. It is clean, plausible, and too narrow.</p>
+          <h4>Swap float for Decimal</h4>
+          <p>The visible direction is right, but <span class="mono">int(total * 100)</span> still truncates values like 0.005 to 0 cents.</p>
         </div>
         <div class="case-panel good">
           <div class="kicker">Real contract</div>
-          <h4>Implement business-hours advancement</h4>
-          <p>The deadline must move correctly through weekday hours and weekend boundaries. Hidden acceptance checks the policy, not only the symptom.</p>
+          <h4>Round half-up to cents</h4>
+          <p>The contract requires cent rounding behavior, not just a safer numeric type. Hidden acceptance checks the half-cent edge.</p>
         </div>
       </div>
     </div>
-    <p style="margin-top:14px;font-size:13px"><a href="scenario-catalog.html#support_sla_business_hours" style="color:#2563eb;text-decoration:none;font-weight:800">Inspect this scenario &rarr;</a></p>
+    <p style="margin-top:14px;font-size:13px"><a href="scenario-catalog.html#decimal_money_rounding" style="color:#2563eb;text-decoration:none;font-weight:800">Inspect this scenario &rarr;</a></p>
   </section>
 
   <section class="section">

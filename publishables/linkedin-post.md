@@ -40,6 +40,8 @@ When the public tests pass but hidden acceptance fails, I refer to it as a false
 
 The patch looks finished, but the actual acceptance contract is still broken.
 
+The loop can look good while the reasoning stops at the assertion: read, edit, test, exit.
+
 In the depth study, 385 attempts passed public CI.
 
 101 still failed hidden acceptance.

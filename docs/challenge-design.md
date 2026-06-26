@@ -137,42 +137,35 @@ The first four challenges are deliberately compact:
 They are not meant to be a leaderboard. They are meant to make model behavior
 visible.
 
-## Glimpses from the North Mini Code Evidence
+## Early Evidence That Shaped the Challenge Design
 
-Findings from 39 runs of `opencode/north-mini-code-free` plus one
-`deepseek/deepseek-v4-pro` control. They describe one model in one harness,
-not a universal law — but they are the kind of signal pass@1 cannot surface.
+Before the breadth and depth studies, an exploratory slice contained 39 runs
+of `opencode/north-mini-code-free` plus one `deepseek/deepseek-v4-pro`
+control configuration.
 
-- **The failure mode is systematic, not random.** Across the false-green
-  runs, the model satisfied the specific failing assertion instead of
-  inferring the rule the assertion was testing. It got the number right for
-  the visible input with the wrong rounding mode. It redacted the visible
-  secret without recursing. It normalized the unit in the wrong API layer. A
-  consistent failure direction is learnable, which means guardrails can be
-  built around it.
+This is historical design evidence, not the canonical result set. It helped
+identify the behaviors that the later study measured more systematically.
 
-- **The loop is good; the reasoning stops at the assertion.** Every completed
-  run followed the correct agent loop — read, edit, test, exit — with no
-  sprawl, no loops, no unrelated file churn. The weakness is not tool use or
-  process discipline. It is that the model asks "what makes this test pass?"
-  instead of "what else should be true here?"
+- **False-greens followed recurrent, locally plausible strategies.** The
+  agent fixed the visible input with the wrong rounding policy, redacted the
+  exposed secret without handling nested values, or normalized a unit in the
+  wrong API layer. The errors were not simply nonsense; the visible assertion
+  pulled the patch toward an incomplete implementation.
 
-- **The task-type split is semantic, not about capability.** Mechanical
-  migrations, stale artifact regeneration, import hygiene, and missing
-  regression tests pass hidden tests at 70%+. Money math, business calendars,
-  auth/audit completeness, and state invariants sit under 30%. The dividing
-  line is whether the spec is richer than the visible test, not model size.
+- **The tool loop often looked disciplined while the contract remained
+  broken.** The agent read, edited, tested, and exited without unrelated
+  churn. The weakness was not necessarily tool use. The reasoning often
+  stopped at "what makes this assertion pass?" rather than continuing to "what
+  else must remain true?"
 
-- **Product workflows are hard for strong models too.** The DeepSeek control
-  went 11/11 public but 3/11 hidden on the same product-workflows pack. The
-  useful cross-model comparison is the false-green rate, not absolute hidden
-  pass. "Even a strong model misses most of the hidden contract at pass@1" is
-  a more valuable fact than who scored higher.
+- **Semantic width appeared to matter.** Mechanical migrations and bounded
+  maintenance tasks were easier than money rules, business calendars,
+  security completeness, and state invariants. The early evidence suggested
+  that difficulty was not explained by model size alone; it also depended on
+  how much of the real contract was visible in the failing test.
 
-- **The false-green rate is the deployment-changing number.** Roughly four in
-  ten public-green patches from this model are still contract-broken. That is
-  not a reason to avoid the model. It is a reason to put a hidden-acceptance
-  gate before merge and use it confidently inside that gate.
+These observations motivated the hidden-acceptance design and the later
+separation between public-green patches and accepted patches.
 
 The current canonical analysis is the public technical report in
 [publishables/paper.html](../publishables/paper.html), backed by the release

@@ -962,6 +962,8 @@
 
   <p><strong>Public green is not a merge gate for policy-heavy work.</strong> Across all six matched cells in Study B, the attempt-level false-green rate exceeded 24% under sparse prompts. On product workflows — where patches affect security, billing, inventory and SLA behavior — the pooled sparse false-green rate was 76.2%. Visible test success is a necessary checkpoint, not a sufficient one.</p>
 
+  <p>Many false-greens were not tool-use failures. The agent completed the expected edit-test-exit loop, but optimized against the visible assertion rather than the broader contract. This distinction matters operationally: improving process discipline alone does not close the acceptance gap.</p>
+
   <p><strong>Contract exposure is a stronger lever than blind resampling.</strong> Exposing explicit acceptance criteria reduced the pooled false-green rate from 43.3% to 8.9%. Retries improved scenario coverage but did not eliminate false-greens; contract exposure did both. The <code>decimal_money_rounding</code> walkthrough demonstrates the mechanism: the model identity stayed constant; the information exposed in the prompt changed the search target from a local symptom to a policy.</p>
 
   <p><strong>Any-of-k coverage should not be confused with per-attempt trust.</strong> Laguna XS.2 reached 33/33 scenarios under any-of-three with contract-visible prompts — a strong coverage result. But 33/33 any-of-three success means at least one attempt succeeded per scenario, not that the system is reliable on any single invocation. Per-attempt hidden-pass rates remain the appropriate metric for deployment decisions that cannot wait for a retry.</p>
